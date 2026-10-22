@@ -128,6 +128,8 @@ export interface TribeView {
   /** Coût en rations d'un nouveau chasseur, et ce qui empêche d'en former un (ou null). */
   recruitCost: number
   recruitBlocked: string | null
+  /** Réserve pleine : les chasseurs ne chassent pas. */
+  huntersResting: boolean
   /** Campements tenus, et combien la population permet d'en tenir. */
   camps: number
   maxCamps: number

@@ -46,6 +46,7 @@ describe('barre du haut', () => {
     const recruit = wrapper.find('[data-testid=recruit]')
     expect(recruit.attributes('disabled')).toBeDefined()
     expect(recruit.attributes('title')).toMatch(/habitants/)
+    expect(wrapper.find('[data-testid=hunters-resting]').exists()).toBe(false)
     await wrapper.find('[data-testid=speed-4]').trigger('click')
     await flushPromises()
     expect(game.view?.speed).toBe(4)
