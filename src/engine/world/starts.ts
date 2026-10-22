@@ -39,10 +39,35 @@ export function rateStart(world: World, x: number, y: number): number | null {
   }
   const meanFood = food / cells
   if (water === 0 || meanFood < MIN_FOOD) return null
-  // L'eau compte, mais un site presque entièrement marin n'est pas un bon départ.
-  const land = 1 - water / cells
+  // L'eau compte, mais un site presque entièrement marin n'est pas un bon départ. On ne
+  // compte que les terres reliées au camp : un îlot face à une côte n'en est pas un.
+  const land = reachableLand(world, x, y, r) / cells
   if (land < 0.45) return null
   return meanFood + Math.min(water / cells, 0.2)
+}
+
+/** Cellules de terre reliées à (x, y) sans quitter le disque de rayon r. */
+function reachableLand(world: World, x: number, y: number, r: number): number {
+  const seen = new Set<number>([cellIndex(world, x, y)])
+  const queue = [[x, y] as const]
+  while (queue.length > 0) {
+    const [cx, cy] = queue.pop()!
+    for (const [dx, dy] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ] as const) {
+      const nx = cx + dx
+      const ny = cy + dy
+      if ((nx - x) ** 2 + (ny - y) ** 2 > r * r) continue
+      const i = cellIndex(world, nx, ny)
+      if (seen.has(i) || isWater(world.biome[i]!)) continue
+      seen.add(i)
+      queue.push([nx, ny])
+    }
+  }
+  return seen.size
 }
 
 /** Tire jusqu'à `count` départs viables, éloignés les uns des autres. */
