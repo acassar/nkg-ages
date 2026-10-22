@@ -1,5 +1,6 @@
 import type { Command, CommandResult } from './commands'
 import { FIRST_ERA } from './content/eras'
+import { goalReached, scoreOf, type Tally } from './score/score'
 import { createClock, isSpeed, type ClockState } from './core/clock'
 import { createRng, type Rng } from './core/random'
 import { createFog, updateFog, Visibility, type FogState } from './fog/fog'
@@ -75,8 +76,19 @@ export type GameEvent =
   | { type: 'hunterKilled'; animal: AnimalKind }
   /** Une invention est achevée, avec le rang tiré (le meilleur rang est gardé). */
   | { type: 'invented'; invention: InventionKind; rank: Rank }
+  /** L'objectif de l'ère est atteint. */
+  | { type: 'victory' }
+  /** La tribu a disparu : la partie est finie. */
+  | { type: 'defeat' }
   /** La réserve était pleine : une part de la viande rapportée est perdue. */
   | { type: 'meatLost'; amount: number }
+
+export interface Outcome {
+  type: 'victory' | 'defeat'
+  tick: number
+  /** Score au moment de la fin. */
+  score: number
+}
 
 export interface GameState {
   options: NewGameOptions
@@ -96,6 +108,8 @@ export interface GameState {
   /** Troupeaux de la faune, qui errent et que l'on chasse. */
   herds: Herd[]
   inventions: InventionsState
+  /** Fin de partie : victoire (on peut continuer) ou défaite (tout s'arrête). */
+  outcome: Outcome | null
   nextId: number
   events: GameEvent[]
 }
@@ -128,6 +142,7 @@ export function createGame(options: NewGameOptions): GameState {
     deposits: placeDeposits(world, createRng(`ressources:${world.seed}`)),
     herds: placeHerds(world, createRng(`faune:${world.seed}`)),
     inventions: createInventions(),
+    outcome: null,
     nextId: 1,
     events: [],
   }
@@ -226,6 +241,7 @@ export function clampIndex(index: number | undefined, length: number): number {
 }
 
 export function applyCommand(state: GameState, command: Command): CommandResult {
+  if (state.outcome?.type === 'defeat') return { ok: false, reason: 'La tribu a disparu' }
   switch (command.type) {
     case 'setSpeed':
       if (!isSpeed(command.speed)) return { ok: false, reason: 'Vitesse inconnue' }
@@ -312,6 +328,7 @@ function orderUnit(state: GameState, u: Unit, x: number, y: number, auto: boolea
 
 /** Joue un tick (un mois de jeu). */
 export function step(state: GameState): void {
+  if (state.outcome?.type === 'defeat') return
   state.clock.tick++
   const pace = 1 + inventionMean(state.inventions, 'portage') / 100
   for (const unit of state.units) if (!moveUnit(unit, state.world, pace)) replan(state, unit)
@@ -334,6 +351,7 @@ export function step(state: GameState): void {
     unit.plannedFog = state.fog.version
     if (pathBlocked(state.world, state.fog, unit, unit.path)) replan(state, unit)
   }
+  judge(state)
 }
 
 /**
@@ -512,4 +530,45 @@ function nearestHerd(
 export function herdVisible(state: GameState, herd: Herd): boolean {
   const i = Math.floor(herd.y) * state.world.width + Math.floor(herd.x)
   return state.fog.cells[i] === Visibility.Visible
+}
+
+/** Ce que l'on compte de la partie pour l'objectif et le score. */
+export function tallyOf(state: GameState): Tally {
+  const ranks = Object.values(state.inventions.ranks).filter((r): r is Rank => r !== undefined)
+  return {
+    population: state.tribe.population,
+    territoryCells: territoryOf(state),
+    camps: state.camps.filter((c) => c.owner === PLAYER).length,
+    inventions: ranks,
+    years: state.clock.tick / 12,
+  }
+}
+
+function territoryOf(state: GameState): number {
+  // Toutes les cellules tenues sont au joueur tant qu'il n'y a pas d'autre peuple.
+  return state.territory.ownedCount
+}
+
+/** Score courant ; après une victoire, il garde le bonus gagné ce jour-là. */
+export function currentScore(state: GameState): number {
+  const won = state.outcome?.type === 'victory' ? state.outcome.tick / 12 : null
+  return scoreOf(tallyOf(state), won)
+}
+
+/** Défaite si la tribu a disparu, victoire la première fois que l'objectif de l'ère est atteint. */
+function judge(state: GameState): void {
+  if (state.outcome?.type === 'defeat') return
+  if (state.tribe.population <= 0) {
+    state.outcome = { type: 'defeat', tick: state.clock.tick, score: currentScore(state) }
+    state.clock.paused = true
+    state.events.push({ type: 'defeat' })
+    return
+  }
+  if (state.outcome) return
+  if (goalReached(FIRST_ERA.goal, tallyOf(state))) {
+    const tick = state.clock.tick
+    state.outcome = { type: 'victory', tick, score: scoreOf(tallyOf(state), tick / 12) }
+    state.clock.paused = true
+    state.events.push({ type: 'victory' })
+  }
 }

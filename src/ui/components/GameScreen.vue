@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { useGameStore } from '../stores/game'
+import GoalsPanel from './GoalsPanel.vue'
 import InventionsPanel from './InventionsPanel.vue'
 import MapView from './MapView.vue'
+import OutcomeDialog from './OutcomeDialog.vue'
 import SelectionBar from './SelectionBar.vue'
 import TopBar from './TopBar.vue'
 
@@ -16,6 +18,7 @@ defineProps<{ benchmark?: boolean }>()
     <TopBar />
     <InventionsPanel />
     <SelectionBar />
+    <GoalsPanel />
     <p v-if="game.error" class="notice parchment" role="alert" data-testid="notice">
       {{ game.error }}
       <button class="close" aria-label="Fermer" @click="game.dismissError()">×</button>
@@ -25,6 +28,7 @@ defineProps<{ benchmark?: boolean }>()
       seuls les bêtes en vue · F : l’éclaireur fonde un campement · glisser ou ZQSD : déplacer la
       carte · molette : zoom · Espace : pause · 1 à 5 : vitesse
     </p>
+    <OutcomeDialog />
   </div>
 </template>
 

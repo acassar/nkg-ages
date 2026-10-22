@@ -68,6 +68,25 @@ export interface GameView {
   inventions: InventionView[]
   /** Troupeaux en vue en ce moment (ils bougent : le déjà-vu ne suffit pas). */
   herds: HerdView[]
+  score: number
+  /** Objectif de l'ère, élément par élément. */
+  goal: GoalView[]
+  /** Fin de partie, ou null tant qu'elle dure. */
+  outcome: OutcomeView | null
+}
+
+export interface GoalView {
+  label: string
+  have: number
+  need: number
+  done: boolean
+}
+
+export interface OutcomeView {
+  type: 'victory' | 'defeat'
+  score: number
+  /** Date de la fin, déjà rédigée. */
+  dateLabel: string
 }
 
 export interface InventionView {

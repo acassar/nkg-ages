@@ -143,11 +143,30 @@ describe('vues de partie', () => {
     )
   })
 
+  it('montre le score, l’objectif et la fin de partie', () => {
+    const g = game()
+    let view = buildGameView(g)
+    expect(view.score).toBeGreaterThan(0)
+    expect(view.goal.map((s) => s.label)).toEqual(['Habitants', 'Campements', 'Inventions'])
+    expect(view.goal[0]).toMatchObject({ have: 12, done: false })
+    expect(view.outcome).toBeNull()
+    g.outcome = { type: 'defeat', tick: 13, score: 42 }
+    g.events.push({ type: 'defeat' }, { type: 'victory' })
+    view = buildGameView(g)
+    expect(view.outcome).toMatchObject({ type: 'defeat', score: 42 })
+    expect(view.outcome!.dateLabel).toMatch(/^février 11.999 av\. J\.-C\.$/)
+    expect(view.notices).toEqual([
+      'Défaite : la tribu a disparu.',
+      "Victoire : la tribu a atteint l'objectif du paléolithique.",
+    ])
+  })
+
   it('écrit les statistiques avec leur unité', () => {
     expect(formatStat({ mean: 22.5, spread: 3 }, '%')).toBe('+22,5 ± 3 %')
     expect(formatStat({ mean: 4, spread: 0 }, 'mois')).toBe('4 mois')
     expect(formatStat({ mean: -20, spread: 5 }, '%')).toBe('-20 ± 5 %')
-    expect(formatStat({ mean: 3, spread: 0 }, 'cases')).toBe('3 cases')
+    expect(formatStat({ mean: 3, spread: 0 }, 'cases')).toBe('+3 cases')
+    expect(formatStat({ mean: 1, spread: 0 }, 'cases')).toBe('+1 case')
   })
 
   it('rédige les événements du moteur pour le joueur', () => {

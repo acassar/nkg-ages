@@ -6,7 +6,9 @@ import { createInMemoryClient } from '@/client/inMemoryClient'
 import { ManualScheduler } from '@/host/scheduler'
 import StartScreen from '@/ui/components/StartScreen.vue'
 import GameScreen from '@/ui/components/GameScreen.vue'
+import GoalsPanel from '@/ui/components/GoalsPanel.vue'
 import InventionsPanel from '@/ui/components/InventionsPanel.vue'
+import OutcomeDialog from '@/ui/components/OutcomeDialog.vue'
 import SelectionBar from '@/ui/components/SelectionBar.vue'
 import TopBar from '@/ui/components/TopBar.vue'
 import { useClientFactory, useGameStore } from '@/ui/stores/game'
@@ -200,5 +202,37 @@ describe('écran de jeu', () => {
     expect(wrapper.find('[data-testid=invention-feu] .why').exists()).toBe(false)
     await wrapper.find('.title').trigger('click')
     expect(wrapper.find('ul').exists()).toBe(false)
+  })
+})
+
+describe('fin de partie', () => {
+  it('montre l’objectif et le score', async () => {
+    const game = useGameStore()
+    await game.newGame({ seed: 'objectif', randomStart: false, width: 128, height: 64 })
+    const wrapper = mount(GoalsPanel)
+    expect(wrapper.findAll('li')).toHaveLength(3)
+    expect(wrapper.find('li').text()).toMatch(/Habitants\s*12 \/ 250/)
+    expect(Number(wrapper.find('[data-testid=score]').text())).toBe(game.view!.score)
+  })
+
+  it('une victoire se referme pour continuer, une défaite ne propose que le menu', async () => {
+    const game = useGameStore()
+    await game.newGame({ seed: 'fin', randomStart: false, width: 128, height: 64 })
+    const wrapper = mount(OutcomeDialog)
+    expect(wrapper.find('[data-testid=outcome]').exists()).toBe(false)
+    const victory = { type: 'victory' as const, score: 1500, dateLabel: 'mars 11 950 av. J.-C.' }
+    game.view = { ...game.view!, paused: true, outcome: victory }
+    await flushPromises()
+    expect(wrapper.find('h2').text()).toBe('Victoire')
+    await wrapper.find('[data-testid=keep-playing]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid=outcome]').exists()).toBe(false)
+    expect(game.view!.paused).toBe(false)
+    game.view = { ...game.view!, outcome: { ...victory, type: 'defeat' } }
+    await flushPromises()
+    expect(wrapper.find('h2').text()).toBe('Défaite')
+    expect(wrapper.find('[data-testid=keep-playing]').exists()).toBe(false)
+    await wrapper.findAll('button').at(-1)!.trigger('click')
+    expect(game.world).toBeNull()
   })
 })

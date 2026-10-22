@@ -73,7 +73,7 @@
         },
         {
           "title": "Victoire, défaite, score",
-          "status": "todo"
+          "status": "done"
         },
         {
           "title": "Sauvegarde automatique",
@@ -181,6 +181,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-22",
+      "text": "J1 : objectif de l'ère (250 habitants, 3 campements, 6 inventions), victoire, défaite et score"
+    },
     {
       "date": "2026-10-22",
       "text": "J1 : dix techniques avec prérequis (feu, peaux, pistage, propulseur, taille du silex, harpon, portage…), chacune à rang E à S"

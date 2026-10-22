@@ -6,6 +6,9 @@ import {
   ANIMAL_RULES,
   cannotStart,
   cannotRecruit,
+  currentScore,
+  goalSteps,
+  tallyOf,
   cannotFoundCamp,
   maxCamps,
   maxHunters,
@@ -130,7 +133,28 @@ export function buildGameView(state: GameState, full = false): GameView {
         y: h.y,
         size: h.size,
       })),
+    score: currentScore(state),
+    goal: goalSteps(FIRST_ERA.goal, tallyOf(state)).map((s) => ({
+      label: GOAL_LABELS[s.kind],
+      have: s.have,
+      need: s.need,
+      done: s.have >= s.need,
+    })),
+    outcome: state.outcome
+      ? {
+          type: state.outcome.type,
+          score: state.outcome.score,
+          dateLabel: dateLabelOf(state.outcome.tick),
+        }
+      : null,
   }
+}
+
+const GOAL_LABELS = { population: 'Habitants', camps: 'Campements', inventions: 'Inventions' }
+
+function dateLabelOf(tick: number): string {
+  const { year, month } = dateOfTick(tick, startYear())
+  return formatDate(year, month)
 }
 
 /** Rédige un événement du moteur pour le joueur. */
@@ -141,6 +165,10 @@ function noticeOf(state: GameState, event: GameEvent): string {
       const name = unit ? UNIT_RULES[unit.kind].name : 'Une unité'
       return `${name} renonce : aucun chemin connu assez court ne mène à sa destination.`
     }
+    case 'victory':
+      return `Victoire : la tribu a atteint l'objectif du ${FIRST_ERA.name.toLowerCase()}.`
+    case 'defeat':
+      return 'Défaite : la tribu a disparu.'
     case 'famine':
       return 'Famine : les réserves sont vides, la tribu perd des siens chaque mois.'
     case 'invented': {
@@ -214,9 +242,11 @@ const statNumber = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 })
 
 /** « 5,2 ± 1,1 », avec l'unité de la statistique. */
 export function formatStat(stat: RankedStat, unit: string): string {
-  const suffix = unit === '' ? '' : unit === '%' ? ' %' : ` ${unit}`
+  // « 1 case » au singulier : le français n'accorde qu'à partir de 2.
+  const word = unit === 'cases' && Math.abs(stat.mean) < 2 ? 'case' : unit
+  const suffix = unit === '' ? '' : unit === '%' ? ' %' : ` ${word}`
   const spread = stat.spread > 0 ? ` ± ${statNumber.format(stat.spread)}` : ''
-  const sign = unit === '%' && stat.mean > 0 ? '+' : ''
+  const sign = (unit === '%' || unit === 'cases') && stat.mean > 0 ? '+' : ''
   return `${sign}${statNumber.format(stat.mean)}${spread}${suffix}`
 }
 
