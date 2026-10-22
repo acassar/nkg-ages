@@ -15,7 +15,18 @@ import {
 } from './territory/territory'
 import { findPath, knownPassable, pathBlocked } from './units/path'
 import { ANIMAL_RULES, HUNT_RULES, type AnimalKind } from './content/fauna'
+import { INVENTION_KINDS, INVENTION_WORK, type InventionKind } from './content/inventions'
+import type { Rank } from './content/rarity'
 import { RESOURCE_RULES } from './content/resources'
+import {
+  cannotStart,
+  createInventions,
+  inventionStat,
+  startInvention,
+  tickInventions,
+  type InventionsState,
+} from './inventions/inventions'
+import { rollStat } from './rarity/rarity'
 import { flee, placeHerds, regrow, wander, type Herd } from './fauna/fauna'
 import { depositYield, heldBy, placeDeposits, type Deposit } from './resources/deposits'
 import {
@@ -53,6 +64,8 @@ export type GameEvent =
   | { type: 'famine' }
   /** Un chasseur est mort à la chasse. */
   | { type: 'hunterKilled'; animal: AnimalKind }
+  /** Une invention est achevée, avec le rang tiré (le meilleur rang est gardé). */
+  | { type: 'invented'; invention: InventionKind; rank: Rank }
 
 export interface GameState {
   options: NewGameOptions
@@ -69,6 +82,7 @@ export interface GameState {
   deposits: Deposit[]
   /** Troupeaux de la faune, qui errent et que l'on chasse. */
   herds: Herd[]
+  inventions: InventionsState
   nextId: number
   events: GameEvent[]
 }
@@ -103,6 +117,7 @@ export function createGame(options: NewGameOptions): GameState {
     tribe: createTribe(),
     deposits: placeDeposits(world, createRng(`ressources:${world.seed}`)),
     herds: placeHerds(world, createRng(`faune:${world.seed}`)),
+    inventions: createInventions(),
     nextId: 1,
     events: [],
   }
@@ -182,6 +197,14 @@ export function applyCommand(state: GameState, command: Command): CommandResult 
       if (routed === 0) return { ok: false, reason: 'Aucun chemin connu vers cette destination' }
       return { ok: true }
     }
+    case 'invent': {
+      if (!INVENTION_KINDS.includes(command.invention))
+        return { ok: false, reason: 'Invention inconnue' }
+      const reason = cannotStart(state.inventions, command.invention, state.tribe.materials)
+      if (reason) return { ok: false, reason }
+      startInvention(state.inventions, command.invention, state.tribe.materials)
+      return { ok: true }
+    }
     default: {
       const unknown: never = command
       return { ok: false, reason: `Commande inconnue : ${JSON.stringify(unknown)}` }
@@ -212,6 +235,9 @@ export function step(state: GameState): void {
   hunt(state)
   growTerritory(state.territory, state.world, seatsOf(state), state.rng, GROWTH_PER_TICK)
   harvest(state)
+  const invented = tickInventions(state.inventions, state.tribe.population, state.rng)
+  if (invented)
+    state.events.push({ type: 'invented', invention: invented.kind, rank: invented.rank })
   updateFog(state.fog, viewersOf(state))
   // Le terrain découvert peut couper le chemin prévu : on le recalcule.
   for (const unit of state.units) {
@@ -279,7 +305,18 @@ function harvest(state: GameState): void {
     else if (tribe.population > 0) tribe.materials[d.kind] = (tribe.materials[d.kind] ?? 0) + amount
   }
   const available = territoryFood(state.territory.playerWeight, depositFood)
-  if (tickTribe(tribe, available) === 'famineStarts') state.events.push({ type: 'famine' })
+  const basket = inventionStat(state.inventions, 'panier')
+  const bonus = {
+    gather: basket ? Math.max(0, rollStat(basket, state.rng)) / 100 : 0,
+    storageMonths: inventionStat(state.inventions, 'fumage')?.mean ?? 0,
+  }
+  if (tickTribe(tribe, available, bonus) === 'famineStarts') state.events.push({ type: 'famine' })
+}
+
+/** Réserve maximale de la tribu, conservation comprise. */
+export function foodCapacity(state: GameState): number {
+  const extra = inventionStat(state.inventions, 'fumage')?.mean ?? 0
+  return storageCapacity(state.tribe.population, extra)
 }
 
 /** Le gisement est-il exploité par le joueur ? */
@@ -306,9 +343,12 @@ function hunt(state: GameState): void {
         state.events.push({ type: 'hunterKilled', animal: prey.kind })
         continue
       }
-      if (rng.next() < rules.catchChance) {
+      // Dégâts de l'arme du moment, rapportés à ceux des mains nues.
+      const weapon = inventionStat(state.inventions, 'lance') ?? INVENTION_WORK.bareDamage
+      const power = Math.max(0, rollStat(weapon, rng)) / INVENTION_WORK.bareDamage.mean
+      if (rng.next() < rules.catchChance * power) {
         prey.size--
-        tribe.food = Math.min(tribe.food + rules.meat, storageCapacity(tribe.population))
+        tribe.food = Math.min(tribe.food + rules.meat, foodCapacity(state))
         flee(prey, world, rng, unit, HUNT_RULES.fleeDistance)
       }
       continue

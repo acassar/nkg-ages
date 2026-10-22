@@ -49,9 +49,23 @@ export function production(
   return Math.min(population * rules.gatherPerPerson, available)
 }
 
-export function storageCapacity(population: number, rules: TribeRules = TRIBE_RULES): number {
-  return Math.max(1, population) * rules.rationPerPerson * rules.storageMonths
+export function storageCapacity(
+  population: number,
+  extraMonths = 0,
+  rules: TribeRules = TRIBE_RULES,
+): number {
+  return Math.max(1, population) * rules.rationPerPerson * (rules.storageMonths + extraMonths)
 }
+
+/** Effets des inventions sur la tribu ce mois-ci. */
+export interface TribeBonus {
+  /** Part de récolte en plus (0,1 = +10 %). */
+  gather: number
+  /** Mois de réserve en plus. */
+  storageMonths: number
+}
+
+export const NO_BONUS: TribeBonus = { gather: 0, storageMonths: 0 }
 
 /**
  * Un mois de vie de la tribu : récolte, repas, puis naissances ou famine.
@@ -60,14 +74,18 @@ export function storageCapacity(population: number, rules: TribeRules = TRIBE_RU
 export function tickTribe(
   tribe: TribeState,
   available: number,
+  bonus: TribeBonus = NO_BONUS,
   rules: TribeRules = TRIBE_RULES,
 ): TribeOutcome {
   if (tribe.population <= 0) return 'stable'
-  const produced = production(tribe.population, available, rules)
+  const produced = production(tribe.population, available, rules) * (1 + bonus.gather)
   const eaten = tribe.population * rules.rationPerPerson
   tribe.lastProduction = produced
   tribe.lastConsumption = eaten
-  tribe.food = Math.min(tribe.food + produced - eaten, storageCapacity(tribe.population, rules))
+  tribe.food = Math.min(
+    tribe.food + produced - eaten,
+    storageCapacity(tribe.population, bonus.storageMonths, rules),
+  )
 
   if (tribe.food < 0) {
     tribe.food = 0

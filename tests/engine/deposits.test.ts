@@ -3,7 +3,8 @@ import { isWater } from '@/engine/content/biomes'
 import { RANK_RULES, RANKS } from '@/engine/content/rarity'
 import { RESOURCE_RULES } from '@/engine/content/resources'
 import { createRng } from '@/engine/core/random'
-import { depositYield, heldBy, placeDeposits, rollRank } from '@/engine/resources/deposits'
+import { depositYield, heldBy, placeDeposits } from '@/engine/resources/deposits'
+import { rollRank } from '@/engine/rarity/rarity'
 import { generateWorld } from '@/engine/world/generate'
 
 const world = generateWorld({ seed: 'gisements', width: 256, height: 128 })

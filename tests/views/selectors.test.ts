@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { createGame, step } from '@/engine/game'
-import { buildGameView, buildWorldSnapshot, formatDate, patchOf } from '@/views/selectors'
+import {
+  buildGameView,
+  buildWorldSnapshot,
+  formatDate,
+  formatStat,
+  patchOf,
+} from '@/views/selectors'
 
 const game = () => createGame({ seed: 'vues', randomStart: false, width: 128, height: 64 })
 
@@ -89,6 +95,30 @@ describe('vues de partie', () => {
     const view = buildGameView(g)
     expect(view.herds).toEqual([{ id: 1, kind: 'cerf', name: 'Cerfs', x: c.x, y: c.y, size: 5 }])
     expect(view.notices).toEqual(['Chasse : un chasseur est mort face aux mammouths.'])
+  })
+
+  it('montre les inventions : coût, blocage, avancement et statistique au rang', () => {
+    const g = game()
+    let view = buildGameView(g)
+    const lance = view.inventions.find((i) => i.kind === 'lance')!
+    expect(lance).toMatchObject({ rank: null, stat: null, cost: ['15 silex'] })
+    expect(lance.blocked).toBe('Il faut 15 silex')
+    g.inventions.ranks.lance = 'S'
+    g.inventions.current = { kind: 'panier', progress: 45, work: 90 }
+    g.events.push({ type: 'invented', invention: 'lance', rank: 'B' })
+    view = buildGameView(g)
+    const [l, p] = view.inventions
+    expect(l).toMatchObject({ rank: 'S', stat: 'Dégâts 7 ± 3' })
+    expect(p).toMatchObject({ progress: 0.5, blocked: null })
+    expect(p!.monthsLeft).toBeGreaterThan(0)
+    expect(view.notices[0]).toBe(
+      'Invention : Lance de rang B, dégâts 5,8 ± 1,9 (le rang S obtenu avant est gardé).',
+    )
+  })
+
+  it('écrit les statistiques avec leur unité', () => {
+    expect(formatStat({ mean: 22.5, spread: 3 }, '%')).toBe('+22,5 ± 3 %')
+    expect(formatStat({ mean: 4, spread: 0 }, 'mois')).toBe('4 mois')
   })
 
   it('rédige les événements du moteur pour le joueur', () => {

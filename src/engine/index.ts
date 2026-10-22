@@ -10,6 +10,9 @@ export { Visibility } from './fog/fog'
 export { PLAYER, NO_OWNER } from './territory/territory'
 export { UNIT_RULES } from './units/units'
 export { TRIBE_RULES } from './content/tribe'
+export { INVENTION_KINDS, INVENTION_RULES } from './content/inventions'
+export type { InventionKind } from './content/inventions'
+export { cannotStart, inventionStat, nextCost, workPerMonth } from './inventions/inventions'
 export { ANIMAL_KINDS, ANIMAL_RULES, HUNT_RULES } from './content/fauna'
 export type { AnimalKind } from './content/fauna'
 export type { Herd } from './fauna/fauna'
@@ -17,7 +20,9 @@ export { RANKS, RANK_RULES } from './content/rarity'
 export type { Rank } from './content/rarity'
 export { RESOURCE_KINDS, RESOURCE_RULES } from './content/resources'
 export type { ResourceKind } from './content/resources'
-export { depositYield, rollRank } from './resources/deposits'
+export { depositYield } from './resources/deposits'
+export { rollRank, statAt, rollStat } from './rarity/rarity'
+export type { RankedStat } from './rarity/rarity'
 export type { Deposit } from './resources/deposits'
 export { storageCapacity } from './tribe/tribe'
 export type { TribeState } from './tribe/tribe'
@@ -29,6 +34,7 @@ export {
   clearDirty,
   startYear,
   depositHeld,
+  foodCapacity,
   herdVisible,
   START_CHOICES,
 } from './game'

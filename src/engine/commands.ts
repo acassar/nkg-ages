@@ -1,3 +1,4 @@
+import type { InventionKind } from './content/inventions'
 import type { Speed } from './core/clock'
 
 /**
@@ -9,5 +10,7 @@ export type Command =
   | { type: 'setPaused'; paused: boolean }
   | { type: 'togglePause' }
   | { type: 'moveUnits'; unitIds: number[]; x: number; y: number }
+  /** Lance une invention (ou la réinvente pour tenter un meilleur rang). */
+  | { type: 'invent'; invention: InventionKind }
 
 export type CommandResult = { ok: true } | { ok: false; reason: string }

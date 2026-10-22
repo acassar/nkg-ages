@@ -1,7 +1,7 @@
-import type { Command, CommandResult, NewGameOptions } from '@/engine'
+import type { Command, CommandResult, InventionKind, NewGameOptions } from '@/engine'
 import type { GameView, WorldSnapshot } from '@/views/types'
 
-export type { Command, CommandResult, NewGameOptions }
+export type { Command, CommandResult, InventionKind, NewGameOptions }
 
 /**
  * Seul point d'entrée de l'interface vers le jeu : on envoie des commandes,

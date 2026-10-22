@@ -1,7 +1,8 @@
-import { RANK_RULES, RANKS, type Rank } from '../content/rarity'
+import { RANK_RULES, type Rank } from '../content/rarity'
 import { RESOURCE_KINDS, RESOURCE_RULES, type ResourceKind } from '../content/resources'
 import { isWater, type BiomeId } from '../content/biomes'
 import type { Rng } from '../core/random'
+import { rollRank } from '../rarity/rarity'
 import type { World } from '../world/world'
 
 export interface Deposit {
@@ -11,18 +12,6 @@ export interface Deposit {
   x: number
   y: number
   rank: Rank
-}
-
-const TOTAL_WEIGHT = RANKS.reduce((sum, r) => sum + RANK_RULES[r].weight, 0)
-
-/** Tire un rang selon les poids de rareté. */
-export function rollRank(rng: Rng): Rank {
-  let roll = rng.next() * TOTAL_WEIGHT
-  for (const rank of RANKS) {
-    roll -= RANK_RULES[rank].weight
-    if (roll < 0) return rank
-  }
-  return RANKS[0]
 }
 
 /** Sème les gisements sur le monde, de façon reproductible (une cellule au plus chacun). */
