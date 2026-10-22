@@ -1,6 +1,6 @@
 import type { Rank } from '../content/rarity'
 import { INVENTION_RULES, INVENTION_WORK, type InventionKind } from '../content/inventions'
-import type { ResourceKind } from '../content/resources'
+import { RESOURCE_RULES, type ResourceKind } from '../content/resources'
 import type { Rng } from '../core/random'
 import { bestRank, rollRank, statAt, type RankedStat } from '../rarity/rarity'
 
@@ -38,9 +38,12 @@ export function cannotStart(
 ): string | null {
   if (state.current) return 'Une invention est déjà en cours'
   if (state.ranks[kind] === 'S') return 'Déjà au meilleur rang'
+  const missing = (INVENTION_RULES[kind].requires ?? []).filter((k) => !state.ranks[k])
+  if (missing.length > 0)
+    return `Il faut d'abord : ${missing.map((k) => INVENTION_RULES[k].name).join(', ')}`
   const { materials } = nextCost(state, kind)
   for (const [k, need] of Object.entries(materials) as [ResourceKind, number][])
-    if ((stock[k] ?? 0) < need) return `Il faut ${need} ${k}`
+    if ((stock[k] ?? 0) < need) return `Il faut ${need} ${RESOURCE_RULES[k].name.toLowerCase()}`
   return null
 }
 
@@ -88,4 +91,9 @@ export function tickInventions(
 export function inventionStat(state: InventionsState, kind: InventionKind): RankedStat | null {
   const rank = state.ranks[kind]
   return rank ? statAt(INVENTION_RULES[kind].range, rank) : null
+}
+
+/** Moyenne de la statistique au rang obtenu, 0 si l'invention n'est pas faite. */
+export function inventionMean(state: InventionsState, kind: InventionKind): number {
+  return inventionStat(state, kind)?.mean ?? 0
 }

@@ -9,6 +9,7 @@ import {
   foodCapacity,
   herdVisible,
   maxHunters,
+  sightOf,
   step,
   type GameState,
 } from '@/engine/game'
@@ -18,6 +19,7 @@ import { BIOMES, isWater, type BiomeId } from '@/engine/content/biomes'
 import { RIVER_RULES } from '@/engine/content/rivers'
 import { Visibility } from '@/engine/fog/fog'
 import { TRIBE_RULES } from '@/engine/content/tribe'
+import { UNIT_RULES } from '@/engine/units/units'
 import { PLAYER } from '@/engine/territory/territory'
 import fc from 'fast-check'
 
@@ -256,6 +258,67 @@ describe('commandes', () => {
     }
     expect(hunt(true)).toBeGreaterThan(hunt(false))
   })
+
+  it('chaque technique agit sur la partie', () => {
+    const g = createGame(options)
+    const scout = g.units.find((u) => u.kind === 'eclaireur')!
+    const hunter = g.units.find((u) => u.kind === 'chasseur')!
+    const sight = sightOf(g, hunter)
+    g.inventions.ranks.pistage = 'S'
+    expect(sightOf(g, hunter)).toBe(sight + 5)
+    expect(sightOf(g, scout)).toBe(UNIT_RULES.eclaireur.sight)
+
+    // Portage : l'éclaireur couvre plus de chemin dans le même temps.
+    const walk = (rank: 'S' | null) => {
+      const h = createGame(options)
+      if (rank) h.inventions.ranks.portage = rank
+      const u = h.units.find((v) => v.kind === 'eclaireur')!
+      h.units = [u]
+      const start = { x: u.x, y: u.y }
+      const far = landAt(h, (x, y) => Math.hypot(x - start.x, y - start.y) > 25)
+      applyCommand(h, { type: 'moveUnits', unitIds: [u.id], x: far.x + 0.5, y: far.y + 0.5 })
+      for (let i = 0; i < 10; i++) step(h)
+      return Math.hypot(u.x - start.x, u.y - start.y)
+    }
+    expect(walk('S')).toBeGreaterThan(walk(null))
+
+    // Taille du silex et harpon : les gisements rendent davantage.
+    const yieldOf = (kind: 'silex' | 'poisson', invention: 'taille' | 'harpon' | null) => {
+      const h = createGame(options)
+      if (invention) h.inventions.ranks[invention] = 'S'
+      const c = h.camps[0]!
+      h.deposits = [{ id: 1, kind, x: Math.floor(c.x), y: Math.floor(c.y), rank: 'E' }]
+      h.tribe.food = 0
+      h.territory.playerWeight = 0
+      step(h)
+      return kind === 'silex' ? h.tribe.materials.silex! : h.tribe.lastProduction
+    }
+    expect(yieldOf('silex', 'taille')).toBeCloseTo(yieldOf('silex', null) * 2)
+    expect(yieldOf('poisson', 'harpon')).toBeGreaterThan(yieldOf('poisson', null))
+  })
+
+  it('le propulseur rend la chasse au mammouth moins meurtrière', () => {
+    const deaths = (thrower: boolean) => {
+      let dead = 0
+      for (let run = 0; run < 20; run++) {
+        const g = createGame({ ...options, seed: `propulseur-${run}` })
+        g.inventions.ranks.lance = 'E'
+        if (thrower) g.inventions.ranks.propulseur = 'S'
+        const hunter = g.units.find((u) => u.kind === 'chasseur')!
+        g.units = [hunter]
+        for (let i = 0; i < 40 && g.units.length > 0; i++) {
+          g.herds = [
+            { id: 1, kind: 'mammouth', x: hunter.x + 0.5, y: hunter.y, size: 4, goal: hunter },
+          ]
+          g.tribe.food = 0
+          step(g)
+        }
+        if (g.units.length === 0) dead++
+      }
+      return dead
+    }
+    expect(deaths(true)).toBeLessThan(deaths(false))
+  }, 30_000)
 
   it('refuse une commande inconnue sans planter', () => {
     const g = createGame(options)

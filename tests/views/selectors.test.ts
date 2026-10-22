@@ -146,6 +146,8 @@ describe('vues de partie', () => {
   it('écrit les statistiques avec leur unité', () => {
     expect(formatStat({ mean: 22.5, spread: 3 }, '%')).toBe('+22,5 ± 3 %')
     expect(formatStat({ mean: 4, spread: 0 }, 'mois')).toBe('4 mois')
+    expect(formatStat({ mean: -20, spread: 5 }, '%')).toBe('-20 ± 5 %')
+    expect(formatStat({ mean: 3, spread: 0 }, 'cases')).toBe('3 cases')
   })
 
   it('rédige les événements du moteur pour le joueur', () => {

@@ -188,10 +188,16 @@ describe('écran de jeu', () => {
     const lance = wrapper.find('[data-testid=invention-lance] button')
     expect(lance.attributes('disabled')).toBeDefined()
     expect(lance.attributes('title')).toBe('Il faut 15 silex')
+    // La raison s'affiche aussi sous le bouton, prérequis compris.
+    expect(wrapper.find('[data-testid=invention-propulseur] .why').text()).toBe(
+      "Il faut d'abord : Lance",
+    )
     await wrapper.find('[data-testid=invention-panier] button').trigger('click')
     await flushPromises()
     expect(game.view!.inventions.find((i) => i.kind === 'panier')!.progress).toBe(0)
     expect(wrapper.find('[data-testid=invention-panier] .progress').exists()).toBe(true)
+    // Une invention en cours : on ne répète pas « déjà en cours » sous chaque bouton.
+    expect(wrapper.find('[data-testid=invention-feu] .why').exists()).toBe(false)
     await wrapper.find('.title').trigger('click')
     expect(wrapper.find('ul').exists()).toBe(false)
   })

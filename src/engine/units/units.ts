@@ -43,13 +43,13 @@ export const UNIT_RULES: Readonly<Record<UnitKind, UnitRules>> = {
  * Avance une unité le long de son chemin, plus lentement en terrain difficile.
  * Rend false si le prochain pas tombe sur une cellule infranchissable : il faut recalculer.
  */
-export function moveUnit(unit: Unit, world: World): boolean {
+export function moveUnit(unit: Unit, world: World, pace = 1): boolean {
   if (!unit.target) return true
   if (unit.path.length === 0) unit.path = [{ ...unit.target }]
   const cx = Math.floor(unit.x)
   const cy = Math.floor(unit.y)
   const cost = inBounds(world, cx, cy) ? moveCostAt(world, cy * world.width + cx) : 1
-  let budget = UNIT_RULES[unit.kind].speed / (Number.isFinite(cost) ? cost : 1)
+  let budget = (UNIT_RULES[unit.kind].speed * pace) / (Number.isFinite(cost) ? cost : 1)
   while (budget > 0 && unit.path.length > 0) {
     const next = unit.path[0]!
     const dx = next.x - unit.x

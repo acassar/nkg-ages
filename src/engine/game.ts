@@ -19,10 +19,11 @@ import { RIVER_RULES } from './content/rivers'
 import { ANIMAL_RULES, HUNT_RULES, type AnimalKind } from './content/fauna'
 import { INVENTION_KINDS, INVENTION_WORK, type InventionKind } from './content/inventions'
 import type { Rank } from './content/rarity'
-import { RESOURCE_RULES } from './content/resources'
+import { RESOURCE_RULES, type ResourceKind } from './content/resources'
 import {
   cannotStart,
   createInventions,
+  inventionMean,
   inventionStat,
   startInvention,
   tickInventions,
@@ -312,7 +313,8 @@ function orderUnit(state: GameState, u: Unit, x: number, y: number, auto: boolea
 /** Joue un tick (un mois de jeu). */
 export function step(state: GameState): void {
   state.clock.tick++
-  for (const unit of state.units) if (!moveUnit(unit, state.world)) replan(state, unit)
+  const pace = 1 + inventionMean(state.inventions, 'portage') / 100
+  for (const unit of state.units) if (!moveUnit(unit, state.world, pace)) replan(state, unit)
   hunt(state)
   growTerritory(
     state.territory,
@@ -362,9 +364,15 @@ export function startYear(): number {
   return FIRST_ERA.startYear
 }
 
+/** Vue d'une unité : le pistage allonge celle des chasseurs. */
+export function sightOf(state: GameState, unit: Unit): number {
+  const tracking = unit.kind === 'chasseur' ? inventionMean(state.inventions, 'pistage') : 0
+  return UNIT_RULES[unit.kind].sight + tracking
+}
+
 function viewersOf(state: GameState) {
   return [
-    ...state.units.map((u) => ({ x: u.x, y: u.y, sight: UNIT_RULES[u.kind].sight })),
+    ...state.units.map((u) => ({ x: u.x, y: u.y, sight: sightOf(state, u) })),
     ...state.camps.map((c) => ({ x: c.x, y: c.y, sight: CAMP_RULES.sight })),
   ]
 }
@@ -394,24 +402,34 @@ function harvest(state: GameState): void {
   let depositFood = 0
   for (const d of state.deposits) {
     if (!heldBy(owner, width, height, d, PLAYER)) continue
-    const amount = depositYield(d)
+    const amount = depositYield(d) * (1 + depositBonus(state, d.kind))
     if (RESOURCE_RULES[d.kind].category === 'food') depositFood += amount
     else if (tribe.population > 0) tribe.materials[d.kind] = (tribe.materials[d.kind] ?? 0) + amount
   }
   const available = territoryFood(state.territory.playerWeight, depositFood)
   const basket = inventionStat(state.inventions, 'panier')
+  const inv = state.inventions
   const bonus = {
     gather: basket ? Math.max(0, rollStat(basket, state.rng)) / 100 : 0,
-    storageMonths: inventionStat(state.inventions, 'fumage')?.mean ?? 0,
+    storageMonths: inventionMean(inv, 'fumage'),
+    growth: inventionMean(inv, 'feu') / 100,
+    famineShield: -inventionMean(inv, 'peaux') / 100,
   }
   const hunters = state.units.filter((u) => u.kind === 'chasseur').length
   if (tickTribe(tribe, available, bonus, hunters) === 'famineStarts')
     state.events.push({ type: 'famine' })
 }
 
+/** Rendement en plus d'un gisement, selon les inventions (0,2 = +20 %). */
+function depositBonus(state: GameState, kind: ResourceKind): number {
+  if (kind === 'silex') return inventionMean(state.inventions, 'taille') / 100
+  if (kind === 'poisson') return inventionMean(state.inventions, 'harpon') / 100
+  return 0
+}
+
 /** Réserve maximale de la tribu, conservation comprise. */
 export function foodCapacity(state: GameState): number {
-  const extra = inventionStat(state.inventions, 'fumage')?.mean ?? 0
+  const extra = inventionMean(state.inventions, 'fumage')
   return storageCapacity(state.tribe.population, extra)
 }
 
@@ -436,7 +454,10 @@ function hunt(state: GameState): void {
     const prey = nearestHerd(state, unit, HUNT_RULES.reach, false, 1)
     if (prey) {
       const rules = ANIMAL_RULES[prey.kind]
-      if (rng.next() < rules.danger) {
+      // Le propulseur éloigne le chasseur de la bête : le danger baisse.
+      const thrower = inventionStat(state.inventions, 'propulseur')
+      const safety = thrower ? Math.min(1, Math.max(0, -rollStat(thrower, rng) / 100)) : 0
+      if (rng.next() < rules.danger * (1 - safety)) {
         state.units.splice(state.units.indexOf(unit), 1)
         tribe.population = Math.max(0, tribe.population - 1)
         state.events.push({ type: 'hunterKilled', animal: prey.kind })
