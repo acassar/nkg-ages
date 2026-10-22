@@ -3,6 +3,7 @@ import { applyCommand, createGame, step, type GameState } from '@/engine/game'
 import { isWater } from '@/engine/content/biomes'
 import { Visibility } from '@/engine/fog/fog'
 import { PLAYER } from '@/engine/territory/territory'
+import fc from 'fast-check'
 
 const options = { seed: 'scénario', randomStart: false, width: 256, height: 128 }
 
@@ -15,6 +16,52 @@ function fingerprint(g: GameState): string {
     land = (land * 31 + g.territory.owner[i]!) | 0
   }
   return JSON.stringify({ tick: g.clock.tick, units: g.units, fog, land, rng: g.rng.state })
+}
+
+function onWater(g: GameState, u: { x: number; y: number }): boolean {
+  return isWater(g.world.biome[Math.floor(u.y) * g.world.width + Math.floor(u.x)]!)
+}
+
+/** Une case d'eau déjà découverte par le joueur. */
+function knownWater(g: GameState): { x: number; y: number } {
+  const i = g.fog.cells.findIndex((c, i) => c !== Visibility.Unknown && isWater(g.world.biome[i]!))
+  expect(i).toBeGreaterThanOrEqual(0)
+  return { x: (i % g.world.width) + 0.5, y: Math.floor(i / g.world.width) + 0.5 }
+}
+
+/** Une terre qu'aucune suite de terres ne relie au campement, s'il y en a une. */
+function otherIsland(g: GameState): { x: number; y: number } | null {
+  const { width, height, biome } = g.world
+  const c = g.camps[0]!
+  const start = Math.floor(c.y) * width + Math.floor(c.x)
+  const seen = new Uint8Array(width * height)
+  const queue = [start]
+  seen[start] = 1
+  while (queue.length > 0) {
+    const i = queue.pop()!
+    const x = i % width
+    const y = (i - x) / width
+    for (const [dx, dy] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+      [1, 1],
+      [1, -1],
+      [-1, 1],
+      [-1, -1],
+    ] as const) {
+      const nx = x + dx
+      const ny = y + dy
+      if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue
+      const n = ny * width + nx
+      if (seen[n] || isWater(biome[n]!)) continue
+      seen[n] = 1
+      queue.push(n)
+    }
+  }
+  const i = [...biome.keys()].find((i) => !seen[i] && !isWater(biome[i]!))
+  return i === undefined ? null : { x: (i % width) + 0.5, y: Math.floor(i / width) + 0.5 }
 }
 
 describe('création de partie', () => {
@@ -71,14 +118,43 @@ describe('commandes', () => {
     expect(g.clock.speed).toBe(1)
   })
 
-  it('refuse une destination hors du monde, dans l’eau ou sans unité', () => {
+  it('refuse une destination hors du monde, dans l’eau connue ou sans unité', () => {
     const g = createGame(options)
     const id = g.units[0]!.id
     expect(applyCommand(g, { type: 'moveUnits', unitIds: [id], x: -1, y: 5 }).ok).toBe(false)
     expect(applyCommand(g, { type: 'moveUnits', unitIds: [id], x: NaN, y: 5 }).ok).toBe(false)
-    expect(applyCommand(g, { type: 'moveUnits', unitIds: [id], x: 0.5, y: 0.5 }).ok).toBe(false)
+    const water = knownWater(g)
+    expect(applyCommand(g, { type: 'moveUnits', unitIds: [id], ...water })).toEqual({
+      ok: false,
+      reason: 'Destination infranchissable',
+    })
     const c = g.camps[0]!
     expect(applyCommand(g, { type: 'moveUnits', unitIds: [999], x: c.x, y: c.y }).ok).toBe(false)
+  })
+
+  it('accepte un clic sur de l’eau encore inconnue : le brouillard ne trahit rien', () => {
+    const g = createGame(options)
+    const u = g.units[0]!
+    expect(g.fog.cells[0]).toBe(Visibility.Unknown)
+    expect(isWater(g.world.biome[0]!)).toBe(true)
+    expect(applyCommand(g, { type: 'moveUnits', unitIds: [u.id], x: 0.5, y: 0.5 })).toEqual({
+      ok: true,
+    })
+    expect(u.target).toEqual({ x: 0.5, y: 0.5 })
+  })
+
+  it('refuse une destination qu’aucun chemin connu n’atteint', () => {
+    const g = createGame(options)
+    const u = g.units[0]!
+    // On fait comme si le joueur connaissait toute la carte : la case d'eau du coin est
+    // refusée, et une terre d'une autre île aussi.
+    g.fog.cells.fill(Visibility.Seen)
+    const island = otherIsland(g)
+    if (!island) return
+    expect(applyCommand(g, { type: 'moveUnits', unitIds: [u.id], ...island })).toEqual({
+      ok: false,
+      reason: 'Aucun chemin connu vers cette destination',
+    })
   })
 
   it('refuse une commande inconnue sans planter', () => {
@@ -115,6 +191,45 @@ describe('scénarios', () => {
     for (let i = 0; i < 120; i++) step(g)
     expect(known()).toBeGreaterThan(before)
   })
+
+  it('l’éclaireur envoyé dans l’eau inconnue s’arrête au bord, sans jamais nager', () => {
+    const g = createGame(options)
+    const u = g.units[0]!
+    applyCommand(g, { type: 'moveUnits', unitIds: [u.id], x: 0.5, y: 0.5 })
+    let ticks = 0
+    for (; ticks < 3000 && u.target; ticks++) {
+      step(g)
+      expect(onWater(g, u)).toBe(false)
+    }
+    // Le coin est en pleine mer : une fois les côtes découvertes, plus aucun chemin connu
+    // assez court n'y mène, l'éclaireur s'arrête au lieu d'errer.
+    expect(u.target).toBeNull()
+    expect(u.path).toEqual([])
+    expect(ticks).toBeLessThan(1500)
+  })
+
+  it('n’entre jamais dans l’eau et finit toujours par arriver ou s’arrêter (fast-check)', () => {
+    const g0 = createGame(options)
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: g0.world.width - 1 }),
+        fc.integer({ min: 0, max: g0.world.height - 1 }),
+        (x, y) => {
+          const g = createGame(options)
+          const u = g.units[0]!
+          const r = applyCommand(g, { type: 'moveUnits', unitIds: [u.id], x: x + 0.5, y: y + 0.5 })
+          if (!r.ok) return
+          for (let i = 0; i < 2500 && u.target; i++) {
+            step(g)
+            expect(onWater(g, u)).toBe(false)
+          }
+          // Arrivé, ou arrêté faute de chemin connu assez court : jamais en errance.
+          expect(u.target).toBeNull()
+        },
+      ),
+      { numRuns: 12 },
+    )
+  }, 60_000)
 
   it('le territoire grandit avec le temps', () => {
     const g = createGame(options)

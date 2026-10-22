@@ -28,6 +28,9 @@ const scout = (x: number, y: number, target: Unit['target']): Unit => ({
   x,
   y,
   target,
+  path: [],
+  plannedFog: 0,
+  patience: 100,
 })
 
 describe('déplacement des unités', () => {
@@ -54,12 +57,28 @@ describe('déplacement des unités', () => {
     expect(forest.x - 0.5).toBeLessThan(plain.x - 0.5)
   })
 
-  it("s'arrête au bord de l'eau", () => {
+  it("ne met jamais le pied dans l'eau et signale qu'il faut recalculer", () => {
     const world = worldOf(['PPP~~~PPPP'])
     const u = scout(0.5, 0.5, { x: 8.5, y: 0.5 })
-    for (let i = 0; i < 40; i++) moveUnit(u, world)
+    let blocked = false
+    for (let i = 0; i < 40; i++) blocked = !moveUnit(u, world) || blocked
     expect(u.x).toBeLessThan(3)
-    expect(u.target).toBeNull()
+    expect(blocked).toBe(true)
+  })
+
+  it('suit ses points de passage dans l’ordre, même plusieurs dans un tick', () => {
+    const world = worldOf(['PPPPPP', 'PPPPPP', 'PPPPPP'])
+    const u = scout(0.5, 0.5, { x: 0.5, y: 2.5 })
+    u.path = [
+      { x: 0.7, y: 0.5 },
+      { x: 0.7, y: 0.7 },
+      { x: 0.5, y: 2.5 },
+    ]
+    moveUnit(u, world)
+    expect(u.path).toHaveLength(1)
+    expect(u.y).toBeGreaterThan(0.7)
+    for (let i = 0; i < 10; i++) moveUnit(u, world)
+    expect(u).toMatchObject({ x: 0.5, y: 2.5, target: null, path: [] })
   })
 
   it('ne bouge pas sans cible', () => {
