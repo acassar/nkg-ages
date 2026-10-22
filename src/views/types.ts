@@ -53,6 +53,8 @@ export interface GameView {
   fog: GridPatch | null
   /** Propriétaire par cellule (0 personne, 1 le joueur). Seulement la zone modifiée. */
   territory: GridPatch | null
+  /** Messages pour le joueur, nés depuis la vue précédente (déjà rédigés). */
+  notices: string[]
 }
 
 /** Biomes, dans l'ordre de leurs identifiants (même table que le moteur). */

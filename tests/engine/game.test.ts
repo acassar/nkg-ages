@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyCommand, createGame, step, type GameState } from '@/engine/game'
+import { applyCommand, clearDirty, createGame, step, type GameState } from '@/engine/game'
 import { isWater } from '@/engine/content/biomes'
 import { Visibility } from '@/engine/fog/fog'
 import { PLAYER } from '@/engine/territory/territory'
@@ -157,6 +157,28 @@ describe('commandes', () => {
     })
   })
 
+  it('dans un ordre de groupe, l’unité sans chemin abandonne son ancien ordre', () => {
+    const g = createGame(options)
+    const scout = g.units[0]!
+    const camp = g.camps[0]!
+    // Une seconde unité, sur une île que le joueur sait séparée du campement.
+    g.fog.cells.fill(Visibility.Seen)
+    const island = otherIsland(g)
+    if (!island) return
+    const castaway = {
+      ...scout,
+      id: 99,
+      ...island,
+      target: { x: island.x + 0.1, y: island.y },
+      path: [],
+    }
+    g.units.push(castaway)
+    const r = applyCommand(g, { type: 'moveUnits', unitIds: [scout.id, 99], x: camp.x, y: camp.y })
+    expect(r.ok).toBe(true)
+    expect(castaway.target).toBeNull()
+    expect(castaway.path).toEqual([])
+  })
+
   it('refuse une commande inconnue sans planter', () => {
     const g = createGame(options)
     expect(applyCommand(g, { type: 'téléporter' } as never).ok).toBe(false)
@@ -206,6 +228,20 @@ describe('scénarios', () => {
     expect(u.target).toBeNull()
     expect(u.path).toEqual([])
     expect(ticks).toBeLessThan(1500)
+    // Le joueur en est prévenu, une seule fois, puis l'envoi suivant repart à vide.
+    expect(g.events).toEqual([{ type: 'unitGaveUp', unitId: u.id }])
+    clearDirty(g)
+    expect(g.events).toEqual([])
+  })
+
+  it('une unité qui arrive à destination ne prévient de rien', () => {
+    const g = createGame(options)
+    const u = g.units[0]!
+    const c = g.camps[0]!
+    applyCommand(g, { type: 'moveUnits', unitIds: [u.id], x: c.x + 1, y: c.y })
+    for (let i = 0; i < 20 && u.target; i++) step(g)
+    expect(u.target).toBeNull()
+    expect(g.events).toEqual([])
   })
 
   it('n’entre jamais dans l’eau et finit toujours par arriver ou s’arrêter (fast-check)', () => {
