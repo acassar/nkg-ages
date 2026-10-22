@@ -43,6 +43,16 @@ describe('tribu', () => {
     expect(t.lastConsumption).toBe(10)
   })
 
+  it('les habitants occupés ailleurs mangent mais ne cueillent pas', () => {
+    const t = tribe({ population: 10, food: 0 })
+    tickTribe(t, PLENTY, undefined, 4)
+    expect(t.lastProduction).toBe(6 * R.gatherPerPerson)
+    expect(t.lastConsumption).toBe(10 * R.rationPerPerson)
+    const all = tribe({ population: 10, food: 0 })
+    tickTribe(all, PLENTY, undefined, 99)
+    expect(all.lastProduction).toBe(0)
+  })
+
   it('ne stocke pas au-delà de sa capacité', () => {
     const t = tribe({ population: 10, food: storageCapacity(10) })
     tickTribe(t, PLENTY)

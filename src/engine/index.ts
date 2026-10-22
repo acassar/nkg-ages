@@ -41,6 +41,7 @@ export {
   cannotFoundCamp,
   maxCamps,
   maxHunters,
+  huntersResting,
   START_CHOICES,
 } from './game'
 export type { GameState, GameEvent, NewGameOptions, Camp } from './game'

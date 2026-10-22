@@ -168,6 +168,11 @@ export function maxHunters(state: GameState): number {
   return Math.floor(state.tribe.population / HUNT_RULES.peoplePerHunter)
 }
 
+/** Réserve pleine : les chasseurs ne risquent pas leur vie et se reposent. */
+export function huntersResting(state: GameState): boolean {
+  return state.tribe.food >= foodCapacity(state)
+}
+
 /** Pourquoi on ne peut pas former de chasseur maintenant, ou null si on le peut. */
 export function cannotRecruit(state: GameState): string | null {
   const hunters = state.units.filter((u) => u.kind === 'chasseur').length
@@ -395,7 +400,9 @@ function harvest(state: GameState): void {
     gather: basket ? Math.max(0, rollStat(basket, state.rng)) / 100 : 0,
     storageMonths: inventionStat(state.inventions, 'fumage')?.mean ?? 0,
   }
-  if (tickTribe(tribe, available, bonus) === 'famineStarts') state.events.push({ type: 'famine' })
+  const hunters = state.units.filter((u) => u.kind === 'chasseur').length
+  if (tickTribe(tribe, available, bonus, hunters) === 'famineStarts')
+    state.events.push({ type: 'famine' })
 }
 
 /** Réserve maximale de la tribu, conservation comprise. */
@@ -420,8 +427,8 @@ function hunt(state: GameState): void {
   for (const herd of state.herds) wander(herd, world, faunaRng)
   for (const unit of [...state.units]) {
     if (unit.kind !== 'chasseur') continue
+    if (huntersResting(state)) continue
     const capacity = foodCapacity(state)
-    if (tribe.food >= capacity) continue
     const prey = nearestHerd(state, unit, HUNT_RULES.reach, false, 1)
     if (prey) {
       const rules = ANIMAL_RULES[prey.kind]

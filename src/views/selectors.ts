@@ -9,6 +9,7 @@ import {
   cannotFoundCamp,
   maxCamps,
   maxHunters,
+  huntersResting,
   HUNT_RULES,
   depositHeld,
   foodCapacity,
@@ -173,6 +174,7 @@ function tribeView(state: GameState): TribeView {
     maxHunters: maxHunters(state),
     recruitCost: HUNT_RULES.recruitFood,
     recruitBlocked: cannotRecruit(state),
+    huntersResting: huntersResting(state),
     camps: state.camps.filter((c) => c.owner === PLAYER).length,
     maxCamps: maxCamps(state),
   }

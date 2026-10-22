@@ -75,10 +75,13 @@ export function tickTribe(
   tribe: TribeState,
   available: number,
   bonus: TribeBonus = NO_BONUS,
+  /** Habitants occupés ailleurs (les chasseurs) : ils mangent mais ne cueillent pas. */
+  away = 0,
   rules: TribeRules = TRIBE_RULES,
 ): TribeOutcome {
   if (tribe.population <= 0) return 'stable'
-  const produced = production(tribe.population, available, rules) * (1 + bonus.gather)
+  const gatherers = Math.max(0, tribe.population - away)
+  const produced = production(gatherers, available, rules) * (1 + bonus.gather)
   const eaten = tribe.population * rules.rationPerPerson
   tribe.lastProduction = produced
   tribe.lastConsumption = eaten

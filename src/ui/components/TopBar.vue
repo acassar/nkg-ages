@@ -29,10 +29,19 @@ const signed = new Intl.NumberFormat('fr-FR', {
           >{{ signed.format(game.view.tribe.foodBalance) }}/mois</span
         >
       </span>
-      <span title="Chasseurs en vie / que la tribu peut entretenir">
+      <span
+        :title="
+          game.view.tribe.huntersResting
+            ? 'Réserve pleine : les chasseurs se reposent'
+            : 'Chasseurs en vie / que la tribu peut entretenir (un chasseur ne cueille pas)'
+        "
+      >
         <span class="label">Chasseurs</span>
         <b data-testid="hunters">{{ game.view.tribe.hunters }}</b>
         <span class="soft">/ {{ game.view.tribe.maxHunters }}</span>
+        <span v-if="game.view.tribe.huntersResting" class="balance" data-testid="hunters-resting"
+          >au repos</span
+        >
         <button
           class="ink-button recruit"
           data-testid="recruit"

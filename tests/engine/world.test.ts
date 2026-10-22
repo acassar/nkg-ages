@@ -113,4 +113,19 @@ describe('sites de départ', () => {
     const w = small('mer')
     expect(rateStart(w, 0, 0)).toBeNull()
   })
+
+  it('refuse un îlot face à la côte : seules les terres reliées au camp comptent', () => {
+    const w = small('îlot')
+    const c = { x: Math.floor(w.width / 2), y: Math.floor(w.height / 2) }
+    w.biome.fill(Biome.Plain)
+    // Un peu de mer au loin : le site est viable.
+    for (let x = 0; x < 4; x++) w.biome[(c.y + START_RADIUS - 1) * w.width + c.x + x] = Biome.Ocean
+    expect(rateStart(w, c.x, c.y)).not.toBeNull()
+    // Un anneau d'eau autour du camp en fait un îlot, malgré toute la terre au-delà.
+    for (let dy = -2; dy <= 2; dy++)
+      for (let dx = -2; dx <= 2; dx++)
+        if (Math.max(Math.abs(dx), Math.abs(dy)) === 2)
+          w.biome[(c.y + dy) * w.width + c.x + dx] = Biome.Ocean
+    expect(rateStart(w, c.x, c.y)).toBeNull()
+  })
 })

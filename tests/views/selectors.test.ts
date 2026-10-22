@@ -119,6 +119,9 @@ describe('vues de partie', () => {
     g.units = g.units.filter((u) => u.kind !== 'chasseur')
     view = buildGameView(g)
     expect(view.tribe).toMatchObject({ hunters: 0, recruitBlocked: null })
+    expect(view.tribe.huntersResting).toBe(false)
+    g.tribe.food = view.tribe.foodCapacity + 1
+    expect(buildGameView(g).tribe.huntersResting).toBe(true)
   })
 
   it('montre les inventions : coût, blocage, avancement et statistique au rang', () => {
