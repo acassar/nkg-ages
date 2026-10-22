@@ -76,3 +76,23 @@ describe('hôte de partie', () => {
     expect(host.game?.clock.tick).toBe(0)
   })
 })
+
+describe('sauvegarde par l’hôte', () => {
+  it('reprend une partie au même point, en pause, avec une vue complète', () => {
+    const { scheduler, host } = setup()
+    host.send({ type: 'setPaused', paused: false })
+    scheduler.advance(2000)
+    const save = host.save()!
+    const other = new GameHost(new ManualScheduler())
+    const { world, view } = other.load(save)
+    expect(world.width).toBe(128)
+    expect(view.tick).toBe(save.clock.tick)
+    expect(view.paused).toBe(true)
+    expect(view.fog?.w).toBe(128)
+    expect(view.territory?.w).toBe(128)
+  })
+
+  it('sans partie, rien à sauvegarder', () => {
+    expect(new GameHost(new ManualScheduler()).save()).toBeNull()
+  })
+})

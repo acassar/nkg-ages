@@ -65,6 +65,19 @@ describe('client de jeu par Worker', () => {
     expect(views.at(-1)?.tick).toBeGreaterThan(0)
   })
 
+  it('sauvegarde la partie et la reprend par le Worker', async () => {
+    const { client, scheduler } = setup()
+    await client.newGame(options)
+    await client.send({ type: 'togglePause' })
+    scheduler.advance(1000)
+    const save = await client.save()
+    expect(save?.options.seed).toBe('worker')
+    const other = setup().client
+    const { view } = await other.load(JSON.parse(JSON.stringify(save)))
+    expect(view.tick).toBe(save!.clock.tick)
+    await expect(other.load({ ...save!, version: 0 })).rejects.toThrow(/autre version/)
+  })
+
   it('transmet le refus d’une commande', async () => {
     const { client } = setup()
     await client.newGame(options)

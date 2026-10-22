@@ -52,6 +52,7 @@ export function createWorkerClient(createWorker: () => WorkerLike = browserWorke
     if (message.kind === 'error') waiting.reject(new Error(message.message))
     else if (message.kind === 'started')
       waiting.resolve({ world: message.world, view: message.view })
+    else if (message.kind === 'saved') waiting.resolve(message.save)
     else waiting.resolve(message.result)
   }
   worker.onerror = (event) => {
@@ -71,6 +72,8 @@ export function createWorkerClient(createWorker: () => WorkerLike = browserWorke
 
   return {
     newGame: (options) => request((requestId) => ({ kind: 'newGame', requestId, options })),
+    load: (save) => request((requestId) => ({ kind: 'load', requestId, save })),
+    save: () => request((requestId) => ({ kind: 'save', requestId })),
     send: (command) => request((requestId) => ({ kind: 'command', requestId, command })),
     subscribe(listener) {
       listeners.add(listener)

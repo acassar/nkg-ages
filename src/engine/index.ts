@@ -50,3 +50,5 @@ export type { GameState, GameEvent, NewGameOptions, Camp, Outcome } from './game
 export { goalSteps, goalReached, scoreOf } from './score/score'
 export type { Tally, GoalStep } from './score/score'
 export type { World } from './world/world'
+export { saveGame, loadGame, SAVE_VERSION } from './save/save'
+export type { SaveData } from './save/save'

@@ -2,12 +2,15 @@ import {
   applyCommand,
   clearDirty,
   createGame,
+  loadGame,
+  saveGame,
   step,
   ticksDue,
   type Command,
   type CommandResult,
   type GameState,
   type NewGameOptions,
+  type SaveData,
 } from '@/engine'
 import { buildGameView, buildWorldSnapshot } from '@/views/selectors'
 import type { GameView, WorldSnapshot } from '@/views/types'
@@ -30,8 +33,23 @@ export class GameHost {
   constructor(private readonly scheduler: Scheduler = realScheduler) {}
 
   newGame(options: NewGameOptions): { world: WorldSnapshot; view: GameView } {
+    return this.start(createGame(options))
+  }
+
+  /** Reprend une partie sauvegardée, en pause : le joueur relance quand il est prêt. */
+  load(save: SaveData): { world: WorldSnapshot; view: GameView } {
+    const state = loadGame(save)
+    state.clock.paused = true
+    return this.start(state)
+  }
+
+  /** Photographie de la partie en cours, à ranger où le client veut. */
+  save(): SaveData | null {
+    return this.state ? saveGame(this.state) : null
+  }
+
+  private start(state: GameState): { world: WorldSnapshot; view: GameView } {
     this.stop?.()
-    const state = createGame(options)
     this.state = state
     this.carry = 0
     const world = buildWorldSnapshot(state)

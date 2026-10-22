@@ -77,7 +77,7 @@
         },
         {
           "title": "Sauvegarde automatique",
-          "status": "todo"
+          "status": "done"
         }
       ]
     },
@@ -181,6 +181,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-22",
+      "text": "J1 : sauvegarde automatique (toutes les 20 s, en quittant, onglet caché) et reprise depuis l'accueil, à l'identique"
+    },
     {
       "date": "2026-10-22",
       "text": "J1 : objectif de l'ère (250 habitants, 3 campements, 6 inventions), victoire, défaite et score"
