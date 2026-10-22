@@ -24,7 +24,7 @@ const report = {
   worldMs: Number(worldMs.toFixed(1)),
   ticks: TICKS,
   tickMs: Number(tickMs.toFixed(4)),
-  territoryCells: game.territory.owned.length,
+  territoryCells: game.territory.ownedCount,
 }
 mkdirSync('ci-out', { recursive: true })
 writeFileSync('ci-out/bench-engine.json', JSON.stringify(report, null, 2))

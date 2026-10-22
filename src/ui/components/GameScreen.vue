@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { useGameStore } from '../stores/game'
 import MapView from './MapView.vue'
 import TopBar from './TopBar.vue'
+
+const game = useGameStore()
 
 defineProps<{ benchmark?: boolean }>()
 </script>
@@ -9,6 +12,10 @@ defineProps<{ benchmark?: boolean }>()
   <div class="game">
     <MapView :benchmark="benchmark" />
     <TopBar />
+    <p v-if="game.error" class="notice parchment" role="alert" data-testid="notice">
+      {{ game.error }}
+      <button class="close" aria-label="Fermer" @click="game.dismissError()">×</button>
+    </p>
     <p class="hint parchment">
       Clic : choisir l'éclaireur · clic droit : l'envoyer · glisser ou ZQSD : déplacer la carte ·
       molette : zoom · Espace : pause · 1 à 5 : vitesse
@@ -21,6 +28,28 @@ defineProps<{ benchmark?: boolean }>()
   position: relative;
   height: 100%;
   overflow: hidden;
+}
+.notice {
+  position: absolute;
+  top: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 8px 36px 8px 14px;
+  border-color: var(--ink-red);
+  color: var(--ink-red);
+  border-radius: 3px;
+  max-width: calc(100% - 32px);
+}
+.close {
+  position: absolute;
+  top: 2px;
+  right: 6px;
+  border: 0;
+  background: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: inherit;
 }
 .hint {
   position: absolute;

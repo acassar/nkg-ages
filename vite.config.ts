@@ -13,5 +13,22 @@ export default defineConfig({
   test: {
     include: ['tests/**/*.test.ts'],
     environment: 'node',
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{ts,vue}'],
+      // Le rendu WebGL, le Worker et la vue carte se vérifient dans Chromium (pnpm e2e).
+      exclude: [
+        'src/main.ts',
+        'src/env.d.ts',
+        'src/host/worker.ts',
+        'src/render/webgl/**',
+        'src/render/overlay.ts',
+        'src/ui/components/MapView.vue',
+        'src/ui/App.vue',
+      ],
+      reporter: ['text-summary', 'json-summary'],
+      reportsDirectory: 'ci-out/coverage',
+      thresholds: { lines: 90, functions: 90, branches: 85, statements: 90 },
+    },
   },
 })

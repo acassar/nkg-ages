@@ -32,6 +32,22 @@ export const useGameStore = defineStore('game', () => {
   const viewListeners = new Set<ViewListener>()
   let client: GameClient | null = null
   let unsubscribe: (() => void) | null = null
+  let errorTimer: ReturnType<typeof setTimeout> | null = null
+
+  /** Affiche un message ; `transient` : il s'efface seul (refus d'une commande en jeu). */
+  function report(message: string | null, transient = false) {
+    if (errorTimer) clearTimeout(errorTimer)
+    errorTimer = null
+    error.value = message
+    if (message && transient) errorTimer = setTimeout(() => (error.value = null), 4000)
+  }
+
+  function disconnect() {
+    unsubscribe?.()
+    unsubscribe = null
+    client?.dispose()
+    client = null
+  }
 
   function receive(next: GameView) {
     view.value = markRaw(next)
@@ -40,18 +56,26 @@ export const useGameStore = defineStore('game', () => {
 
   async function newGame(options: NewGameOptions) {
     loading.value = true
-    error.value = null
+    report(null)
     try {
-      unsubscribe?.()
-      client?.dispose()
-      client = clientFactory()
-      unsubscribe = client.subscribe(receive)
-      const started = await client.newGame(options)
+      disconnect()
+      const current = clientFactory()
+      client = current
+      const stopViews = current.subscribe(receive)
+      const stopFailures = current.onFailure((message) => report(message))
+      unsubscribe = () => {
+        stopViews()
+        stopFailures()
+      }
+      const started = await current.newGame(options)
       world.value = markRaw(started.world)
       selected.value = new Set(started.view.units.map((u) => u.id))
       receive(started.view)
     } catch (e) {
-      error.value = e instanceof Error ? e.message : String(e)
+      disconnect()
+      world.value = null
+      view.value = null
+      report(e instanceof Error ? e.message : String(e))
     } finally {
       loading.value = false
     }
@@ -59,8 +83,12 @@ export const useGameStore = defineStore('game', () => {
 
   async function send(command: Command) {
     if (!client) return
-    const result = await client.send(command)
-    if (!result.ok) error.value = result.reason
+    try {
+      const result = await client.send(command)
+      if (!result.ok) report(result.reason, true)
+    } catch (e) {
+      report(e instanceof Error ? e.message : String(e))
+    }
   }
 
   /** Les composants de rendu s'abonnent ici pour appliquer les zones modifiées. */
@@ -84,12 +112,14 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function quit() {
-    unsubscribe?.()
-    client?.dispose()
-    client = null
+    disconnect()
     world.value = null
     view.value = null
+    selected.value = new Set()
+    report(null)
   }
+
+  const dismissError = () => report(null)
 
   return {
     world,
@@ -106,5 +136,6 @@ export const useGameStore = defineStore('game', () => {
     select,
     moveSelectedTo,
     quit,
+    dismissError,
   }
 })

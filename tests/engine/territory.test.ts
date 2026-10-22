@@ -24,7 +24,7 @@ function grown(seed: string, attempts = 4000) {
 describe('territoire', () => {
   it("s'étend autour du siège", () => {
     const { territory } = grown('croissance')
-    expect(territory.owned.length).toBeGreaterThan(50)
+    expect(territory.ownedCount).toBeGreaterThan(50)
   })
 
   it("ne dépasse jamais la portée du siège et ne prend jamais l'eau", () => {
@@ -40,7 +40,7 @@ describe('territoire', () => {
 
   it("reste d'un seul tenant", () => {
     const { world, territory } = grown('tenant', 6000)
-    const start = territory.owned[0]!
+    const start = territory.owner.findIndex((o) => o === PLAYER)
     const seen = new Set([start])
     const queue = [start]
     while (queue.length) {
@@ -54,7 +54,7 @@ describe('territoire', () => {
         }
       }
     }
-    expect(seen.size).toBe(territory.owned.length)
+    expect(seen.size).toBe(territory.ownedCount)
   })
 
   it('est déterministe', () => {
@@ -65,6 +65,39 @@ describe('territoire', () => {
     const t = createTerritory(4, 4)
     expect(claim(t, 1, 1, PLAYER)).toBe(true)
     expect(claim(t, 1, 1, PLAYER)).toBe(false)
-    expect(t.owned).toEqual([5])
+    expect(t.ownedCount).toBe(1)
+    expect(t.frontier).toEqual([5])
+  })
+
+  it('ne s’essouffle pas : chaque tick gagne autant de cellules tant qu’il reste de la place', () => {
+    const world = generateWorld({ seed: 'souffle', width: 256, height: 128 })
+    const [site] = findStarts(world, createRng('souffle'), 1)
+    const territory = createTerritory(world.width, world.height)
+    claim(territory, site!.x, site!.y, PLAYER)
+    const seat = { owner: PLAYER, x: site!.x + 0.5, y: site!.y + 0.5, reach: 20 }
+    const rng = createRng('souffle')
+    const gains: number[] = []
+    for (let tick = 0; tick < 150; tick++) {
+      const before = territory.ownedCount
+      growTerritory(territory, world, [seat], rng, 2)
+      gains.push(territory.ownedCount - before)
+    }
+    // Au début comme plus tard, la croissance tient son rythme (l'ancien tirage dans tout
+    // le territoire ralentissait à mesure que l'intérieur grossissait).
+    expect(gains.slice(100).every((g) => g === 2)).toBe(true)
+  })
+
+  it('vide sa frontière une fois la portée remplie', () => {
+    const { territory } = grown('rempli', 50000)
+    expect(territory.frontier.length).toBe(0)
+  })
+
+  it('compte une cellule reprise par un autre propriétaire une seule fois', () => {
+    const t = createTerritory(4, 4)
+    claim(t, 1, 1, PLAYER)
+    claim(t, 1, 1, 2)
+    expect(t.ownedCount).toBe(1)
+    claim(t, 1, 1, NO_OWNER)
+    expect(t.ownedCount).toBe(0)
   })
 })

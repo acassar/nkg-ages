@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
-import { describe, expect, it, beforeEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createInMemoryClient } from '@/client/inMemoryClient'
 import { ManualScheduler } from '@/host/scheduler'
 import StartScreen from '@/ui/components/StartScreen.vue'
+import GameScreen from '@/ui/components/GameScreen.vue'
 import TopBar from '@/ui/components/TopBar.vue'
 import { useClientFactory, useGameStore } from '@/ui/stores/game'
 
@@ -55,5 +56,48 @@ describe('barre du haut', () => {
     game.select([999])
     await game.moveSelectedTo(1, 1)
     expect(game.error).not.toBeNull()
+  })
+})
+
+describe('écran de jeu', () => {
+  afterEach(() => vi.useRealTimers())
+
+  it('montre un refus de commande en jeu, puis l’efface seul', async () => {
+    vi.useFakeTimers()
+    const game = useGameStore()
+    await game.newGame({ seed: 'avis', randomStart: false, width: 128, height: 64 })
+    // La carte WebGL n'existe pas sous jsdom : on ne monte que l'avis.
+    const wrapper = mount(GameScreen, { global: { stubs: { MapView: true } } })
+    const camp = game.view!.camps[0]!
+    game.select([999])
+    await game.moveSelectedTo(camp.x, camp.y)
+    await flushPromises()
+    expect(wrapper.find('[data-testid=notice]').text()).toContain('Aucune unité')
+    vi.advanceTimersByTime(4100)
+    await flushPromises()
+    expect(wrapper.find('[data-testid=notice]').exists()).toBe(false)
+  })
+
+  it('retour au menu : plus d’erreur ni de sélection', async () => {
+    const game = useGameStore()
+    await game.newGame({ seed: 'menu', randomStart: false, width: 128, height: 64 })
+    game.select([999])
+    await game.moveSelectedTo(1, 1)
+    expect(game.error).not.toBeNull()
+    game.quit()
+    expect(game.error).toBeNull()
+    expect(game.selected.size).toBe(0)
+    expect(game.world).toBeNull()
+  })
+
+  it('un refus se ferme avec le bouton', async () => {
+    const game = useGameStore()
+    await game.newGame({ seed: 'fermer', randomStart: false, width: 128, height: 64 })
+    const wrapper = mount(GameScreen, { global: { stubs: { MapView: true } } })
+    game.select([999])
+    await game.moveSelectedTo(1, 1)
+    await flushPromises()
+    await wrapper.find('[data-testid=notice] button').trigger('click')
+    expect(game.error).toBeNull()
   })
 })

@@ -39,6 +39,11 @@ describe('vues de partie', () => {
     g.fog.dirty = null
     g.territory.dirty = null
     expect(buildGameView(g).fog).toBeNull()
+    // Rien ne bouge : rien à renvoyer.
+    step(g)
+    expect(buildGameView(g).fog).toBeNull()
+    const u = g.units[0]!
+    u.target = { x: u.x + 3, y: u.y }
     step(g)
     const view = buildGameView(g)
     expect(view.fog).not.toBeNull()

@@ -33,7 +33,3 @@ export function discRect(
   if (x1 <= x0 || y1 <= y0) return null
   return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }
 }
-
-export function distance(ax: number, ay: number, bx: number, by: number): number {
-  return Math.hypot(ax - bx, ay - by)
-}
