@@ -30,6 +30,8 @@ export interface UnitView {
   x: number
   y: number
   target: { x: number; y: number } | null
+  /** Points de passage restants, le dernier étant la cible. */
+  path: { x: number; y: number }[]
 }
 
 export interface CampView {

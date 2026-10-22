@@ -74,6 +74,7 @@ export function buildGameView(state: GameState, full = false): GameView {
       x: u.x,
       y: u.y,
       target: u.target ? { ...u.target } : null,
+      path: u.path.map((p) => ({ x: p.x, y: p.y })),
     })),
     camps: state.camps.map((c) => ({ id: c.id, x: c.x, y: c.y, mine: c.owner === PLAYER })),
     fog: patchOf(state.fog.cells, state.world.width, full ? whole : state.fog.dirty),

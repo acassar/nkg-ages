@@ -11,7 +11,8 @@ import {
   type Seat,
   type TerritoryState,
 } from './territory/territory'
-import { isPassable, moveUnit, UNIT_RULES, type Unit } from './units/units'
+import { findPath, knownPassable, pathBlocked } from './units/path'
+import { moveUnit, stopUnit, UNIT_RULES, type Unit } from './units/units'
 import { generateWorld } from './world/generate'
 import { findStarts, type StartSite } from './world/starts'
 import { inBounds, type World } from './world/world'
@@ -76,7 +77,16 @@ export function createGame(options: NewGameOptions): GameState {
   const cy = site.y + 0.5
   state.camps.push({ id: state.nextId++, owner: PLAYER, x: cx, y: cy })
   claim(state.territory, site.x, site.y, PLAYER)
-  state.units.push({ id: state.nextId++, kind: 'eclaireur', x: cx, y: cy, target: null })
+  state.units.push({
+    id: state.nextId++,
+    kind: 'eclaireur',
+    x: cx,
+    y: cy,
+    target: null,
+    path: [],
+    plannedFog: 0,
+    patience: 0,
+  })
   updateFog(state.fog, viewersOf(state))
   return state
 }
@@ -119,11 +129,23 @@ export function applyCommand(state: GameState, command: Command): CommandResult 
       if (!Number.isFinite(x) || !Number.isFinite(y) || !inBounds(state.world, x, y)) {
         return { ok: false, reason: 'Destination hors du monde' }
       }
-      if (!isPassable(state.world, x, y))
+      // Seule l'eau déjà découverte est refusée : un clic dans le brouillard ne révèle rien.
+      if (!knownPassable(state.world, state.fog, x, y))
         return { ok: false, reason: 'Destination infranchissable' }
       const units = state.units.filter((u) => command.unitIds.includes(u.id))
       if (units.length === 0) return { ok: false, reason: 'Aucune unité choisie' }
-      for (const u of units) u.target = { x, y }
+      let routed = 0
+      for (const u of units) {
+        const route = findPath(state.world, state.fog, u, { x, y })
+        if (!route) continue
+        const rules = UNIT_RULES[u.kind]
+        u.target = { x, y }
+        u.path = route.points
+        u.plannedFog = state.fog.version
+        u.patience = route.cost * rules.detour + rules.detourSlack
+        routed++
+      }
+      if (routed === 0) return { ok: false, reason: 'Aucun chemin connu vers cette destination' }
       return { ok: true }
     }
     default: {
@@ -136,9 +158,27 @@ export function applyCommand(state: GameState, command: Command): CommandResult 
 /** Joue un tick (un mois de jeu). */
 export function step(state: GameState): void {
   state.clock.tick++
-  for (const unit of state.units) moveUnit(unit, state.world)
+  for (const unit of state.units) if (!moveUnit(unit, state.world)) replan(state, unit)
   growTerritory(state.territory, state.world, seatsOf(state), state.rng, GROWTH_PER_TICK)
   updateFog(state.fog, viewersOf(state))
+  // Le terrain découvert peut couper le chemin prévu : on le recalcule.
+  for (const unit of state.units) {
+    if (!unit.target || unit.plannedFog === state.fog.version) continue
+    unit.plannedFog = state.fog.version
+    if (pathBlocked(state.world, state.fog, unit, unit.path)) replan(state, unit)
+  }
+}
+
+/**
+ * Recalcule le chemin d'une unité sur la carte connue. Elle s'arrête si plus aucun chemin
+ * connu n'y mène, ou si le détour dépasse sa patience (elle n'erre pas tout un continent).
+ */
+function replan(state: GameState, unit: Unit): void {
+  const route =
+    unit.target && findPath(state.world, state.fog, unit, unit.target, Math.max(0, unit.patience))
+  if (!route) return stopUnit(unit)
+  unit.path = route.points
+  unit.plannedFog = state.fog.version
 }
 
 /** L'hôte appelle ceci après avoir transmis les zones modifiées. */

@@ -52,6 +52,10 @@ export class OverlayPainter {
         ctx.lineWidth = 1.2
         ctx.beginPath()
         ctx.moveTo(p.x, p.y)
+        for (const point of unit.path) {
+          const q = worldToScreen(camera, point.x, point.y)
+          ctx.lineTo(q.x, q.y)
+        }
         ctx.lineTo(t.x, t.y)
         ctx.stroke()
         ctx.setLineDash([])

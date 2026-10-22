@@ -183,6 +183,10 @@
   "log": [
     {
       "date": "2026-10-22",
+      "text": "J1 : l'éclaireur trouve son chemin sur la carte connue, un clic dans le brouillard ne trahit plus l'eau"
+    },
+    {
+      "date": "2026-10-22",
       "text": "J0 : corrections de la revue (brouillard, territoire, arrêt du Worker, réponses tardives, avis en jeu, couverture)"
     },
     {
