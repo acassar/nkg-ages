@@ -1,0 +1,25 @@
+import { describe, expect, it } from 'vitest'
+import { fogToTexels, ownerMask } from '@/render/grids'
+import { paletteArray } from '@/render/palette'
+
+const patch = (data: number[]) => ({
+  x: 0,
+  y: 0,
+  w: data.length,
+  h: 1,
+  data: Uint8Array.from(data),
+})
+
+describe('textures de la carte', () => {
+  it('code le brouillard en trois niveaux', () => {
+    expect([...fogToTexels(patch([0, 1, 2]))]).toEqual([0, 128, 255])
+  })
+  it('isole le territoire d’un propriétaire', () => {
+    expect([...ownerMask(patch([0, 1, 2, 1]), 1)]).toEqual([0, 255, 0, 255])
+  })
+  it('a une couleur pour chaque biome', () => {
+    const p = paletteArray()
+    expect(p).toHaveLength(30)
+    expect([...p].every((c) => c >= 0 && c <= 1)).toBe(true)
+  })
+})

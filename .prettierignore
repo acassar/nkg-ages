@@ -1,0 +1,5 @@
+pnpm-lock.yaml
+dist
+ci-out
+docs/roadmap.svg
+public/roadmap.svg
