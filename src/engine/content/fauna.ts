@@ -71,4 +71,10 @@ export const HUNT_RULES = {
   chaseRange: 8,
   /** Ticks entre deux recalculs de poursuite (le troupeau bouge). */
   chaseEvery: 6,
+  /** En poursuite automatique, on laisse les troupeaux plus dangereux que ceci (les mammouths). */
+  autoMaxDanger: 0.02,
+  /** Un chasseur au plus pour tant d'habitants. */
+  peoplePerHunter: 5,
+  /** Rations dépensées pour former un chasseur. */
+  recruitFood: 15,
 } as const

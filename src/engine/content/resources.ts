@@ -17,6 +17,8 @@ export interface ResourceRules {
   density: number
   /** Production par mois d'un gisement de rang E tenu par la tribu. */
   yield: number
+  /** Si présent : un gisement est garanti sur une terre à cette distance du départ, au plus. */
+  nearStart?: number
 }
 
 export const RESOURCE_RULES: Readonly<Record<ResourceKind, ResourceRules>> = {
@@ -41,6 +43,8 @@ export const RESOURCE_RULES: Readonly<Record<ResourceKind, ResourceRules>> = {
     biomes: [Biome.Hills, Biome.Mountain, Biome.Desert],
     density: 1 / 150,
     yield: 0.5,
+    // Sans silex à portée, la lance resterait hors d'atteinte sur la plupart des cartes.
+    nearStart: 4,
   },
 }
 

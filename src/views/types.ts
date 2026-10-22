@@ -117,6 +117,12 @@ export interface TribeView {
   starving: boolean
   /** Matériaux en réserve, arrondis. */
   materials: { kind: string; name: string; amount: number }[]
+  /** Chasseurs en vie et nombre que la tribu peut entretenir. */
+  hunters: number
+  maxHunters: number
+  /** Coût en rations d'un nouveau chasseur, et ce qui empêche d'en former un (ou null). */
+  recruitCost: number
+  recruitBlocked: string | null
 }
 
 /** Biomes, dans l'ordre de leurs identifiants (même table que le moteur). */

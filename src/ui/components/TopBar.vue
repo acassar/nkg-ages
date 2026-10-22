@@ -29,6 +29,23 @@ const signed = new Intl.NumberFormat('fr-FR', {
           >{{ signed.format(game.view.tribe.foodBalance) }}/mois</span
         >
       </span>
+      <span title="Chasseurs en vie / que la tribu peut entretenir">
+        <span class="label">Chasseurs</span>
+        <b data-testid="hunters">{{ game.view.tribe.hunters }}</b>
+        <span class="soft">/ {{ game.view.tribe.maxHunters }}</span>
+        <button
+          class="ink-button recruit"
+          data-testid="recruit"
+          :disabled="game.view.tribe.recruitBlocked !== null"
+          :title="
+            game.view.tribe.recruitBlocked ??
+            `Former un chasseur (${game.view.tribe.recruitCost} rations)`
+          "
+          @click="game.recruitHunter()"
+        >
+          +
+        </button>
+      </span>
       <span v-for="m in game.view.tribe.materials" :key="m.kind" :title="`${m.name} en réserve`">
         <span class="label">{{ m.name }}</span>
         <b :data-testid="`material-${m.kind}`">{{ m.amount }}</b>
@@ -120,6 +137,15 @@ const signed = new Intl.NumberFormat('fr-FR', {
 .tribe.starving b,
 .tribe.starving .balance {
   color: var(--ink-red);
+}
+.recruit {
+  margin-left: 5px;
+  padding: 0 6px;
+  line-height: 1.2;
+}
+.recruit:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 .speeds {
   display: flex;

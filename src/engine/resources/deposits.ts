@@ -35,6 +35,46 @@ export function placeDeposits(world: World, rng: Rng, firstId = 1): Deposit[] {
   return deposits
 }
 
+/**
+ * Garantit près du départ les gisements que les règles promettent (`nearStart`) :
+ * s'il n'y en a aucun à portée, on en pose un sur une terre libre, hors du camp.
+ */
+export function ensureNearStart(
+  deposits: Deposit[],
+  world: World,
+  start: { x: number; y: number },
+  rng: Rng,
+): void {
+  const taken = new Set(deposits.map((d) => d.y * world.width + d.x))
+  let id = deposits.reduce((m, d) => Math.max(m, d.id), 0) + 1
+  for (const kind of RESOURCE_KINDS) {
+    const radius = RESOURCE_RULES[kind].nearStart
+    if (radius === undefined) continue
+    const near = (x: number, y: number) => Math.hypot(x - start.x, y - start.y) <= radius
+    if (deposits.some((d) => d.kind === kind && near(d.x, d.y))) continue
+    const spots: { x: number; y: number }[] = []
+    for (
+      let y = Math.max(0, start.y - radius);
+      y <= Math.min(world.height - 1, start.y + radius);
+      y++
+    ) {
+      for (
+        let x = Math.max(0, start.x - radius);
+        x <= Math.min(world.width - 1, start.x + radius);
+        x++
+      ) {
+        const i = y * world.width + x
+        if ((x === start.x && y === start.y) || taken.has(i) || !near(x, y)) continue
+        if (!isWater(world.biome[i] as BiomeId)) spots.push({ x, y })
+      }
+    }
+    if (spots.length === 0) continue
+    const spot = rng.pick(spots)
+    taken.add(spot.y * world.width + spot.x)
+    deposits.push({ id: id++, kind, ...spot, rank: rollRank(rng) })
+  }
+}
+
 function touchesLand(world: World, x: number, y: number): boolean {
   for (const [dx, dy] of [
     [1, 0],

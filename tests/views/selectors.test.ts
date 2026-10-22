@@ -97,6 +97,20 @@ describe('vues de partie', () => {
     expect(view.notices).toEqual(['Chasse : un chasseur est mort face aux mammouths.'])
   })
 
+  it('montre les chasseurs et ce qui empêche d’en former, et prévient de la viande perdue', () => {
+    const g = game()
+    g.events.push({ type: 'meatLost', amount: 7 })
+    let view = buildGameView(g)
+    expect(view.tribe).toMatchObject({ hunters: 2, maxHunters: 2, recruitCost: 15 })
+    expect(view.tribe.recruitBlocked).toMatch(/habitants/)
+    expect(view.notices).toEqual([
+      'Chasse : la réserve est pleine, 7 rations de viande sont perdues.',
+    ])
+    g.units = g.units.filter((u) => u.kind !== 'chasseur')
+    view = buildGameView(g)
+    expect(view.tribe).toMatchObject({ hunters: 0, recruitBlocked: null })
+  })
+
   it('montre les inventions : coût, blocage, avancement et statistique au rang', () => {
     const g = game()
     let view = buildGameView(g)

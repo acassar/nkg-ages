@@ -3,7 +3,7 @@ import { isWater } from '@/engine/content/biomes'
 import { RANK_RULES, RANKS } from '@/engine/content/rarity'
 import { RESOURCE_RULES } from '@/engine/content/resources'
 import { createRng } from '@/engine/core/random'
-import { depositYield, heldBy, placeDeposits } from '@/engine/resources/deposits'
+import { depositYield, ensureNearStart, heldBy, placeDeposits } from '@/engine/resources/deposits'
 import { rollRank } from '@/engine/rarity/rarity'
 import { generateWorld } from '@/engine/world/generate'
 
@@ -74,5 +74,21 @@ describe('gisements', () => {
     owner.fill(0)
     owner[4] = 2
     expect(heldBy(owner, 3, 3, d, 2)).toBe(true)
+  })
+
+  it('garantissent un silex près du départ, sans en ajouter s’il y en a déjà un', () => {
+    const land = world.biome.findIndex((b) => !isWater(b))
+    const start = { x: land % world.width, y: Math.floor(land / world.width) }
+    const radius = RESOURCE_RULES.silex.nearStart!
+    const deposits: ReturnType<typeof placeDeposits> = []
+    ensureNearStart(deposits, world, start, createRng('départ'))
+    const silex = deposits.filter((d) => d.kind === 'silex')
+    expect(silex).toHaveLength(1)
+    const d = silex[0]!
+    expect(Math.hypot(d.x - start.x, d.y - start.y)).toBeLessThanOrEqual(radius)
+    expect(isWater(world.biome[d.y * world.width + d.x]!)).toBe(false)
+    expect(d.x === start.x && d.y === start.y).toBe(false)
+    ensureNearStart(deposits, world, start, createRng('départ'))
+    expect(deposits).toHaveLength(1)
   })
 })

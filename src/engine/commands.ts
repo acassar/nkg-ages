@@ -12,5 +12,7 @@ export type Command =
   | { type: 'moveUnits'; unitIds: number[]; x: number; y: number }
   /** Lance une invention (ou la réinvente pour tenter un meilleur rang). */
   | { type: 'invent'; invention: InventionKind }
+  /** Forme un chasseur parmi la tribu ; il paraît au camp. */
+  | { type: 'recruitHunter' }
 
 export type CommandResult = { ok: true } | { ok: false; reason: string }

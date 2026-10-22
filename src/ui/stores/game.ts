@@ -109,6 +109,7 @@ export const useGameStore = defineStore('game', () => {
   const setPaused = (paused: boolean) => send({ type: 'setPaused', paused })
   const invent = (invention: string) =>
     send({ type: 'invent', invention: invention as InventionKind })
+  const recruitHunter = () => send({ type: 'recruitHunter' })
 
   function select(ids: number[]) {
     selected.value = new Set(ids)
@@ -151,6 +152,7 @@ export const useGameStore = defineStore('game', () => {
     select,
     toggleSelected,
     invent,
+    recruitHunter,
     moveSelectedTo,
     quit,
     dismissError,
