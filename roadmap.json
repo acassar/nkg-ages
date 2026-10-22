@@ -61,7 +61,7 @@
         },
         {
           "title": "Campements à fonder",
-          "status": "todo"
+          "status": "done"
         },
         {
           "title": "Fleuves",
@@ -181,6 +181,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-22",
+      "text": "J1 : l'éclaireur fonde des campements (un de plus pour 20 habitants), qui étendent le territoire et la vue"
+    },
     {
       "date": "2026-10-22",
       "text": "J1 : on forme des chasseurs, la poursuite seule évite les mammouths, la viande perdue est signalée, un silex est garanti près du départ"

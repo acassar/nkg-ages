@@ -32,6 +32,11 @@ export interface UnitView {
   target: { x: number; y: number } | null
   /** Points de passage restants, le dernier étant la cible. */
   path: { x: number; y: number }[]
+  /**
+   * Fondation d'un campement là où se tient l'unité : null si elle n'en fonde jamais
+   * (seul l'éclaireur le peut), sinon ce qui l'en empêche maintenant (ou null).
+   */
+  foundCamp: { blocked: string | null } | null
 }
 
 export interface CampView {
@@ -123,6 +128,9 @@ export interface TribeView {
   /** Coût en rations d'un nouveau chasseur, et ce qui empêche d'en former un (ou null). */
   recruitCost: number
   recruitBlocked: string | null
+  /** Campements tenus, et combien la population permet d'en tenir. */
+  camps: number
+  maxCamps: number
 }
 
 /** Biomes, dans l'ordre de leurs identifiants (même table que le moteur). */

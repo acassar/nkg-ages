@@ -6,6 +6,8 @@ import {
   ANIMAL_RULES,
   cannotStart,
   cannotRecruit,
+  cannotFoundCamp,
+  maxCamps,
   maxHunters,
   HUNT_RULES,
   depositHeld,
@@ -103,6 +105,7 @@ export function buildGameView(state: GameState, full = false): GameView {
       y: u.y,
       target: u.target ? { ...u.target } : null,
       path: u.path.map((p) => ({ x: p.x, y: p.y })),
+      foundCamp: u.kind === 'eclaireur' ? { blocked: cannotFoundCamp(state, u) } : null,
     })),
     camps: state.camps.map((c) => ({ id: c.id, x: c.x, y: c.y, mine: c.owner === PLAYER })),
     fog: patchOf(state.fog.cells, state.world.width, full ? whole : state.fog.dirty),
@@ -170,6 +173,8 @@ function tribeView(state: GameState): TribeView {
     maxHunters: maxHunters(state),
     recruitCost: HUNT_RULES.recruitFood,
     recruitBlocked: cannotRecruit(state),
+    camps: state.camps.filter((c) => c.owner === PLAYER).length,
+    maxCamps: maxCamps(state),
   }
 }
 

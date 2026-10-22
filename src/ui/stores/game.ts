@@ -111,6 +111,13 @@ export const useGameStore = defineStore('game', () => {
     send({ type: 'invent', invention: invention as InventionKind })
   const recruitHunter = () => send({ type: 'recruitHunter' })
 
+  /** Le premier éclaireur choisi fonde un campement là où il se tient. */
+  function foundCamp() {
+    const scout = view.value?.units.find((u) => selected.value.has(u.id) && u.foundCamp)
+    if (!scout) return report('Choisissez un éclaireur pour fonder un campement', true)
+    return send({ type: 'foundCamp', unitId: scout.id })
+  }
+
   function select(ids: number[]) {
     selected.value = new Set(ids)
   }
@@ -153,6 +160,7 @@ export const useGameStore = defineStore('game', () => {
     toggleSelected,
     invent,
     recruitHunter,
+    foundCamp,
     moveSelectedTo,
     quit,
     dismissError,
