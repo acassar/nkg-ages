@@ -183,6 +183,10 @@
   "log": [
     {
       "date": "2026-10-22",
+      "text": "CI : navigateurs Playwright en cache, plus d'installation apt de 15 min, délai maximal de 20 min, test de vitesse moins sensible à la machine"
+    },
+    {
+      "date": "2026-10-22",
       "text": "J1 : l'éclaireur prévient quand il renonce ; une unité sans chemin dans un ordre de groupe s'arrête"
     },
     {
