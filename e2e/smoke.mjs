@@ -43,6 +43,7 @@ async function startGame(page) {
 await scenario('partie', { width: 1280, height: 720 }, async (page) => {
   await startGame(page)
   assert.match(await date(page), /janvier 12 000 av\. J\.-C\./)
+  assert.equal(await page.locator('[data-testid=population]').textContent(), '12')
   assert.equal(await page.locator('.failure').count(), 0, 'la carte WebGL doit s’afficher')
 
   // Le temps est en pause au départ.
@@ -87,6 +88,7 @@ await scenario('telephone', { width: 390, height: 844 }, async (page) => {
   assert.ok(bar.x >= 0 && bar.x + bar.width <= 390, 'la barre du haut tient dans l’écran')
   const scroll = await page.evaluate(() => document.documentElement.scrollWidth)
   assert.ok(scroll <= 390, 'pas de défilement horizontal')
+  await page.screenshot({ path: 'ci-out/e2e-telephone.png' })
 })
 
 await browser.close()

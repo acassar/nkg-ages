@@ -4,12 +4,19 @@ import {
   FIRST_ERA,
   PLAYER,
   startYear,
+  storageCapacity,
   UNIT_RULES,
   type GameEvent,
   type GameState,
   type Rect,
 } from '@/engine'
-import { BIOME_IDS, type GameView, type GridPatch, type WorldSnapshot } from './types'
+import {
+  BIOME_IDS,
+  type GameView,
+  type GridPatch,
+  type TribeView,
+  type WorldSnapshot,
+} from './types'
 
 // Les identifiants exposés aux vues doivent rester ceux du moteur.
 for (const [name, id] of Object.entries(BIOME_IDS)) {
@@ -85,14 +92,33 @@ export function buildGameView(state: GameState, full = false): GameView {
       full ? whole : state.territory.dirty,
     ),
     notices: state.events.map((e) => noticeOf(state, e)),
+    tribe: tribeView(state),
   }
 }
 
 /** Rédige un événement du moteur pour le joueur. */
 function noticeOf(state: GameState, event: GameEvent): string {
-  const unit = state.units.find((u) => u.id === event.unitId)
-  const name = unit ? UNIT_RULES[unit.kind].name : 'Une unité'
-  return `${name} renonce : aucun chemin connu assez court ne mène à sa destination.`
+  switch (event.type) {
+    case 'unitGaveUp': {
+      const unit = state.units.find((u) => u.id === event.unitId)
+      const name = unit ? UNIT_RULES[unit.kind].name : 'Une unité'
+      return `${name} renonce : aucun chemin connu assez court ne mène à sa destination.`
+    }
+    case 'famine':
+      return 'Famine : les réserves sont vides, la tribu perd des siens chaque mois.'
+  }
+}
+
+/** La tribu, arrondie pour l'affichage. */
+function tribeView(state: GameState): TribeView {
+  const { tribe } = state
+  return {
+    population: tribe.population,
+    food: Math.floor(tribe.food),
+    foodCapacity: Math.floor(storageCapacity(tribe.population)),
+    foodBalance: Math.round((tribe.lastProduction - tribe.lastConsumption) * 10) / 10,
+    starving: tribe.starvingMonths > 0,
+  }
 }
 
 export function patchOf(cells: Uint8Array, width: number, rect: Rect | null): GridPatch | null {

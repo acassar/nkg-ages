@@ -20,6 +20,9 @@ export interface TerritoryState {
    * Purgée au fil des tirages : l'intérieur du territoire n'y reste pas.
    */
   frontier: number[]
+  /** Poids de chaque cellule (ex. nourriture) et somme sur les cellules du joueur. */
+  weights: Float32Array | null
+  playerWeight: number
 }
 
 export interface Seat {
@@ -30,7 +33,11 @@ export interface Seat {
   reach: number
 }
 
-export function createTerritory(width: number, height: number): TerritoryState {
+export function createTerritory(
+  width: number,
+  height: number,
+  weights: Float32Array | null = null,
+): TerritoryState {
   return {
     width,
     height,
@@ -39,6 +46,8 @@ export function createTerritory(width: number, height: number): TerritoryState {
     dirty: null,
     ownedCount: 0,
     frontier: [],
+    weights,
+    playerWeight: 0,
   }
 }
 
@@ -55,6 +64,9 @@ export function claim(territory: TerritoryState, x: number, y: number, owner: nu
   if (previous === owner) return false
   territory.owner[i] = owner
   if (previous === NO_OWNER) territory.ownedCount++
+  const weight = territory.weights?.[i] ?? 0
+  if (previous === PLAYER) territory.playerWeight -= weight
+  if (owner === PLAYER) territory.playerWeight += weight
   if (owner === NO_OWNER) {
     territory.ownedCount--
     // Les voisines possédées d'une cellule libérée redeviennent des bords d'expansion.
@@ -123,4 +135,31 @@ export function growTerritory(
     claim(territory, x, y, owner)
     taken++
   }
+}
+
+/**
+ * Prend d'un coup les terres libres reliées au siège dans un rayon donné (fondation d'un
+ * camp). Parcours depuis le siège : le territoire reste d'un seul tenant.
+ */
+export function claimAround(
+  territory: TerritoryState,
+  world: World,
+  seat: Seat,
+  radius: number,
+): number {
+  const seatSmall = { ...seat, reach: Math.min(seat.reach, radius) }
+  const sx = Math.floor(seat.x)
+  const sy = Math.floor(seat.y)
+  if (isWater(world.biome[sy * territory.width + sx]!)) return 0
+  let taken = claim(territory, sx, sy, seat.owner) ? 1 : 0
+  const queue = [sy * territory.width + sx]
+  while (queue.length > 0) {
+    const from = queue.pop()!
+    for (const [x, y] of freeNeighbors(territory, world, seatSmall, from)) {
+      claim(territory, x, y, seat.owner)
+      taken++
+      queue.push(y * territory.width + x)
+    }
+  }
+  return taken
 }

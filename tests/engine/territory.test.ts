@@ -3,6 +3,7 @@ import { isWater } from '@/engine/content/biomes'
 import { createRng } from '@/engine/core/random'
 import {
   claim,
+  claimAround,
   createTerritory,
   growTerritory,
   NO_OWNER,
@@ -108,5 +109,37 @@ describe('territoire', () => {
     t.frontier.length = 0
     claim(t, 2, 1, NO_OWNER)
     expect(t.frontier).toEqual([5])
+  })
+
+  it('prend d’un coup les terres reliées au siège, sans eau ni île voisine', () => {
+    const world = generateWorld({ seed: 'fondation', width: 256, height: 128 })
+    const [site] = findStarts(world, createRng('fondation'), 1)
+    const territory = createTerritory(world.width, world.height)
+    const seat = { owner: PLAYER, x: site!.x + 0.5, y: site!.y + 0.5, reach: 26 }
+    const taken = claimAround(territory, world, seat, 5)
+    expect(taken).toBe(territory.ownedCount)
+    expect(taken).toBeGreaterThan(20)
+    for (let i = 0; i < territory.owner.length; i++) {
+      if (territory.owner[i] !== PLAYER) continue
+      const x = (i % world.width) + 0.5
+      const y = Math.floor(i / world.width) + 0.5
+      expect(isWater(world.biome[i]!)).toBe(false)
+      expect(Math.hypot(x - seat.x, y - seat.y)).toBeLessThanOrEqual(5)
+    }
+    // Siège sur l'eau : rien à prendre.
+    const sea = { ...seat, x: 0.5, y: 0.5 }
+    expect(claimAround(createTerritory(world.width, world.height), world, sea, 5)).toBe(0)
+  })
+
+  it('tient le compte de la richesse des cellules du joueur', () => {
+    const weights = Float32Array.from({ length: 16 }, (_, i) => i / 10)
+    const t = createTerritory(4, 4, weights)
+    claim(t, 1, 1, PLAYER)
+    claim(t, 2, 1, PLAYER)
+    expect(t.playerWeight).toBeCloseTo(0.5 + 0.6)
+    claim(t, 2, 1, 2)
+    expect(t.playerWeight).toBeCloseTo(0.5)
+    claim(t, 1, 1, NO_OWNER)
+    expect(t.playerWeight).toBeCloseTo(0)
   })
 })
