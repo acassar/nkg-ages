@@ -33,6 +33,9 @@ export interface Camp {
   y: number
 }
 
+/** Ce qui est arrivé pendant les ticks, pour prévenir le joueur ; vidé à chaque envoi. */
+export type GameEvent = { type: 'unitGaveUp'; unitId: number }
+
 export interface GameState {
   options: NewGameOptions
   world: World
@@ -44,6 +47,7 @@ export interface GameState {
   fog: FogState
   territory: TerritoryState
   nextId: number
+  events: GameEvent[]
 }
 
 /** Nombre de départs proposés quand le placement n'est pas aléatoire. */
@@ -72,6 +76,7 @@ export function createGame(options: NewGameOptions): GameState {
     fog: createFog(world.width, world.height),
     territory: createTerritory(world.width, world.height),
     nextId: 1,
+    events: [],
   }
   const cx = site.x + 0.5
   const cy = site.y + 0.5
@@ -137,7 +142,12 @@ export function applyCommand(state: GameState, command: Command): CommandResult 
       let routed = 0
       for (const u of units) {
         const route = findPath(state.world, state.fog, u, { x, y })
-        if (!route) continue
+        // Dans un ordre de groupe, celle qui ne peut pas y aller s'arrête plutôt que de
+        // poursuivre son ancien ordre.
+        if (!route) {
+          stopUnit(u)
+          continue
+        }
         const rules = UNIT_RULES[u.kind]
         u.target = { x, y }
         u.path = route.points
@@ -176,7 +186,11 @@ export function step(state: GameState): void {
 function replan(state: GameState, unit: Unit): void {
   const route =
     unit.target && findPath(state.world, state.fog, unit, unit.target, Math.max(0, unit.patience))
-  if (!route) return stopUnit(unit)
+  if (!route) {
+    stopUnit(unit)
+    state.events.push({ type: 'unitGaveUp', unitId: unit.id })
+    return
+  }
   unit.path = route.points
   unit.plannedFog = state.fog.version
 }
@@ -185,6 +199,7 @@ function replan(state: GameState, unit: Unit): void {
 export function clearDirty(state: GameState): void {
   state.fog.dirty = null
   state.territory.dirty = null
+  state.events = []
 }
 
 export function startYear(): number {

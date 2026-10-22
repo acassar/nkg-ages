@@ -50,6 +50,17 @@ describe('vues de partie', () => {
     expect(view.fog!.w * view.fog!.h).toBeLessThan(128 * 64)
   })
 
+  it('rédige les événements du moteur pour le joueur', () => {
+    const g = game()
+    expect(buildGameView(g).notices).toEqual([])
+    g.events.push({ type: 'unitGaveUp', unitId: g.units[0]!.id })
+    g.events.push({ type: 'unitGaveUp', unitId: 999 })
+    expect(buildGameView(g).notices).toEqual([
+      'Éclaireur renonce : aucun chemin connu assez court ne mène à sa destination.',
+      'Une unité renonce : aucun chemin connu assez court ne mène à sa destination.',
+    ])
+  })
+
   it("ne partage pas d'objets mutables avec le moteur", () => {
     const g = game()
     g.units[0]!.target = { x: 3, y: 3 }

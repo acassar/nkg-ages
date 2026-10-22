@@ -8,6 +8,7 @@ import StartScreen from '@/ui/components/StartScreen.vue'
 import GameScreen from '@/ui/components/GameScreen.vue'
 import TopBar from '@/ui/components/TopBar.vue'
 import { useClientFactory, useGameStore } from '@/ui/stores/game'
+import type { GameView } from '@/views/types'
 
 let scheduler: ManualScheduler
 
@@ -109,5 +110,30 @@ describe('écran de jeu', () => {
     game.quit()
     await pending
     expect(game.error).toBeNull()
+  })
+
+  it('montre un message du jeu (éclaireur qui renonce), puis l’efface seul', async () => {
+    vi.useFakeTimers()
+    // Client en mémoire dont on peut pousser une vue à la main.
+    let push: ((view: GameView) => void) | null = null
+    useClientFactory(() => {
+      const inner = createInMemoryClient(scheduler)
+      return {
+        ...inner,
+        subscribe(listener) {
+          push = listener
+          return inner.subscribe(listener)
+        },
+      }
+    })
+    const game = useGameStore()
+    await game.newGame({ seed: 'avis-jeu', randomStart: false, width: 128, height: 64 })
+    const wrapper = mount(GameScreen, { global: { stubs: { MapView: true } } })
+    push!({ ...game.view!, notices: ['Éclaireur renonce : aucun chemin connu.'] })
+    await flushPromises()
+    expect(wrapper.find('[data-testid=notice]').text()).toContain('Éclaireur renonce')
+    vi.advanceTimersByTime(4100)
+    await flushPromises()
+    expect(wrapper.find('[data-testid=notice]').exists()).toBe(false)
   })
 })

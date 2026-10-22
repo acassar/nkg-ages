@@ -5,6 +5,7 @@ import {
   PLAYER,
   startYear,
   UNIT_RULES,
+  type GameEvent,
   type GameState,
   type Rect,
 } from '@/engine'
@@ -83,7 +84,15 @@ export function buildGameView(state: GameState, full = false): GameView {
       state.world.width,
       full ? whole : state.territory.dirty,
     ),
+    notices: state.events.map((e) => noticeOf(state, e)),
   }
+}
+
+/** Rédige un événement du moteur pour le joueur. */
+function noticeOf(state: GameState, event: GameEvent): string {
+  const unit = state.units.find((u) => u.id === event.unitId)
+  const name = unit ? UNIT_RULES[unit.kind].name : 'Une unité'
+  return `${name} renonce : aucun chemin connu assez court ne mène à sa destination.`
 }
 
 export function patchOf(cells: Uint8Array, width: number, rect: Rect | null): GridPatch | null {

@@ -51,6 +51,8 @@ export const useGameStore = defineStore('game', () => {
 
   function receive(next: GameView) {
     view.value = markRaw(next)
+    const notice = next.notices.at(-1)
+    if (notice) report(notice, true)
     for (const listener of viewListeners) listener(next)
   }
 
