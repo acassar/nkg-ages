@@ -93,10 +93,10 @@
 </g>
 <text x="24" y="692" font-size="13" letter-spacing="1.5" fill="#6b5843">JOURNAL</text>
 <text x="24" y="716" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : la tribu vit de son territoire (population, vivres, naissances, famine)</text>
-<text x="24" y="737" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : l'éclaireur prévient quand il renonce ; une unité sans chemin dans un ordre de groupe s'arrête</text>
-<text x="24" y="758" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : l'éclaireur trouve son chemin sur la carte connue, un clic dans le brouillard ne trahit plus l'eau</text>
-<text x="24" y="779" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J0 : corrections de la revue (brouillard, territoire, arrêt du Worker, réponses tardives, avis en jeu, couverture)</text>
-<text x="24" y="800" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J0 : fondations, monde organique et carte d'explorateur</text>
+<text x="24" y="737" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  CI : navigateurs Playwright en cache, plus d'installation apt de 15 min, délai maximal de 20 min, test de vitesse moins sensible à la machine</text>
+<text x="24" y="758" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : l'éclaireur prévient quand il renonce ; une unité sans chemin dans un ordre de groupe s'arrête</text>
+<text x="24" y="779" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : l'éclaireur trouve son chemin sur la carte connue, un clic dans le brouillard ne trahit plus l'eau</text>
+<text x="24" y="800" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J0 : corrections de la revue (brouillard, territoire, arrêt du Worker, réponses tardives, avis en jeu, couverture)</text>
 <circle cx="700" cy="809" r="5" fill="#3a2c1e"/>
 <text x="710" y="813" font-size="12" fill="#6b5843">fait</text>
 <circle cx="760" cy="809" r="5" fill="none" stroke="#8c2f1c" stroke-width="1.5"/><path d="M760 804a5 5 0 0 1 0 10z" fill="#8c2f1c"/>
