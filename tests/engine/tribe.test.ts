@@ -5,6 +5,7 @@ import {
   createTribe,
   production,
   storageCapacity,
+  territoryFood,
   tickTribe,
   type TribeState,
 } from '@/engine/tribe/tribe'
@@ -24,8 +25,13 @@ describe('tribu', () => {
 
   it('récolte au plus ce que permettent ses bras, et au plus ce qu’offre le territoire', () => {
     expect(production(10, PLENTY)).toBe(10 * R.gatherPerPerson)
-    expect(production(10, 5)).toBeCloseTo(5 * R.yieldPerCell)
+    expect(production(10, 5)).toBe(5)
     expect(production(0, PLENTY)).toBe(0)
+  })
+
+  it('compte la richesse du territoire et les gisements de nourriture', () => {
+    expect(territoryFood(100)).toBeCloseTo(100 * R.yieldPerCell)
+    expect(territoryFood(100, 6)).toBeCloseTo(100 * R.yieldPerCell + 6)
   })
 
   it('mange chaque mois et garde le bilan pour l’affichage', () => {
@@ -52,7 +58,7 @@ describe('tribu', () => {
   it('ne grandit pas sans réserve confortable', () => {
     const t = tribe({ population: 20, food: 0 })
     // Récolte = consommation : rien de côté, pas de naissance.
-    for (let m = 0; m < 24; m++) tickTribe(t, (20 * R.rationPerPerson) / R.yieldPerCell)
+    for (let m = 0; m < 24; m++) tickTribe(t, 20 * R.rationPerPerson)
     expect(t.population).toBe(20)
   })
 

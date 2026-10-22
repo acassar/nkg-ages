@@ -56,6 +56,25 @@ export interface GameView {
   /** Messages pour le joueur, nés depuis la vue précédente (déjà rédigés). */
   notices: string[]
   tribe: TribeView
+  /** Gisements découverts par le joueur (hors brouillard inconnu). */
+  deposits: DepositView[]
+}
+
+export type RankLetter = 'E' | 'D' | 'C' | 'B' | 'A' | 'S'
+
+export interface DepositView {
+  id: number
+  kind: string
+  name: string
+  category: 'food' | 'material'
+  /** Centre de la cellule du gisement. */
+  x: number
+  y: number
+  rank: RankLetter
+  /** Exploité par la tribu (dans son territoire). */
+  held: boolean
+  /** Production par mois. */
+  yield: number
 }
 
 export interface TribeView {
@@ -66,6 +85,8 @@ export interface TribeView {
   /** Récolte moins consommation au dernier mois. */
   foodBalance: number
   starving: boolean
+  /** Matériaux en réserve, arrondis. */
+  materials: { kind: string; name: string; amount: number }[]
 }
 
 /** Biomes, dans l'ordre de leurs identifiants (même table que le moteur). */

@@ -3,8 +3,13 @@ import {
   dateOfTick,
   FIRST_ERA,
   PLAYER,
+  depositHeld,
+  depositYield,
+  RESOURCE_KINDS,
+  RESOURCE_RULES,
   startYear,
   storageCapacity,
+  Visibility,
   UNIT_RULES,
   type GameEvent,
   type GameState,
@@ -12,6 +17,7 @@ import {
 } from '@/engine'
 import {
   BIOME_IDS,
+  type DepositView,
   type GameView,
   type GridPatch,
   type TribeView,
@@ -93,6 +99,7 @@ export function buildGameView(state: GameState, full = false): GameView {
     ),
     notices: state.events.map((e) => noticeOf(state, e)),
     tribe: tribeView(state),
+    deposits: depositViews(state),
   }
 }
 
@@ -118,7 +125,31 @@ function tribeView(state: GameState): TribeView {
     foodCapacity: Math.floor(storageCapacity(tribe.population)),
     foodBalance: Math.round((tribe.lastProduction - tribe.lastConsumption) * 10) / 10,
     starving: tribe.starvingMonths > 0,
+    materials: RESOURCE_KINDS.filter((k) => tribe.materials[k] !== undefined).map((k) => ({
+      kind: k,
+      name: RESOURCE_RULES[k].name,
+      amount: Math.floor(tribe.materials[k]!),
+    })),
   }
+}
+
+/** Gisements que le joueur a déjà vus. */
+function depositViews(state: GameState): DepositView[] {
+  const { cells } = state.fog
+  const { width } = state.world
+  return state.deposits
+    .filter((d) => cells[d.y * width + d.x] !== Visibility.Unknown)
+    .map((d) => ({
+      id: d.id,
+      kind: d.kind,
+      name: RESOURCE_RULES[d.kind].name,
+      category: RESOURCE_RULES[d.kind].category,
+      x: d.x + 0.5,
+      y: d.y + 0.5,
+      rank: d.rank,
+      held: depositHeld(state, d),
+      yield: Math.round(depositYield(d) * 10) / 10,
+    }))
 }
 
 export function patchOf(cells: Uint8Array, width: number, rect: Rect | null): GridPatch | null {

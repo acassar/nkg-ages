@@ -29,6 +29,10 @@ const signed = new Intl.NumberFormat('fr-FR', {
           >{{ signed.format(game.view.tribe.foodBalance) }}/mois</span
         >
       </span>
+      <span v-for="m in game.view.tribe.materials" :key="m.kind" :title="`${m.name} en réserve`">
+        <span class="label">{{ m.name }}</span>
+        <b :data-testid="`material-${m.kind}`">{{ m.amount }}</b>
+      </span>
     </div>
     <div class="speeds" role="group" aria-label="Vitesse du temps">
       <button
