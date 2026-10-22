@@ -46,7 +46,8 @@ export const INVENTION_RULES: Readonly<Record<InventionKind, InventionRules>> = 
     description: 'La viande et les baies se conservent plus longtemps.',
     stat: 'Conservation',
     unit: 'mois',
-    range: { e: { mean: 2, spread: 0.5 }, s: { mean: 8, spread: 2 } },
+    // Sans écart : la réserve ne varie pas d'un mois à l'autre, seul le rang compte.
+    range: { e: { mean: 2, spread: 0 }, s: { mean: 8, spread: 0 } },
     work: 160,
     cost: {},
   },

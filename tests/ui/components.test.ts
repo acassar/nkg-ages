@@ -40,6 +40,11 @@ describe('barre du haut', () => {
     expect(wrapper.find('[data-testid=date]').text()).toContain('12 000 av. J.-C.')
     expect(wrapper.find('[data-testid=population]').text()).toBe('12')
     expect(wrapper.find('[data-testid=food]').text()).toBe('36')
+    expect(wrapper.find('[data-testid=hunters]').text()).toBe('2')
+    // Deux chasseurs pour douze habitants : la tribu n'en entretient pas plus.
+    const recruit = wrapper.find('[data-testid=recruit]')
+    expect(recruit.attributes('disabled')).toBeDefined()
+    expect(recruit.attributes('title')).toMatch(/habitants/)
     await wrapper.find('[data-testid=speed-4]').trigger('click')
     await flushPromises()
     expect(game.view?.speed).toBe(4)

@@ -28,7 +28,13 @@ import {
 } from './inventions/inventions'
 import { rollStat } from './rarity/rarity'
 import { flee, placeHerds, regrow, wander, type Herd } from './fauna/fauna'
-import { depositYield, heldBy, placeDeposits, type Deposit } from './resources/deposits'
+import {
+  depositYield,
+  ensureNearStart,
+  heldBy,
+  placeDeposits,
+  type Deposit,
+} from './resources/deposits'
 import {
   createTribe,
   storageCapacity,
@@ -66,6 +72,8 @@ export type GameEvent =
   | { type: 'hunterKilled'; animal: AnimalKind }
   /** Une invention est achevée, avec le rang tiré (le meilleur rang est gardé). */
   | { type: 'invented'; invention: InventionKind; rank: Rank }
+  /** La réserve était pleine : une part de la viande rapportée est perdue. */
+  | { type: 'meatLost'; amount: number }
 
 export interface GameState {
   options: NewGameOptions
@@ -73,6 +81,8 @@ export interface GameState {
   starts: StartSite[]
   clock: ClockState
   rng: Rng
+  /** Aléa propre à l'errance de la faune, pour qu'elle ne dérange pas les autres tirages. */
+  faunaRng: Rng
   units: Unit[]
   camps: Camp[]
   fog: FogState
@@ -110,6 +120,7 @@ export function createGame(options: NewGameOptions): GameState {
     starts,
     clock: createClock(),
     rng,
+    faunaRng: createRng(`errance:${world.seed}`),
     units: [],
     camps: [],
     fog: createFog(world.width, world.height),
@@ -124,27 +135,48 @@ export function createGame(options: NewGameOptions): GameState {
   const cx = site.x + 0.5
   const cy = site.y + 0.5
   state.camps.push({ id: state.nextId++, owner: PLAYER, x: cx, y: cy })
+  ensureNearStart(state.deposits, world, site, createRng(`depart:${world.seed}`))
   claimAround(state.territory, world, seatsOf(state)[0]!, TRIBE_RULES.startTerritoryRadius)
-  const unitAt = (kind: Unit['kind'], dx: number): Unit => ({
+  state.units.push(newUnit(state, 'eclaireur', cx, cy))
+  for (let i = 0; i < START_HUNTERS; i++) state.units.push(newHunter(state, i))
+  updateFog(state.fog, viewersOf(state))
+  return state
+}
+
+function newUnit(state: GameState, kind: Unit['kind'], x: number, y: number): Unit {
+  return {
     id: state.nextId++,
     kind,
-    x: cx + dx,
-    y: cy,
+    x,
+    y,
     target: null,
     path: [],
     plannedFog: 0,
     patience: 0,
     auto: false,
-  })
-  state.units.push(unitAt('eclaireur', 0))
-  // Les chasseurs se tiennent à côté du camp, sur la terre ferme, pour rester distincts.
-  for (let i = 0; i < START_HUNTERS; i++) {
-    const side = i % 2 === 0 ? 1 : -1
-    const dx = isPassable(world, cx + side, cy) ? side : 0
-    state.units.push(unitAt('chasseur', dx))
   }
-  updateFog(state.fog, viewersOf(state))
-  return state
+}
+
+/** Un chasseur se tient à côté du camp, sur la terre ferme, pour rester distinct des autres. */
+function newHunter(state: GameState, index: number): Unit {
+  const camp = state.camps.find((c) => c.owner === PLAYER)!
+  const side = index % 2 === 0 ? 1 : -1
+  const dx = isPassable(state.world, camp.x + side, camp.y) ? side : 0
+  return newUnit(state, 'chasseur', camp.x + dx, camp.y)
+}
+
+/** Chasseurs que la tribu peut entretenir : un pour `peoplePerHunter` habitants. */
+export function maxHunters(state: GameState): number {
+  return Math.floor(state.tribe.population / HUNT_RULES.peoplePerHunter)
+}
+
+/** Pourquoi on ne peut pas former de chasseur maintenant, ou null si on le peut. */
+export function cannotRecruit(state: GameState): string | null {
+  const hunters = state.units.filter((u) => u.kind === 'chasseur').length
+  if (hunters >= maxHunters(state))
+    return `Un chasseur pour ${HUNT_RULES.peoplePerHunter} habitants au plus`
+  if (state.tribe.food < HUNT_RULES.recruitFood) return `Il faut ${HUNT_RULES.recruitFood} rations`
+  return null
 }
 
 /**
@@ -203,6 +235,14 @@ export function applyCommand(state: GameState, command: Command): CommandResult 
       const reason = cannotStart(state.inventions, command.invention, state.tribe.materials)
       if (reason) return { ok: false, reason }
       startInvention(state.inventions, command.invention, state.tribe.materials)
+      return { ok: true }
+    }
+    case 'recruitHunter': {
+      const reason = cannotRecruit(state)
+      if (reason) return { ok: false, reason }
+      state.tribe.food -= HUNT_RULES.recruitFood
+      const hunters = state.units.filter((u) => u.kind === 'chasseur').length
+      state.units.push(newHunter(state, hunters))
       return { ok: true }
     }
     default: {
@@ -327,14 +367,17 @@ export function depositHeld(state: GameState, deposit: Deposit): boolean {
 
 /**
  * La faune erre ; les chasseurs abattent les bêtes à portée, et poursuivent seuls un
- * troupeau en vue quand le joueur ne leur a rien demandé.
+ * troupeau en vue (sauf les plus dangereux) quand le joueur ne leur a rien demandé.
+ * Réserve pleine, ils ne risquent pas leur vie pour rien.
  */
 function hunt(state: GameState): void {
-  const { world, rng, tribe } = state
-  for (const herd of state.herds) wander(herd, world, rng)
+  const { world, rng, faunaRng, tribe } = state
+  for (const herd of state.herds) wander(herd, world, faunaRng)
   for (const unit of [...state.units]) {
     if (unit.kind !== 'chasseur') continue
-    const prey = nearestHerd(state, unit, HUNT_RULES.reach, false)
+    const capacity = foodCapacity(state)
+    if (tribe.food >= capacity) continue
+    const prey = nearestHerd(state, unit, HUNT_RULES.reach, false, 1)
     if (prey) {
       const rules = ANIMAL_RULES[prey.kind]
       if (rng.next() < rules.danger) {
@@ -348,27 +391,39 @@ function hunt(state: GameState): void {
       const power = Math.max(0, rollStat(weapon, rng)) / INVENTION_WORK.bareDamage.mean
       if (rng.next() < rules.catchChance * power) {
         prey.size--
-        tribe.food = Math.min(tribe.food + rules.meat, foodCapacity(state))
-        flee(prey, world, rng, unit, HUNT_RULES.fleeDistance)
+        const lost = Math.floor(tribe.food + rules.meat - capacity)
+        tribe.food = Math.min(tribe.food + rules.meat, capacity)
+        if (lost >= 1) state.events.push({ type: 'meatLost', amount: lost })
+        flee(prey, world, faunaRng, unit, HUNT_RULES.fleeDistance)
       }
       continue
     }
     if (unit.target && !unit.auto) continue
     if ((state.clock.tick + unit.id) % HUNT_RULES.chaseEvery !== 0) continue
-    const seen = nearestHerd(state, unit, HUNT_RULES.chaseRange, true)
+    const seen = nearestHerd(state, unit, HUNT_RULES.chaseRange, true, HUNT_RULES.autoMaxDanger)
     if (seen) orderUnit(state, unit, seen.x, seen.y, true)
   }
   state.herds = state.herds.filter((h) => h.size > 0)
-  for (const herd of state.herds) regrow(herd, rng)
+  for (const herd of state.herds) regrow(herd, faunaRng)
 }
 
-/** Troupeau le plus proche à moins de `range` ; `visible` : seulement s'il est en vue. */
-function nearestHerd(state: GameState, from: Unit, range: number, visible: boolean): Herd | null {
+/**
+ * Troupeau le plus proche à moins de `range`, d'un danger au plus `maxDanger` ;
+ * `visible` : seulement s'il est en vue.
+ */
+function nearestHerd(
+  state: GameState,
+  from: Unit,
+  range: number,
+  visible: boolean,
+  maxDanger: number,
+): Herd | null {
   let best: Herd | null = null
   let bestDistance = range
   for (const herd of state.herds) {
     const d = Math.hypot(herd.x - from.x, herd.y - from.y)
     if (d > bestDistance) continue
+    if (ANIMAL_RULES[herd.kind].danger > maxDanger) continue
     if (visible && !herdVisible(state, herd)) continue
     best = herd
     bestDistance = d

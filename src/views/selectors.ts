@@ -5,6 +5,9 @@ import {
   PLAYER,
   ANIMAL_RULES,
   cannotStart,
+  cannotRecruit,
+  maxHunters,
+  HUNT_RULES,
   depositHeld,
   foodCapacity,
   INVENTION_KINDS,
@@ -142,6 +145,8 @@ function noticeOf(state: GameState, event: GameEvent): string {
       const kept = best && best !== event.rank ? ` (le rang ${best} obtenu avant est gardé)` : ''
       return `Invention : ${rules.name} de rang ${event.rank}, ${rules.stat.toLowerCase()} ${formatStat(stat, rules.unit)}${kept}.`
     }
+    case 'meatLost':
+      return `Chasse : la réserve est pleine, ${event.amount} rations de viande sont perdues.`
     case 'hunterKilled':
       return `Chasse : un chasseur est mort face aux ${ANIMAL_RULES[event.animal].name.toLowerCase()}.`
   }
@@ -161,6 +166,10 @@ function tribeView(state: GameState): TribeView {
       name: RESOURCE_RULES[k].name,
       amount: Math.floor(tribe.materials[k]!),
     })),
+    hunters: state.units.filter((u) => u.kind === 'chasseur').length,
+    maxHunters: maxHunters(state),
+    recruitCost: HUNT_RULES.recruitFood,
+    recruitBlocked: cannotRecruit(state),
   }
 }
 
@@ -221,7 +230,9 @@ function inventionViews(state: GameState): InventionView[] {
       monthsLeft: current
         ? Math.ceil((current.work - current.progress) / Math.max(monthly, 1e-9))
         : null,
-      cost: Object.entries(cost.materials).map(([k, amount]) => `${amount} ${k}`),
+      cost: RESOURCE_KINDS.filter((k) => cost.materials[k] !== undefined).map(
+        (k) => `${cost.materials[k]} ${RESOURCE_RULES[k].name.toLowerCase()}`,
+      ),
       blocked: current ? null : cannotStart(inv, kind, state.tribe.materials),
     }
   })

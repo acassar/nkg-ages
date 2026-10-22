@@ -92,11 +92,11 @@
 <text x="60" y="631" font-size="14" fill="#6b5843">Futur imaginé</text>
 </g>
 <text x="24" y="692" font-size="13" letter-spacing="1.5" fill="#6b5843">JOURNAL</text>
-<text x="24" y="716" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : inventions à rang E à S (lance, panier, fumage) aux statistiques dynamiques ; le silex sert enfin</text>
-<text x="24" y="737" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : chasseurs, troupeaux (cerfs, sangliers, mammouths) et chasse ; croissance liée au surplus de nourriture</text>
-<text x="24" y="758" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : gisements à rareté E à S (baies, poisson, silex) qui nourrissent et fournissent la tribu</text>
-<text x="24" y="779" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : la tribu vit de son territoire (population, vivres, naissances, famine)</text>
-<text x="24" y="800" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  CI : navigateurs Playwright en cache, plus d'installation apt de 15 min, délai maximal de 20 min, test de vitesse moins sensible à la machine</text>
+<text x="24" y="716" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : on forme des chasseurs, la poursuite seule évite les mammouths, la viande perdue est signalée, un silex est garanti près du départ</text>
+<text x="24" y="737" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : inventions à rang E à S (lance, panier, fumage) aux statistiques dynamiques ; le silex sert enfin</text>
+<text x="24" y="758" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : chasseurs, troupeaux (cerfs, sangliers, mammouths) et chasse ; croissance liée au surplus de nourriture</text>
+<text x="24" y="779" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : gisements à rareté E à S (baies, poisson, silex) qui nourrissent et fournissent la tribu</text>
+<text x="24" y="800" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : la tribu vit de son territoire (population, vivres, naissances, famine)</text>
 <circle cx="700" cy="809" r="5" fill="#3a2c1e"/>
 <text x="710" y="813" font-size="12" fill="#6b5843">fait</text>
 <circle cx="760" cy="809" r="5" fill="none" stroke="#8c2f1c" stroke-width="1.5"/><path d="M760 804a5 5 0 0 1 0 10z" fill="#8c2f1c"/>
