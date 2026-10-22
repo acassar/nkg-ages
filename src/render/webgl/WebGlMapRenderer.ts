@@ -1,6 +1,6 @@
 import type { GameView, WorldSnapshot } from '@/views/types'
 import type { Camera } from '../camera'
-import { fogToTexels, ownerMask } from '../grids'
+import { fogToTexels, ownerMask, riverTexels } from '../grids'
 import type { MapRenderer, OverlayState } from '../MapRenderer'
 import { OverlayPainter } from '../overlay'
 import { INK, PAPER, paletteArray, PLAYER_INK } from '../palette'
@@ -9,7 +9,7 @@ import { FRAGMENT_SHADER, VERTEX_SHADER } from './shaders'
 /** Le joueur dans la grille de propriétaires (voir le moteur). */
 const PLAYER_OWNER = 1
 
-type TextureName = 'uElevation' | 'uBiome' | 'uFog' | 'uTerritory'
+type TextureName = 'uElevation' | 'uBiome' | 'uRiver' | 'uFog' | 'uTerritory'
 
 /**
  * Rendu WebGL2 sans bibliothèque : un seul triangle plein écran, le shader fait tout.
@@ -49,6 +49,7 @@ export class WebGlMapRenderer implements MapRenderer {
     const empty = new Uint8Array(world.width * world.height)
     this.upload('uElevation', world.width, world.height, world.elevation, true)
     this.upload('uBiome', world.width, world.height, world.biome, false)
+    this.upload('uRiver', world.width, world.height, riverTexels(world.river), true)
     this.upload('uFog', world.width, world.height, empty, true)
     this.upload('uTerritory', world.width, world.height, empty, true)
   }
@@ -80,7 +81,7 @@ export class WebGlMapRenderer implements MapRenderer {
     gl.uniform3fv(this.uniform('uInk'), INK)
     gl.uniform3fv(this.uniform('uPlayerInk'), PLAYER_INK)
     gl.uniform1f(this.uniform('uRevealAll'), this.options.revealAll ? 1 : 0)
-    const names: TextureName[] = ['uElevation', 'uBiome', 'uFog', 'uTerritory']
+    const names: TextureName[] = ['uElevation', 'uBiome', 'uRiver', 'uFog', 'uTerritory']
     names.forEach((name, unit) => {
       gl.activeTexture(gl.TEXTURE0 + unit)
       gl.bindTexture(gl.TEXTURE_2D, this.textures.get(name) ?? null)

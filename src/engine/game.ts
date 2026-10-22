@@ -15,6 +15,7 @@ import {
 } from './territory/territory'
 import { findPath, knownPassable, pathBlocked } from './units/path'
 import { CAMP_RULES } from './content/camps'
+import { RIVER_RULES } from './content/rivers'
 import { ANIMAL_RULES, HUNT_RULES, type AnimalKind } from './content/fauna'
 import { INVENTION_KINDS, INVENTION_WORK, type InventionKind } from './content/inventions'
 import type { Rank } from './content/rarity'
@@ -379,7 +380,10 @@ function seatOf(camp: Camp): Seat {
 /** Richesse en nourriture de chaque cellule, d'après son biome. */
 function foodWeights(world: World): Float32Array {
   const weights = new Float32Array(world.biome.length)
-  for (let i = 0; i < weights.length; i++) weights[i] = BIOMES[world.biome[i] as BiomeId].food
+  for (let i = 0; i < weights.length; i++) {
+    const food = BIOMES[world.biome[i] as BiomeId].food
+    weights[i] = world.river[i] ? food + RIVER_RULES.food : food
+  }
   return weights
 }
 

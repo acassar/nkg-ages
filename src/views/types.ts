@@ -21,6 +21,8 @@ export interface WorldSnapshot {
   /** Altitude codée sur 0..255 : eau de 0 à 127, terre de 128 à 255. */
   elevation: Uint8Array
   biome: Uint8Array
+  /** Fleuves : 0 sans fleuve, sinon 1..255 selon le débit. */
+  river: Uint8Array
 }
 
 export interface UnitView {

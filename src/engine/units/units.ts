@@ -1,5 +1,5 @@
 import { BIOMES } from '../content/biomes'
-import { biomeAt, type World } from '../world/world'
+import { biomeAt, inBounds, moveCostAt, type World } from '../world/world'
 
 export type UnitKind = 'eclaireur' | 'chasseur'
 
@@ -46,8 +46,9 @@ export const UNIT_RULES: Readonly<Record<UnitKind, UnitRules>> = {
 export function moveUnit(unit: Unit, world: World): boolean {
   if (!unit.target) return true
   if (unit.path.length === 0) unit.path = [{ ...unit.target }]
-  const here = biomeAt(world, unit.x, unit.y)
-  const cost = here === undefined ? 1 : BIOMES[here as keyof typeof BIOMES].moveCost
+  const cx = Math.floor(unit.x)
+  const cy = Math.floor(unit.y)
+  const cost = inBounds(world, cx, cy) ? moveCostAt(world, cy * world.width + cx) : 1
   let budget = UNIT_RULES[unit.kind].speed / (Number.isFinite(cost) ? cost : 1)
   while (budget > 0 && unit.path.length > 0) {
     const next = unit.path[0]!

@@ -31,9 +31,11 @@ export function rateStart(world: World, x: number, y: number): number | null {
       const cx = x + dx
       const cy = y + dy
       if (cx < 0 || cy < 0 || cx >= world.width || cy >= world.height) return null
-      const b = world.biome[cellIndex(world, cx, cy)]!
+      const i = cellIndex(world, cx, cy)
+      const b = world.biome[i]!
       cells++
-      if (isWater(b)) water++
+      // Un fleuve apporte l'eau douce aussi bien que la côte.
+      if (isWater(b) || world.river[i]) water++
       food += BIOMES[b as keyof typeof BIOMES].food
     }
   }

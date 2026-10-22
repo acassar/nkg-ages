@@ -1,3 +1,6 @@
+import { BIOMES, type BiomeId } from '../content/biomes'
+import { RIVER_RULES } from '../content/rivers'
+
 /** Monde généré : champs continus échantillonnés sur une grille fine. */
 export interface World {
   seed: string
@@ -11,6 +14,8 @@ export interface World {
   temperature: Float32Array
   /** Identifiant de biome par cellule (voir content/biomes). */
   biome: Uint8Array
+  /** Fleuves : 0 sans fleuve, sinon 1..255 selon le débit. On peut les traverser. */
+  river: Uint8Array
 }
 
 export function cellIndex(world: Pick<World, 'width'>, x: number, y: number): number {
@@ -27,4 +32,10 @@ export function biomeAt(world: World, x: number, y: number): number | undefined 
   const cy = Math.floor(y)
   if (!inBounds(world, cx, cy)) return undefined
   return world.biome[cellIndex(world, cx, cy)]
+}
+
+/** Coût de déplacement d'une cellule : celui du biome, plus le gué s'il y a un fleuve. */
+export function moveCostAt(world: World, i: number): number {
+  const base = BIOMES[world.biome[i] as BiomeId].moveCost
+  return world.river[i] ? base + RIVER_RULES.crossCost : base
 }

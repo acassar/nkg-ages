@@ -1,6 +1,7 @@
 import { Biome, type BiomeId } from '../content/biomes'
 import { createRng } from '../core/random'
 import { createNoise2D, fbm } from './noise'
+import { traceRivers } from './rivers'
 import type { World } from './world'
 
 export interface WorldOptions {
@@ -86,7 +87,8 @@ export function generateWorld(options: WorldOptions): World {
     }
   }
 
-  return { seed: options.seed, width, height, elevation, moisture, temperature, biome }
+  const river = traceRivers(width, height, elevation, moisture, biome)
+  return { seed: options.seed, width, height, elevation, moisture, temperature, biome, river }
 }
 
 export function classify(elevation: number, moisture: number, temperature: number): BiomeId {

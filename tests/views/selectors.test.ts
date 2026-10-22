@@ -174,5 +174,7 @@ describe('vues de partie', () => {
       expect(snap.elevation[i]! >= 128).toBe(g.world.elevation[i]! >= 0)
     }
     expect(snap.biome).not.toBe(g.world.biome)
+    expect(snap.river).not.toBe(g.world.river)
+    expect([...snap.river]).toEqual([...g.world.river])
   })
 })
