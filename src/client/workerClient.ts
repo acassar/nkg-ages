@@ -27,6 +27,7 @@ export function createWorkerClient(createWorker: () => WorkerLike = browserWorke
   const pending = new Map<number, Pending>()
   let nextRequest = 1
   let closed: string | null = null
+  let disposed = false
 
   const failAll = (message: string) => {
     for (const p of pending.values()) p.reject(new Error(message))
@@ -80,10 +81,14 @@ export function createWorkerClient(createWorker: () => WorkerLike = browserWorke
       return () => failureListeners.delete(listener)
     },
     dispose() {
-      if (closed) return
-      closed = 'Partie fermée'
-      failAll(closed)
-      worker.postMessage({ kind: 'dispose' })
+      // Après une panne, `closed` est déjà rempli : le Worker doit quand même être arrêté.
+      if (disposed) return
+      disposed = true
+      if (!closed) {
+        closed = 'Partie fermée'
+        failAll(closed)
+        worker.postMessage({ kind: 'dispose' })
+      }
       worker.terminate()
       listeners.clear()
       failureListeners.clear()

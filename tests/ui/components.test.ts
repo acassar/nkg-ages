@@ -100,4 +100,14 @@ describe('écran de jeu', () => {
     await wrapper.find('[data-testid=notice] button').trigger('click')
     expect(game.error).toBeNull()
   })
+
+  it('ignore la réponse d’une commande arrivée après le retour au menu', async () => {
+    const game = useGameStore()
+    await game.newGame({ seed: 'tardif', randomStart: false, width: 128, height: 64 })
+    game.select([999])
+    const pending = game.moveSelectedTo(1, 1)
+    game.quit()
+    await pending
+    expect(game.error).toBeNull()
+  })
 })

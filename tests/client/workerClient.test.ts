@@ -116,6 +116,15 @@ describe('client de jeu par Worker', () => {
     expect(worker.received.filter((r) => r.kind === 'dispose')).toHaveLength(1)
   })
 
+  it('arrête le Worker à la fermeture, même après une panne', async () => {
+    const { client, worker } = setup()
+    worker.crash('boom')
+    client.dispose()
+    expect(worker.terminated).toBe(true)
+    // Le Worker en panne ne reçoit pas de demande de fermeture.
+    expect(worker.received.some((r) => r.kind === 'dispose')).toBe(false)
+  })
+
   it('ignore une réponse à une requête inconnue', async () => {
     const { worker, client } = setup()
     const spy = vi.fn()

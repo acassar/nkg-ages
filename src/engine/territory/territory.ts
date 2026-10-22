@@ -42,25 +42,34 @@ export function createTerritory(width: number, height: number): TerritoryState {
   }
 }
 
-export function claim(territory: TerritoryState, x: number, y: number, owner: number): boolean {
-  const i = y * territory.width + x
-  const previous = territory.owner[i]
-  if (previous === owner) return false
-  territory.owner[i] = owner
-  if (previous === NO_OWNER) territory.ownedCount++
-  if (owner === NO_OWNER) territory.ownedCount--
-  else territory.frontier.push(i)
-  territory.version++
-  territory.dirty = unionRect(territory.dirty, { x, y, w: 1, h: 1 })
-  return true
-}
-
 const NEIGHBORS = [
   [1, 0],
   [-1, 0],
   [0, 1],
   [0, -1],
 ] as const
+
+export function claim(territory: TerritoryState, x: number, y: number, owner: number): boolean {
+  const i = y * territory.width + x
+  const previous = territory.owner[i]
+  if (previous === owner) return false
+  territory.owner[i] = owner
+  if (previous === NO_OWNER) territory.ownedCount++
+  if (owner === NO_OWNER) {
+    territory.ownedCount--
+    // Les voisines possédées d'une cellule libérée redeviennent des bords d'expansion.
+    for (const [dx, dy] of NEIGHBORS) {
+      const nx = x + dx
+      const ny = y + dy
+      if (nx < 0 || ny < 0 || nx >= territory.width || ny >= territory.height) continue
+      const n = ny * territory.width + nx
+      if (territory.owner[n] !== NO_OWNER) territory.frontier.push(n)
+    }
+  } else territory.frontier.push(i)
+  territory.version++
+  territory.dirty = unionRect(territory.dirty, { x, y, w: 1, h: 1 })
+  return true
+}
 
 /** Voisins libres, de terre et dans la portée du siège, d'une cellule tenue. */
 function freeNeighbors(

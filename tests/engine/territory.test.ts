@@ -100,4 +100,13 @@ describe('territoire', () => {
     claim(t, 1, 1, NO_OWNER)
     expect(t.ownedCount).toBe(0)
   })
+
+  it('remet dans la frontière les voisines d’une cellule libérée', () => {
+    const t = createTerritory(4, 4)
+    claim(t, 1, 1, PLAYER)
+    claim(t, 2, 1, PLAYER)
+    t.frontier.length = 0
+    claim(t, 2, 1, NO_OWNER)
+    expect(t.frontier).toEqual([5])
+  })
 })

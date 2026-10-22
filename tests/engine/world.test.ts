@@ -99,7 +99,7 @@ describe('sites de départ', () => {
       }),
       { numRuns: 20 },
     )
-  })
+  }, 30_000) // 20 mondes générés : sous couverture v8 en CI, plus que les 5 s par défaut.
 
   it('espace les départs proposés', () => {
     const w = generateWorld({ seed: 'espacés' })

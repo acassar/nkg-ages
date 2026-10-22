@@ -82,11 +82,15 @@ export const useGameStore = defineStore('game', () => {
   }
 
   async function send(command: Command) {
-    if (!client) return
+    const current = client
+    if (!current) return
     try {
-      const result = await client.send(command)
+      const result = await current.send(command)
+      // Réponse d'une partie quittée ou remplacée entre-temps : on l'ignore.
+      if (client !== current) return
       if (!result.ok) report(result.reason, true)
     } catch (e) {
+      if (client !== current) return
       report(e instanceof Error ? e.message : String(e))
     }
   }
