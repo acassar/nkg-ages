@@ -57,7 +57,7 @@
         },
         {
           "title": "Inventions à rang E à S",
-          "status": "todo"
+          "status": "done"
         },
         {
           "title": "Campements à fonder",
@@ -181,6 +181,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-22",
+      "text": "J1 : inventions à rang E à S (lance, panier, fumage) aux statistiques dynamiques ; le silex sert enfin"
+    },
     {
       "date": "2026-10-22",
       "text": "J1 : chasseurs, troupeaux (cerfs, sangliers, mammouths) et chasse ; croissance liée au surplus de nourriture"

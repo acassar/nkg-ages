@@ -58,8 +58,26 @@ export interface GameView {
   tribe: TribeView
   /** Gisements découverts par le joueur (hors brouillard inconnu). */
   deposits: DepositView[]
+  inventions: InventionView[]
   /** Troupeaux en vue en ce moment (ils bougent : le déjà-vu ne suffit pas). */
   herds: HerdView[]
+}
+
+export interface InventionView {
+  kind: string
+  name: string
+  description: string
+  /** Meilleur rang obtenu, ou null si pas encore inventée. */
+  rank: RankLetter | null
+  /** Statistique au rang obtenu, déjà rédigée (« Dégâts 5,2 ± 1,1 »). */
+  stat: string | null
+  /** Avancement de la recherche en cours (0 à 1), ou null. */
+  progress: number | null
+  monthsLeft: number | null
+  /** Matériaux du prochain essai (« 15 silex »). */
+  cost: string[]
+  /** Ce qui empêche de lancer l'invention, ou null si c'est possible (ou en cours). */
+  blocked: string | null
 }
 
 export interface HerdView {

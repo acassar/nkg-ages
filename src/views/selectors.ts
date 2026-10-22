@@ -4,13 +4,21 @@ import {
   FIRST_ERA,
   PLAYER,
   ANIMAL_RULES,
+  cannotStart,
   depositHeld,
+  foodCapacity,
+  INVENTION_KINDS,
+  INVENTION_RULES,
+  inventionStat,
+  nextCost,
+  statAt,
+  workPerMonth,
+  type RankedStat,
   herdVisible,
   depositYield,
   RESOURCE_KINDS,
   RESOURCE_RULES,
   startYear,
-  storageCapacity,
   Visibility,
   UNIT_RULES,
   type GameEvent,
@@ -20,6 +28,7 @@ import {
 import {
   BIOME_IDS,
   type DepositView,
+  type InventionView,
   type GameView,
   type GridPatch,
   type TribeView,
@@ -102,6 +111,7 @@ export function buildGameView(state: GameState, full = false): GameView {
     notices: state.events.map((e) => noticeOf(state, e)),
     tribe: tribeView(state),
     deposits: depositViews(state),
+    inventions: inventionViews(state),
     herds: state.herds
       .filter((h) => herdVisible(state, h))
       .map((h) => ({
@@ -125,6 +135,13 @@ function noticeOf(state: GameState, event: GameEvent): string {
     }
     case 'famine':
       return 'Famine : les réserves sont vides, la tribu perd des siens chaque mois.'
+    case 'invented': {
+      const rules = INVENTION_RULES[event.invention]
+      const stat = statAt(rules.range, event.rank)
+      const best = state.inventions.ranks[event.invention]
+      const kept = best && best !== event.rank ? ` (le rang ${best} obtenu avant est gardé)` : ''
+      return `Invention : ${rules.name} de rang ${event.rank}, ${rules.stat.toLowerCase()} ${formatStat(stat, rules.unit)}${kept}.`
+    }
     case 'hunterKilled':
       return `Chasse : un chasseur est mort face aux ${ANIMAL_RULES[event.animal].name.toLowerCase()}.`
   }
@@ -136,7 +153,7 @@ function tribeView(state: GameState): TribeView {
   return {
     population: tribe.population,
     food: Math.floor(tribe.food),
-    foodCapacity: Math.floor(storageCapacity(tribe.population)),
+    foodCapacity: Math.floor(foodCapacity(state)),
     foodBalance: Math.round((tribe.lastProduction - tribe.lastConsumption) * 10) / 10,
     starving: tribe.starvingMonths > 0,
     materials: RESOURCE_KINDS.filter((k) => tribe.materials[k] !== undefined).map((k) => ({
@@ -174,4 +191,38 @@ export function patchOf(cells: Uint8Array, width: number, rect: Rect | null): Gr
     data.set(cells.subarray(start, start + rect.w), y * rect.w)
   }
   return { ...rect, data }
+}
+
+const statNumber = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 })
+
+/** « 5,2 ± 1,1 », avec l'unité de la statistique. */
+export function formatStat(stat: RankedStat, unit: string): string {
+  const suffix = unit === '' ? '' : unit === '%' ? ' %' : ` ${unit}`
+  const spread = stat.spread > 0 ? ` ± ${statNumber.format(stat.spread)}` : ''
+  return `${unit === '%' ? '+' : ''}${statNumber.format(stat.mean)}${spread}${suffix}`
+}
+
+/** Inventions : faites, en cours ou possibles, avec leur coût et ce qui les bloque. */
+function inventionViews(state: GameState): InventionView[] {
+  const inv = state.inventions
+  const monthly = workPerMonth(state.tribe.population)
+  return INVENTION_KINDS.map((kind) => {
+    const rules = INVENTION_RULES[kind]
+    const stat = inventionStat(inv, kind)
+    const cost = nextCost(inv, kind)
+    const current = inv.current?.kind === kind ? inv.current : null
+    return {
+      kind,
+      name: rules.name,
+      description: rules.description,
+      rank: inv.ranks[kind] ?? null,
+      stat: stat ? `${rules.stat} ${formatStat(stat, rules.unit)}` : null,
+      progress: current ? Math.min(1, current.progress / current.work) : null,
+      monthsLeft: current
+        ? Math.ceil((current.work - current.progress) / Math.max(monthly, 1e-9))
+        : null,
+      cost: Object.entries(cost.materials).map(([k, amount]) => `${amount} ${k}`),
+      blocked: current ? null : cannotStart(inv, kind, state.tribe.materials),
+    }
+  })
 }

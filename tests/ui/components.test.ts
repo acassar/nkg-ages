@@ -6,6 +6,7 @@ import { createInMemoryClient } from '@/client/inMemoryClient'
 import { ManualScheduler } from '@/host/scheduler'
 import StartScreen from '@/ui/components/StartScreen.vue'
 import GameScreen from '@/ui/components/GameScreen.vue'
+import InventionsPanel from '@/ui/components/InventionsPanel.vue'
 import TopBar from '@/ui/components/TopBar.vue'
 import { useClientFactory, useGameStore } from '@/ui/stores/game'
 import type { GameView } from '@/views/types'
@@ -147,5 +148,20 @@ describe('écran de jeu', () => {
     expect([...game.selected]).toEqual([1, 2])
     game.toggleSelected(1)
     expect([...game.selected]).toEqual([2])
+  })
+
+  it('le panneau des inventions lance une invention par le client', async () => {
+    const game = useGameStore()
+    await game.newGame({ seed: 'inventer', randomStart: false, width: 128, height: 64 })
+    const wrapper = mount(InventionsPanel)
+    const lance = wrapper.find('[data-testid=invention-lance] button')
+    expect(lance.attributes('disabled')).toBeDefined()
+    expect(lance.attributes('title')).toBe('Il faut 15 silex')
+    await wrapper.find('[data-testid=invention-panier] button').trigger('click')
+    await flushPromises()
+    expect(game.view!.inventions.find((i) => i.kind === 'panier')!.progress).toBe(0)
+    expect(wrapper.find('[data-testid=invention-panier] .progress').exists()).toBe(true)
+    await wrapper.find('.title').trigger('click')
+    expect(wrapper.find('ul').exists()).toBe(false)
   })
 })

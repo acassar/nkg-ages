@@ -1,3 +1,3 @@
-export type { GameClient, Command, CommandResult, NewGameOptions } from './client'
+export type { GameClient, Command, CommandResult, InventionKind, NewGameOptions } from './client'
 export { createWorkerClient } from './workerClient'
 export * from '@/views/types'

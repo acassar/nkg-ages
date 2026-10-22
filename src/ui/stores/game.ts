@@ -5,6 +5,7 @@ import {
   type Command,
   type GameClient,
   type GameView,
+  type InventionKind,
   type NewGameOptions,
   type Speed,
   type WorldSnapshot,
@@ -106,6 +107,8 @@ export const useGameStore = defineStore('game', () => {
   const setSpeed = (speed: Speed) => send({ type: 'setSpeed', speed })
   const togglePause = () => send({ type: 'togglePause' })
   const setPaused = (paused: boolean) => send({ type: 'setPaused', paused })
+  const invent = (invention: string) =>
+    send({ type: 'invent', invention: invention as InventionKind })
 
   function select(ids: number[]) {
     selected.value = new Set(ids)
@@ -147,6 +150,7 @@ export const useGameStore = defineStore('game', () => {
     setPaused,
     select,
     toggleSelected,
+    invent,
     moveSelectedTo,
     quit,
     dismissError,

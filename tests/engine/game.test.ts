@@ -3,6 +3,7 @@ import {
   applyCommand,
   clearDirty,
   createGame,
+  foodCapacity,
   herdVisible,
   step,
   type GameState,
@@ -190,6 +191,50 @@ describe('commandes', () => {
     expect(r.ok).toBe(true)
     expect(castaway.target).toBeNull()
     expect(castaway.path).toEqual([])
+  })
+
+  it('lance une invention par commande, puis l’annonce achevée avec son rang', () => {
+    const g = createGame(options)
+    expect(applyCommand(g, { type: 'invent', invention: 'lance' })).toEqual({
+      ok: false,
+      reason: 'Il faut 15 silex',
+    })
+    expect(applyCommand(g, { type: 'invent', invention: 'arc' as never })).toEqual({
+      ok: false,
+      reason: 'Invention inconnue',
+    })
+    expect(applyCommand(g, { type: 'invent', invention: 'panier' })).toEqual({ ok: true })
+    let done = null
+    for (let i = 0; i < 300 && !done; i++) {
+      step(g)
+      done = g.events.find((e) => e.type === 'invented') ?? null
+      clearDirty(g)
+    }
+    expect(done).toMatchObject({ type: 'invented', invention: 'panier' })
+    expect(g.inventions.ranks.panier).toBeDefined()
+  })
+
+  it('le fumage agrandit la réserve, la lance aide la chasse', () => {
+    const g = createGame(options)
+    const before = foodCapacity(g)
+    g.inventions.ranks.fumage = 'S'
+    expect(foodCapacity(g)).toBeGreaterThan(before)
+
+    // Même partie, même chasse : avec une lance S, plus de prises qu'à mains nues.
+    const hunt = (withSpear: boolean) => {
+      const h = createGame(options)
+      if (withSpear) h.inventions.ranks.lance = 'S'
+      const hunter = h.units.find((u) => u.kind === 'chasseur')!
+      h.units = [hunter]
+      let prises = 0
+      for (let i = 0; i < 200; i++) {
+        h.herds = [{ id: 1, kind: 'cerf', x: hunter.x + 0.5, y: hunter.y, size: 8, goal: hunter }]
+        step(h)
+        prises += 8 - (h.herds[0]?.size ?? 0)
+      }
+      return prises
+    }
+    expect(hunt(true)).toBeGreaterThan(hunt(false))
   })
 
   it('refuse une commande inconnue sans planter', () => {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useGameStore } from '../stores/game'
+import InventionsPanel from './InventionsPanel.vue'
 import MapView from './MapView.vue'
 import TopBar from './TopBar.vue'
 
@@ -12,6 +13,7 @@ defineProps<{ benchmark?: boolean }>()
   <div class="game">
     <MapView :benchmark="benchmark" />
     <TopBar />
+    <InventionsPanel />
     <p v-if="game.error" class="notice parchment" role="alert" data-testid="notice">
       {{ game.error }}
       <button class="close" aria-label="Fermer" @click="game.dismissError()">×</button>
