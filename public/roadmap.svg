@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 730" width="960" height="730" font-family="Georgia, 'Iowan Old Style', serif" role="img" aria-label="Roadmap de nkg-ages">
-<rect width="960" height="730" rx="10" fill="#eee2c4" stroke="#c9b283"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 772" width="960" height="772" font-family="Georgia, 'Iowan Old Style', serif" role="img" aria-label="Roadmap de nkg-ages">
+<rect width="960" height="772" rx="10" fill="#eee2c4" stroke="#c9b283"/>
 <text x="24" y="50" font-size="28" fill="#3a2c1e">nkg-ages · roadmap</text>
-<text x="936" y="48" font-size="15" text-anchor="end" fill="#6b5843">7 / 33 fonctionnalités livrées · en cours : J1</text>
-<g><rect x="24" y="72" width="293.3333333333333" height="247" rx="6" fill="#e6d6b0" stroke="#3a2c1e" stroke-width="1.2"/>
+<text x="936" y="48" font-size="15" text-anchor="end" fill="#6b5843">7 / 34 fonctionnalités livrées · en cours : J1</text>
+<g><rect x="24" y="72" width="293.3333333333333" height="268" rx="6" fill="#e6d6b0" stroke="#3a2c1e" stroke-width="1.2"/>
 <text x="40" y="102" font-size="19" fill="#3a2c1e"><tspan fill="#6b5843">J0</tspan> · Fondations</text>
 <circle cx="46" cy="122" r="5" fill="#3a2c1e"/>
 <text x="60" y="126" font-size="14" fill="#3a2c1e">Projet, CI, déploiement Pages</text>
@@ -19,7 +19,7 @@
 <circle cx="46" cy="248" r="5" fill="#3a2c1e"/>
 <text x="60" y="252" font-size="14" fill="#3a2c1e">Roadmap graphique</text>
 </g>
-<g><rect x="333.3333333333333" y="72" width="293.3333333333333" height="247" rx="6" fill="#eee2c4" stroke="#8c2f1c" stroke-width="2.2"/>
+<g><rect x="333.3333333333333" y="72" width="293.3333333333333" height="268" rx="6" fill="#eee2c4" stroke="#8c2f1c" stroke-width="2.2"/>
 <text x="349.3333333333333" y="102" font-size="19" fill="#3a2c1e"><tspan fill="#8c2f1c">J1</tspan> · MVP Préhistoire</text>
 <circle cx="355.3333333333333" cy="122" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
 <text x="369.3333333333333" y="126" font-size="14" fill="#6b5843">Tribu : population, nourriture, famine</text>
@@ -28,19 +28,21 @@
 <circle cx="355.3333333333333" cy="164" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
 <text x="369.3333333333333" y="168" font-size="14" fill="#6b5843">Chasseurs, chasse et faune</text>
 <circle cx="355.3333333333333" cy="185" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="369.3333333333333" y="189" font-size="14" fill="#6b5843">Inventions à rang E à S</text>
+<text x="369.3333333333333" y="189" font-size="14" fill="#6b5843">Chemins qui contournent l'eau (A*)</text>
 <circle cx="355.3333333333333" cy="206" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="369.3333333333333" y="210" font-size="14" fill="#6b5843">Campements à fonder</text>
+<text x="369.3333333333333" y="210" font-size="14" fill="#6b5843">Inventions à rang E à S</text>
 <circle cx="355.3333333333333" cy="227" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="369.3333333333333" y="231" font-size="14" fill="#6b5843">Fleuves</text>
+<text x="369.3333333333333" y="231" font-size="14" fill="#6b5843">Campements à fonder</text>
 <circle cx="355.3333333333333" cy="248" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="369.3333333333333" y="252" font-size="14" fill="#6b5843">Une dizaine de techniques</text>
+<text x="369.3333333333333" y="252" font-size="14" fill="#6b5843">Fleuves</text>
 <circle cx="355.3333333333333" cy="269" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="369.3333333333333" y="273" font-size="14" fill="#6b5843">Victoire, défaite, score</text>
+<text x="369.3333333333333" y="273" font-size="14" fill="#6b5843">Une dizaine de techniques</text>
 <circle cx="355.3333333333333" cy="290" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="369.3333333333333" y="294" font-size="14" fill="#6b5843">Sauvegarde automatique</text>
+<text x="369.3333333333333" y="294" font-size="14" fill="#6b5843">Victoire, défaite, score</text>
+<circle cx="355.3333333333333" cy="311" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
+<text x="369.3333333333333" y="315" font-size="14" fill="#6b5843">Sauvegarde automatique</text>
 </g>
-<g><rect x="642.6666666666666" y="72" width="293.3333333333333" height="247" rx="6" fill="#eee2c4" stroke="#3a2c1e" stroke-width="1.2"/>
+<g><rect x="642.6666666666666" y="72" width="293.3333333333333" height="268" rx="6" fill="#eee2c4" stroke="#3a2c1e" stroke-width="1.2"/>
 <text x="658.6666666666666" y="102" font-size="19" fill="#3a2c1e"><tspan fill="#6b5843">J2</tspan> · Néolithique</text>
 <circle cx="664.6666666666666" cy="122" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
 <text x="678.6666666666666" y="126" font-size="14" fill="#6b5843">Agriculture et villages</text>
@@ -49,52 +51,53 @@
 <circle cx="664.6666666666666" cy="164" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
 <text x="678.6666666666666" y="168" font-size="14" fill="#6b5843">Événements rares</text>
 </g>
-<g><rect x="24" y="335" width="293.3333333333333" height="121" rx="6" fill="#eee2c4" stroke="#3a2c1e" stroke-width="1.2"/>
-<text x="40" y="365" font-size="19" fill="#3a2c1e"><tspan fill="#6b5843">J3</tspan> · Peuples voisins</text>
-<circle cx="46" cy="385" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="60" y="389" font-size="14" fill="#6b5843">Peuples IA sous le brouillard</text>
+<g><rect x="24" y="356" width="293.3333333333333" height="121" rx="6" fill="#eee2c4" stroke="#3a2c1e" stroke-width="1.2"/>
+<text x="40" y="386" font-size="19" fill="#3a2c1e"><tspan fill="#6b5843">J3</tspan> · Peuples voisins</text>
 <circle cx="46" cy="406" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="60" y="410" font-size="14" fill="#6b5843">Relations et commerce</text>
+<text x="60" y="410" font-size="14" fill="#6b5843">Peuples IA sous le brouillard</text>
 <circle cx="46" cy="427" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="60" y="431" font-size="14" fill="#6b5843">Tensions et raids</text>
+<text x="60" y="431" font-size="14" fill="#6b5843">Relations et commerce</text>
+<circle cx="46" cy="448" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
+<text x="60" y="452" font-size="14" fill="#6b5843">Tensions et raids</text>
 </g>
-<g><rect x="333.3333333333333" y="335" width="293.3333333333333" height="121" rx="6" fill="#eee2c4" stroke="#3a2c1e" stroke-width="1.2"/>
-<text x="349.3333333333333" y="365" font-size="19" fill="#3a2c1e"><tspan fill="#6b5843">J4</tspan> · Antiquité</text>
-<circle cx="355.3333333333333" cy="385" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="369.3333333333333" y="389" font-size="14" fill="#6b5843">Bronze : cuivre et étain</text>
+<g><rect x="333.3333333333333" y="356" width="293.3333333333333" height="121" rx="6" fill="#eee2c4" stroke="#3a2c1e" stroke-width="1.2"/>
+<text x="349.3333333333333" y="386" font-size="19" fill="#3a2c1e"><tspan fill="#6b5843">J4</tspan> · Antiquité</text>
 <circle cx="355.3333333333333" cy="406" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="369.3333333333333" y="410" font-size="14" fill="#6b5843">Cités, routes, écriture</text>
+<text x="369.3333333333333" y="410" font-size="14" fill="#6b5843">Bronze : cuivre et étain</text>
 <circle cx="355.3333333333333" cy="427" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="369.3333333333333" y="431" font-size="14" fill="#6b5843">Merveilles très rares</text>
+<text x="369.3333333333333" y="431" font-size="14" fill="#6b5843">Cités, routes, écriture</text>
+<circle cx="355.3333333333333" cy="448" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
+<text x="369.3333333333333" y="452" font-size="14" fill="#6b5843">Merveilles très rares</text>
 </g>
-<g><rect x="642.6666666666666" y="335" width="293.3333333333333" height="121" rx="6" fill="#eee2c4" stroke="#3a2c1e" stroke-width="1.2"/>
-<text x="658.6666666666666" y="365" font-size="19" fill="#3a2c1e"><tspan fill="#6b5843">J5</tspan> · Finition</text>
-<circle cx="664.6666666666666" cy="385" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="678.6666666666666" y="389" font-size="14" fill="#6b5843">Tutoriel, score, succès</text>
+<g><rect x="642.6666666666666" y="356" width="293.3333333333333" height="121" rx="6" fill="#eee2c4" stroke="#3a2c1e" stroke-width="1.2"/>
+<text x="658.6666666666666" y="386" font-size="19" fill="#3a2c1e"><tspan fill="#6b5843">J5</tspan> · Finition</text>
 <circle cx="664.6666666666666" cy="406" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="678.6666666666666" y="410" font-size="14" fill="#6b5843">Options de partie</text>
+<text x="678.6666666666666" y="410" font-size="14" fill="#6b5843">Tutoriel, score, succès</text>
 <circle cx="664.6666666666666" cy="427" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="678.6666666666666" y="431" font-size="14" fill="#6b5843">Jouable sur téléphone</text>
+<text x="678.6666666666666" y="431" font-size="14" fill="#6b5843">Options de partie</text>
+<circle cx="664.6666666666666" cy="448" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
+<text x="678.6666666666666" y="452" font-size="14" fill="#6b5843">Jouable sur téléphone</text>
 </g>
-<g><rect x="24" y="472" width="293.3333333333333" height="163" rx="6" fill="#eee2c4" stroke="#3a2c1e" stroke-width="1.2"/>
-<text x="40" y="502" font-size="19" fill="#3a2c1e"><tspan fill="#6b5843">J6+</tspan> · Ères suivantes</text>
-<circle cx="46" cy="522" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="60" y="526" font-size="14" fill="#6b5843">Moyen Âge</text>
+<g><rect x="24" y="493" width="293.3333333333333" height="163" rx="6" fill="#eee2c4" stroke="#3a2c1e" stroke-width="1.2"/>
+<text x="40" y="523" font-size="19" fill="#3a2c1e"><tspan fill="#6b5843">J6+</tspan> · Ères suivantes</text>
 <circle cx="46" cy="543" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="60" y="547" font-size="14" fill="#6b5843">Renaissance</text>
+<text x="60" y="547" font-size="14" fill="#6b5843">Moyen Âge</text>
 <circle cx="46" cy="564" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="60" y="568" font-size="14" fill="#6b5843">Ère industrielle</text>
+<text x="60" y="568" font-size="14" fill="#6b5843">Renaissance</text>
 <circle cx="46" cy="585" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="60" y="589" font-size="14" fill="#6b5843">Époque moderne</text>
+<text x="60" y="589" font-size="14" fill="#6b5843">Ère industrielle</text>
 <circle cx="46" cy="606" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="60" y="610" font-size="14" fill="#6b5843">Futur imaginé</text>
+<text x="60" y="610" font-size="14" fill="#6b5843">Époque moderne</text>
+<circle cx="46" cy="627" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
+<text x="60" y="631" font-size="14" fill="#6b5843">Futur imaginé</text>
 </g>
-<text x="24" y="671" font-size="13" letter-spacing="1.5" fill="#6b5843">JOURNAL</text>
-<text x="24" y="695" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J0 : fondations, monde organique et carte d'explorateur</text>
-<circle cx="700" cy="704" r="5" fill="#3a2c1e"/>
-<text x="710" y="708" font-size="12" fill="#6b5843">fait</text>
-<circle cx="760" cy="704" r="5" fill="none" stroke="#8c2f1c" stroke-width="1.5"/><path d="M760 699a5 5 0 0 1 0 10z" fill="#8c2f1c"/>
-<text x="770" y="708" font-size="12" fill="#6b5843">en cours</text>
-<circle cx="840" cy="704" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="850" y="708" font-size="12" fill="#6b5843">à faire</text>
+<text x="24" y="692" font-size="13" letter-spacing="1.5" fill="#6b5843">JOURNAL</text>
+<text x="24" y="716" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J0 : corrections de la revue (brouillard, territoire, arrêt du Worker, réponses tardives, avis en jeu, couverture)</text>
+<text x="24" y="737" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J0 : fondations, monde organique et carte d'explorateur</text>
+<circle cx="700" cy="746" r="5" fill="#3a2c1e"/>
+<text x="710" y="750" font-size="12" fill="#6b5843">fait</text>
+<circle cx="760" cy="746" r="5" fill="none" stroke="#8c2f1c" stroke-width="1.5"/><path d="M760 741a5 5 0 0 1 0 10z" fill="#8c2f1c"/>
+<text x="770" y="750" font-size="12" fill="#6b5843">en cours</text>
+<circle cx="840" cy="746" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
+<text x="850" y="750" font-size="12" fill="#6b5843">à faire</text>
 </svg>

@@ -49,7 +49,8 @@ export interface GameState {
 export const START_CHOICES = 3
 const CAMP_SIGHT = 7
 const CAMP_REACH = 26
-const GROWTH_ATTEMPTS = 6
+/** Cellules gagnées par le territoire à chaque tick. */
+const GROWTH_PER_TICK = 2
 const MAX_WORLD_RETRIES = 8
 
 export function createGame(options: NewGameOptions): GameState {
@@ -57,7 +58,7 @@ export function createGame(options: NewGameOptions): GameState {
   const rng = createRng(`partie:${world.seed}`)
   const site = options.randomStart
     ? rng.pick(starts)
-    : (starts[Math.min(options.startIndex ?? 0, starts.length - 1)] as StartSite)
+    : (starts[clampIndex(options.startIndex, starts.length)] as StartSite)
 
   const state: GameState = {
     options,
@@ -95,6 +96,12 @@ function worldWithStarts(options: NewGameOptions): { world: World; starts: Start
   throw new Error(`Aucun départ viable pour la graine « ${options.seed} »`)
 }
 
+/** Index de départ ramené dans la liste : négatif, trop grand ou non entier ne plantent pas. */
+export function clampIndex(index: number | undefined, length: number): number {
+  const n = Number.isFinite(index) ? Math.trunc(index as number) : 0
+  return Math.min(Math.max(n, 0), length - 1)
+}
+
 export function applyCommand(state: GameState, command: Command): CommandResult {
   switch (command.type) {
     case 'setSpeed':
@@ -130,7 +137,7 @@ export function applyCommand(state: GameState, command: Command): CommandResult 
 export function step(state: GameState): void {
   state.clock.tick++
   for (const unit of state.units) moveUnit(unit, state.world)
-  growTerritory(state.territory, state.world, seatsOf(state), state.rng, GROWTH_ATTEMPTS)
+  growTerritory(state.territory, state.world, seatsOf(state), state.rng, GROWTH_PER_TICK)
   updateFog(state.fog, viewersOf(state))
 }
 

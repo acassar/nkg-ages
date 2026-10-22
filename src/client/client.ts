@@ -11,5 +11,8 @@ export interface GameClient {
   newGame(options: NewGameOptions): Promise<{ world: WorldSnapshot; view: GameView }>
   send(command: Command): Promise<CommandResult>
   subscribe(listener: (view: GameView) => void): () => void
+  /** Panne du jeu lui-même (Worker planté) : les requêtes en cours sont rejetées. */
+  onFailure(listener: (message: string) => void): () => void
+  /** Arrête le jeu ; les requêtes encore en attente sont rejetées. */
   dispose(): void
 }

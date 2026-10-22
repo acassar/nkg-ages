@@ -5,79 +5,189 @@
       "id": "J0",
       "title": "Fondations",
       "features": [
-        { "title": "Projet, CI, déploiement Pages", "status": "done" },
-        { "title": "Architecture découplée vérifiée en CI", "status": "done" },
-        { "title": "Horloge, pause, vitesses 1 à 5", "status": "done" },
-        { "title": "Monde organique généré par graine", "status": "done" },
-        { "title": "Carte d'explorateur WebGL", "status": "done" },
-        { "title": "Brouillard et frontière au pixel", "status": "done" },
-        { "title": "Roadmap graphique", "status": "done" }
+        {
+          "title": "Projet, CI, déploiement Pages",
+          "status": "done"
+        },
+        {
+          "title": "Architecture découplée vérifiée en CI",
+          "status": "done"
+        },
+        {
+          "title": "Horloge, pause, vitesses 1 à 5",
+          "status": "done"
+        },
+        {
+          "title": "Monde organique généré par graine",
+          "status": "done"
+        },
+        {
+          "title": "Carte d'explorateur WebGL",
+          "status": "done"
+        },
+        {
+          "title": "Brouillard et frontière au pixel",
+          "status": "done"
+        },
+        {
+          "title": "Roadmap graphique",
+          "status": "done"
+        }
       ]
     },
     {
       "id": "J1",
       "title": "MVP Préhistoire",
       "features": [
-        { "title": "Tribu : population, nourriture, famine", "status": "todo" },
-        { "title": "Ressources à rareté (4 rangs)", "status": "todo" },
-        { "title": "Chasseurs, chasse et faune", "status": "todo" },
-        { "title": "Inventions à rang E à S", "status": "todo" },
-        { "title": "Campements à fonder", "status": "todo" },
-        { "title": "Fleuves", "status": "todo" },
-        { "title": "Une dizaine de techniques", "status": "todo" },
-        { "title": "Victoire, défaite, score", "status": "todo" },
-        { "title": "Sauvegarde automatique", "status": "todo" }
+        {
+          "title": "Tribu : population, nourriture, famine",
+          "status": "todo"
+        },
+        {
+          "title": "Ressources à rareté (4 rangs)",
+          "status": "todo"
+        },
+        {
+          "title": "Chasseurs, chasse et faune",
+          "status": "todo"
+        },
+        {
+          "title": "Chemins qui contournent l'eau (A*)",
+          "status": "todo"
+        },
+        {
+          "title": "Inventions à rang E à S",
+          "status": "todo"
+        },
+        {
+          "title": "Campements à fonder",
+          "status": "todo"
+        },
+        {
+          "title": "Fleuves",
+          "status": "todo"
+        },
+        {
+          "title": "Une dizaine de techniques",
+          "status": "todo"
+        },
+        {
+          "title": "Victoire, défaite, score",
+          "status": "todo"
+        },
+        {
+          "title": "Sauvegarde automatique",
+          "status": "todo"
+        }
       ]
     },
     {
       "id": "J2",
       "title": "Néolithique",
       "features": [
-        { "title": "Agriculture et villages", "status": "todo" },
-        { "title": "Saisons, climat, stockage", "status": "todo" },
-        { "title": "Événements rares", "status": "todo" }
+        {
+          "title": "Agriculture et villages",
+          "status": "todo"
+        },
+        {
+          "title": "Saisons, climat, stockage",
+          "status": "todo"
+        },
+        {
+          "title": "Événements rares",
+          "status": "todo"
+        }
       ]
     },
     {
       "id": "J3",
       "title": "Peuples voisins",
       "features": [
-        { "title": "Peuples IA sous le brouillard", "status": "todo" },
-        { "title": "Relations et commerce", "status": "todo" },
-        { "title": "Tensions et raids", "status": "todo" }
+        {
+          "title": "Peuples IA sous le brouillard",
+          "status": "todo"
+        },
+        {
+          "title": "Relations et commerce",
+          "status": "todo"
+        },
+        {
+          "title": "Tensions et raids",
+          "status": "todo"
+        }
       ]
     },
     {
       "id": "J4",
       "title": "Antiquité",
       "features": [
-        { "title": "Bronze : cuivre et étain", "status": "todo" },
-        { "title": "Cités, routes, écriture", "status": "todo" },
-        { "title": "Merveilles très rares", "status": "todo" }
+        {
+          "title": "Bronze : cuivre et étain",
+          "status": "todo"
+        },
+        {
+          "title": "Cités, routes, écriture",
+          "status": "todo"
+        },
+        {
+          "title": "Merveilles très rares",
+          "status": "todo"
+        }
       ]
     },
     {
       "id": "J5",
       "title": "Finition",
       "features": [
-        { "title": "Tutoriel, score, succès", "status": "todo" },
-        { "title": "Options de partie", "status": "todo" },
-        { "title": "Jouable sur téléphone", "status": "todo" }
+        {
+          "title": "Tutoriel, score, succès",
+          "status": "todo"
+        },
+        {
+          "title": "Options de partie",
+          "status": "todo"
+        },
+        {
+          "title": "Jouable sur téléphone",
+          "status": "todo"
+        }
       ]
     },
     {
       "id": "J6+",
       "title": "Ères suivantes",
       "features": [
-        { "title": "Moyen Âge", "status": "todo" },
-        { "title": "Renaissance", "status": "todo" },
-        { "title": "Ère industrielle", "status": "todo" },
-        { "title": "Époque moderne", "status": "todo" },
-        { "title": "Futur imaginé", "status": "todo" }
+        {
+          "title": "Moyen Âge",
+          "status": "todo"
+        },
+        {
+          "title": "Renaissance",
+          "status": "todo"
+        },
+        {
+          "title": "Ère industrielle",
+          "status": "todo"
+        },
+        {
+          "title": "Époque moderne",
+          "status": "todo"
+        },
+        {
+          "title": "Futur imaginé",
+          "status": "todo"
+        }
       ]
     }
   ],
   "log": [
-    { "date": "2026-10-22", "text": "J0 : fondations, monde organique et carte d'explorateur" }
+    {
+      "date": "2026-10-22",
+      "text": "J0 : corrections de la revue (brouillard, territoire, arrêt du Worker, réponses tardives, avis en jeu, couverture)"
+    },
+    {
+      "date": "2026-10-22",
+      "text": "J0 : fondations, monde organique et carte d'explorateur"
+    }
   ]
 }

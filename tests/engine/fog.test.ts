@@ -32,6 +32,26 @@ describe('brouillard de guerre', () => {
     expect(fog.dirty).toMatchObject({ x: 7, y: 7 })
   })
 
+  it('un observateur immobile ne change rien : ni version, ni zone sale', () => {
+    const fog = createFog(60, 20)
+    updateFog(fog, [{ x: 10, y: 10, sight: 4 }])
+    fog.dirty = null
+    const version = fog.version
+    updateFog(fog, [{ x: 10, y: 10, sight: 4 }])
+    expect(fog.version).toBe(version)
+    expect(fog.dirty).toBeNull()
+  })
+
+  it('la zone sale ne couvre que ce qui change, pas les observateurs immobiles', () => {
+    const fog = createFog(100, 40)
+    const still = { x: 80, y: 20, sight: 5 }
+    updateFog(fog, [{ x: 10, y: 20, sight: 5 }, still])
+    fog.dirty = null
+    updateFog(fog, [{ x: 12, y: 20, sight: 5 }, still])
+    expect(fog.dirty).not.toBeNull()
+    expect(fog.dirty!.x + fog.dirty!.w).toBeLessThanOrEqual(20)
+  })
+
   it('ignore un observateur hors du monde', () => {
     const fog = createFog(10, 10)
     updateFog(fog, [{ x: -50, y: -50, sight: 3 }])

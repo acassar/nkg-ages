@@ -26,7 +26,7 @@ describe('création de partie', () => {
     expect(isWater(g.world.biome[Math.floor(camp.y) * g.world.width + Math.floor(camp.x)]!)).toBe(
       false,
     )
-    expect(g.territory.owned).toHaveLength(1)
+    expect(g.territory.ownedCount).toBe(1)
     expect(g.clock.paused).toBe(true)
   })
 
@@ -40,6 +40,11 @@ describe('création de partie', () => {
     const g = createGame({ ...options, startIndex: 2 })
     expect(g.starts).toHaveLength(3)
     expect(Math.floor(g.camps[0]!.x)).toBe(g.starts[2]!.x)
+  })
+
+  it.each([-3, 99, 1.7, NaN])('ramène un index de départ hors bornes (%f) dans la liste', (i) => {
+    const g = createGame({ ...options, startIndex: i })
+    expect(g.starts.some((s) => s.x === Math.floor(g.camps[0]!.x))).toBe(true)
   })
 
   it('tire un départ au hasard en placement aléatoire, de façon reproductible', () => {
@@ -114,8 +119,8 @@ describe('scénarios', () => {
   it('le territoire grandit avec le temps', () => {
     const g = createGame(options)
     for (let i = 0; i < 200; i++) step(g)
-    expect(g.territory.owned.length).toBeGreaterThan(100)
-    expect(g.territory.owner.filter((o) => o === PLAYER).length).toBe(g.territory.owned.length)
+    expect(g.territory.ownedCount).toBeGreaterThan(100)
+    expect(g.territory.owner.filter((o) => o === PLAYER).length).toBe(g.territory.ownedCount)
   })
 
   it('une même graine et les mêmes commandes donnent la même partie', () => {

@@ -13,12 +13,15 @@ export interface FogState {
   width: number
   height: number
   cells: Uint8Array
-  /** Augmente à chaque changement. */
+  /** Augmente seulement quand au moins une cellule change. */
   version: number
-  /** Zone modifiée depuis la dernière lecture par l'hôte. */
+  /** Rectangle englobant les cellules modifiées depuis la dernière lecture par l'hôte. */
   dirty: Rect | null
-  /** Zones visibles au tick précédent, à rabaisser en « déjà vu ». */
+  /** Zones visibles au calcul précédent : seules candidates au passage en « déjà vu ». */
   lastViewed: Rect[]
+  /** Numéro de passage par cellule : vaut `pass` si la cellule est vue à ce calcul. */
+  seenAt: Uint32Array
+  pass: number
 }
 
 export function createFog(width: number, height: number): FogState {
@@ -29,27 +32,23 @@ export function createFog(width: number, height: number): FogState {
     version: 0,
     dirty: null,
     lastViewed: [],
+    seenAt: new Uint32Array(width * height),
+    pass: 0,
   }
 }
 
 /**
- * Recalcule la vision : ce qui était visible devient « déjà vu », puis chaque
- * observateur rend visible son disque. Une cellule découverte ne redevient jamais inconnue.
+ * Recalcule la vision. Une cellule visible qui n'est plus vue passe en « déjà vu »,
+ * une cellule vue devient visible ; une cellule découverte ne redevient jamais inconnue.
+ * Seules les cellules qui changent réellement élargissent la zone sale : un observateur
+ * immobile ne coûte aucune mise à jour d'affichage.
  * Coût proportionnel aux zones vues, pas à la taille du monde.
  */
 export function updateFog(fog: FogState, viewers: readonly Viewer[]): void {
-  const { width, height, cells } = fog
-  let changed = false
-  for (const r of fog.lastViewed) {
-    for (let y = r.y; y < r.y + r.h; y++) {
-      for (let x = r.x; x < r.x + r.w; x++) {
-        const i = y * width + x
-        if (cells[i] === 2) cells[i] = 1
-      }
-    }
-    fog.dirty = unionRect(fog.dirty, r)
-  }
+  const { width, height, cells, seenAt } = fog
+  const pass = ++fog.pass
   const viewed: Rect[] = []
+  // 1. Marque ce que les observateurs voient à ce calcul.
   for (const v of viewers) {
     const rect = discRect(v.x, v.y, v.sight, width, height)
     if (!rect) continue
@@ -58,18 +57,49 @@ export function updateFog(fog: FogState, viewers: readonly Viewer[]): void {
       for (let x = rect.x; x < rect.x + rect.w; x++) {
         const dx = x + 0.5 - v.x
         const dy = y + 0.5 - v.y
-        if (dx * dx + dy * dy > r2) continue
-        const i = y * width + x
-        if (cells[i] !== 2) {
-          cells[i] = 2
-          changed = true
-        }
+        if (dx * dx + dy * dy <= r2) seenAt[y * width + x] = pass
       }
     }
     viewed.push(rect)
-    fog.dirty = unionRect(fog.dirty, rect)
   }
-  // Un rabaissement sans nouvelle cellule visible change aussi l'affichage.
-  if (changed || fog.lastViewed.length > 0) fog.version++
+
+  let x0 = Infinity
+  let y0 = Infinity
+  let x1 = -Infinity
+  let y1 = -Infinity
+  const touch = (x: number, y: number) => {
+    if (x < x0) x0 = x
+    if (y < y0) y0 = y
+    if (x > x1) x1 = x
+    if (y > y1) y1 = y
+  }
+  // 2. Ce qui était visible et ne l'est plus passe en « déjà vu ».
+  for (const r of fog.lastViewed) {
+    for (let y = r.y; y < r.y + r.h; y++) {
+      for (let x = r.x; x < r.x + r.w; x++) {
+        const i = y * width + x
+        if (cells[i] === Visibility.Visible && seenAt[i] !== pass) {
+          cells[i] = Visibility.Seen
+          touch(x, y)
+        }
+      }
+    }
+  }
+  // 3. Ce qui est vu devient visible.
+  for (const r of viewed) {
+    for (let y = r.y; y < r.y + r.h; y++) {
+      for (let x = r.x; x < r.x + r.w; x++) {
+        const i = y * width + x
+        if (seenAt[i] === pass && cells[i] !== Visibility.Visible) {
+          cells[i] = Visibility.Visible
+          touch(x, y)
+        }
+      }
+    }
+  }
   fog.lastViewed = viewed
+  if (x1 >= x0) {
+    fog.version++
+    fog.dirty = unionRect(fog.dirty, { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 })
+  }
 }

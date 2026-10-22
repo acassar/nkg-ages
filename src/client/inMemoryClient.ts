@@ -10,6 +10,8 @@ export function createInMemoryClient(scheduler?: Scheduler): GameClient & { host
     newGame: async (options) => host.newGame(options),
     send: async (command) => host.send(command),
     subscribe: (listener) => host.onView(listener),
+    // Dans le même fil, une panne remonte directement comme exception.
+    onFailure: () => () => {},
     dispose: () => host.dispose(),
   }
 }

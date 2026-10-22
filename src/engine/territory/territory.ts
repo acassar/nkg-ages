@@ -13,8 +13,13 @@ export interface TerritoryState {
   owner: Uint8Array
   version: number
   dirty: Rect | null
-  /** Cellules possédées, pour tirer vite un point de départ d'expansion. */
-  owned: number[]
+  /** Nombre de cellules tenues, tous propriétaires confondus. */
+  ownedCount: number
+  /**
+   * Cellules tenues qui ont peut-être encore un voisin à prendre.
+   * Purgée au fil des tirages : l'intérieur du territoire n'y reste pas.
+   */
+  frontier: number[]
 }
 
 export interface Seat {
@@ -32,18 +37,9 @@ export function createTerritory(width: number, height: number): TerritoryState {
     owner: new Uint8Array(width * height),
     version: 0,
     dirty: null,
-    owned: [],
+    ownedCount: 0,
+    frontier: [],
   }
-}
-
-export function claim(territory: TerritoryState, x: number, y: number, owner: number): boolean {
-  const i = y * territory.width + x
-  if (territory.owner[i] === owner) return false
-  territory.owner[i] = owner
-  territory.owned.push(i)
-  territory.version++
-  territory.dirty = unionRect(territory.dirty, { x, y, w: 1, h: 1 })
-  return true
 }
 
 const NEIGHBORS = [
@@ -53,30 +49,78 @@ const NEIGHBORS = [
   [0, -1],
 ] as const
 
+export function claim(territory: TerritoryState, x: number, y: number, owner: number): boolean {
+  const i = y * territory.width + x
+  const previous = territory.owner[i]
+  if (previous === owner) return false
+  territory.owner[i] = owner
+  if (previous === NO_OWNER) territory.ownedCount++
+  if (owner === NO_OWNER) {
+    territory.ownedCount--
+    // Les voisines possédées d'une cellule libérée redeviennent des bords d'expansion.
+    for (const [dx, dy] of NEIGHBORS) {
+      const nx = x + dx
+      const ny = y + dy
+      if (nx < 0 || ny < 0 || nx >= territory.width || ny >= territory.height) continue
+      const n = ny * territory.width + nx
+      if (territory.owner[n] !== NO_OWNER) territory.frontier.push(n)
+    }
+  } else territory.frontier.push(i)
+  territory.version++
+  territory.dirty = unionRect(territory.dirty, { x, y, w: 1, h: 1 })
+  return true
+}
+
+/** Voisins libres, de terre et dans la portée du siège, d'une cellule tenue. */
+function freeNeighbors(
+  territory: TerritoryState,
+  world: World,
+  seat: Seat,
+  from: number,
+): [number, number][] {
+  const fx = from % territory.width
+  const fy = Math.floor(from / territory.width)
+  const out: [number, number][] = []
+  for (const [dx, dy] of NEIGHBORS) {
+    const x = fx + dx
+    const y = fy + dy
+    if (x < 0 || y < 0 || x >= territory.width || y >= territory.height) continue
+    const i = y * territory.width + x
+    if (territory.owner[i] !== NO_OWNER || isWater(world.biome[i]!)) continue
+    if (Math.hypot(x + 0.5 - seat.x, y + 0.5 - seat.y) > seat.reach) continue
+    out.push([x, y])
+  }
+  return out
+}
+
 /**
- * Croissance organique : on tire des cellules déjà tenues et l'on gagne un voisin libre,
- * de terre, dans la portée du siège. Le hasard donne des contours irréguliers.
+ * Croissance organique : on tire une cellule de la frontière et l'on prend un de ses voisins
+ * libres. Une cellule sans voisin libre quitte la frontière, si bien que la croissance
+ * ne s'essouffle pas quand le territoire grandit. Le hasard donne des contours irréguliers.
  */
 export function growTerritory(
   territory: TerritoryState,
   world: World,
   seats: readonly Seat[],
   rng: Rng,
-  attempts: number,
+  claims: number,
 ): void {
-  if (territory.owned.length === 0) return
-  for (let a = 0; a < attempts; a++) {
-    const from = territory.owned[rng.int(0, territory.owned.length - 1)]!
+  const { frontier } = territory
+  let taken = 0
+  // Garde-fou : chaque tirage prend une cellule ou retire une cellule de la frontière.
+  for (let guard = 0; taken < claims && frontier.length > 0 && guard < claims * 8; guard++) {
+    const k = rng.int(0, frontier.length - 1)
+    const from = frontier[k]!
     const owner = territory.owner[from]!
     const seat = seats.find((s) => s.owner === owner)
-    if (!seat) continue
-    const [dx, dy] = rng.pick(NEIGHBORS)
-    const x = (from % territory.width) + dx
-    const y = Math.floor(from / territory.width) + dy
-    if (x < 0 || y < 0 || x >= territory.width || y >= territory.height) continue
-    const i = y * territory.width + x
-    if (territory.owner[i] !== NO_OWNER || isWater(world.biome[i]!)) continue
-    if (Math.hypot(x + 0.5 - seat.x, y + 0.5 - seat.y) > seat.reach) continue
+    const options = seat ? freeNeighbors(territory, world, seat, from) : []
+    if (options.length === 0) {
+      frontier[k] = frontier[frontier.length - 1]!
+      frontier.pop()
+      continue
+    }
+    const [x, y] = rng.pick(options)
     claim(territory, x, y, owner)
+    taken++
   }
 }

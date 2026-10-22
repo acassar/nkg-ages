@@ -23,3 +23,11 @@ describe('textures de la carte', () => {
     expect([...p].every((c) => c >= 0 && c <= 1)).toBe(true)
   })
 })
+
+describe('couleurs CSS', () => {
+  it('convertit une couleur de la palette', async () => {
+    const { cssColor, INK } = await import('@/render/palette')
+    expect(cssColor(INK)).toBe('rgba(58, 44, 30, 1)')
+    expect(cssColor([1, 0, 0], 0.5)).toBe('rgba(255, 0, 0, 0.5)')
+  })
+})
