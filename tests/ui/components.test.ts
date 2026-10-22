@@ -27,7 +27,7 @@ describe('écran de départ', () => {
     await flushPromises()
     const game = useGameStore()
     expect(game.world?.seed).toBe('chauvet')
-    expect(game.selected.size).toBe(1)
+    expect(game.selected.size).toBe(3)
   })
 })
 
@@ -137,5 +137,15 @@ describe('écran de jeu', () => {
     vi.advanceTimersByTime(4100)
     await flushPromises()
     expect(wrapper.find('[data-testid=notice]').exists()).toBe(false)
+  })
+
+  it('Maj + clic ajoute ou retire une unité de la sélection', async () => {
+    const game = useGameStore()
+    await game.newGame({ seed: 'choix', randomStart: false, width: 128, height: 64 })
+    game.select([1])
+    game.toggleSelected(2)
+    expect([...game.selected]).toEqual([1, 2])
+    game.toggleSelected(1)
+    expect([...game.selected]).toEqual([2])
   })
 })

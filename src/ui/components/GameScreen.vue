@@ -17,8 +17,9 @@ defineProps<{ benchmark?: boolean }>()
       <button class="close" aria-label="Fermer" @click="game.dismissError()">×</button>
     </p>
     <p class="hint parchment">
-      Clic : choisir l'éclaireur · clic droit : l'envoyer · glisser ou ZQSD : déplacer la carte ·
-      molette : zoom · Espace : pause · 1 à 5 : vitesse
+      Clic : choisir une unité (Maj : en ajouter) · clic droit : l'envoyer · les chasseurs chassent
+      seuls les bêtes en vue · glisser ou ZQSD : déplacer la carte · molette : zoom · Espace : pause
+      · 1 à 5 : vitesse
     </p>
   </div>
 </template>

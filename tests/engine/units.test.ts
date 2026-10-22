@@ -31,6 +31,7 @@ const scout = (x: number, y: number, target: Unit['target']): Unit => ({
   path: [],
   plannedFog: 0,
   patience: 100,
+  auto: false,
 })
 
 describe('déplacement des unités', () => {

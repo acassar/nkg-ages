@@ -1,7 +1,7 @@
 import { BIOMES } from '../content/biomes'
 import { biomeAt, type World } from '../world/world'
 
-export type UnitKind = 'eclaireur'
+export type UnitKind = 'eclaireur' | 'chasseur'
 
 export interface Unit {
   id: number
@@ -16,6 +16,8 @@ export interface Unit {
   plannedFog: number
   /** Coût de trajet qu'elle accepte encore de dépenser avant de renoncer. */
   patience: number
+  /** Ordre donné par l'unité elle-même (poursuite d'un troupeau), pas par le joueur. */
+  auto: boolean
 }
 
 export interface UnitRules {
@@ -34,6 +36,7 @@ export interface UnitRules {
 
 export const UNIT_RULES: Readonly<Record<UnitKind, UnitRules>> = {
   eclaireur: { name: 'Éclaireur', speed: 0.5, sight: 9, detour: 2, detourSlack: 30 },
+  chasseur: { name: 'Chasseur', speed: 0.42, sight: 6, detour: 2, detourSlack: 20 },
 }
 
 /**
@@ -70,6 +73,7 @@ export function moveUnit(unit: Unit, world: World): boolean {
 export function stopUnit(unit: Unit): void {
   unit.target = null
   unit.path = []
+  unit.auto = false
 }
 
 export function isPassable(world: World, x: number, y: number): boolean {

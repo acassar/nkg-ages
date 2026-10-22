@@ -3,7 +3,9 @@ import {
   dateOfTick,
   FIRST_ERA,
   PLAYER,
+  ANIMAL_RULES,
   depositHeld,
+  herdVisible,
   depositYield,
   RESOURCE_KINDS,
   RESOURCE_RULES,
@@ -100,6 +102,16 @@ export function buildGameView(state: GameState, full = false): GameView {
     notices: state.events.map((e) => noticeOf(state, e)),
     tribe: tribeView(state),
     deposits: depositViews(state),
+    herds: state.herds
+      .filter((h) => herdVisible(state, h))
+      .map((h) => ({
+        id: h.id,
+        kind: h.kind,
+        name: ANIMAL_RULES[h.kind].name,
+        x: h.x,
+        y: h.y,
+        size: h.size,
+      })),
   }
 }
 
@@ -113,6 +125,8 @@ function noticeOf(state: GameState, event: GameEvent): string {
     }
     case 'famine':
       return 'Famine : les réserves sont vides, la tribu perd des siens chaque mois.'
+    case 'hunterKilled':
+      return `Chasse : un chasseur est mort face aux ${ANIMAL_RULES[event.animal].name.toLowerCase()}.`
   }
 }
 

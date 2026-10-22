@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { applyCommand, clearDirty, createGame, step, type GameState } from '@/engine/game'
+import {
+  applyCommand,
+  clearDirty,
+  createGame,
+  herdVisible,
+  step,
+  type GameState,
+} from '@/engine/game'
+import { HUNT_RULES } from '@/engine/content/fauna'
 import { isWater } from '@/engine/content/biomes'
 import { Visibility } from '@/engine/fog/fog'
 import { TRIBE_RULES } from '@/engine/content/tribe'
@@ -69,7 +77,8 @@ describe('création de partie', () => {
   it('pose un campement et un éclaireur sur un départ viable', () => {
     const g = createGame(options)
     expect(g.camps).toHaveLength(1)
-    expect(g.units).toHaveLength(1)
+    // Un éclaireur et deux chasseurs, au camp.
+    expect(g.units.map((u) => u.kind)).toEqual(['eclaireur', 'chasseur', 'chasseur'])
     const camp = g.camps[0]!
     expect(isWater(g.world.biome[Math.floor(camp.y) * g.world.width + Math.floor(camp.x)]!)).toBe(
       false,
@@ -308,6 +317,64 @@ describe('scénarios', () => {
     for (let i = 0; i < 24; i++) step(g)
     expect(g.tribe.starvingMonths).toBe(0)
     expect(g.tribe.materials.silex).toBeCloseTo(24 * 0.5)
+  })
+
+  it('un chasseur près d’un troupeau abat des bêtes et nourrit la tribu', () => {
+    const g = createGame(options)
+    const hunter = g.units.find((u) => u.kind === 'chasseur')!
+    g.units = [hunter]
+    g.tribe.food = 0
+    g.territory.playerWeight = 0
+    g.territory.weights = new Float32Array(g.territory.owner.length)
+    g.deposits = []
+    const herd = { id: 1, kind: 'cerf' as const, x: hunter.x + 0.5, y: hunter.y, size: 8 }
+    g.herds = [{ ...herd, goal: { x: herd.x, y: herd.y } }]
+    let meat = 0
+    for (let i = 0; i < 60 && g.herds.length > 0; i++) {
+      const before = g.tribe.food
+      step(g)
+      if (g.tribe.food > before) meat++
+      // Le troupeau fuit : on le ramène à portée pour ce test.
+      for (const h of g.herds) Object.assign(h, { x: hunter.x + 0.5, y: hunter.y, goal: h })
+    }
+    expect(meat).toBeGreaterThan(0)
+    expect(g.herds[0]?.size ?? 0).toBeLessThan(8)
+  })
+
+  it('la chasse au mammouth peut coûter la vie d’un chasseur', () => {
+    const g = createGame(options)
+    const hunters = g.units.filter((u) => u.kind === 'chasseur')
+    const at = hunters[0]!
+    const herd = { id: 1, kind: 'mammouth' as const, x: at.x + 0.5, y: at.y, size: 4 }
+    let killed = 0
+    for (let i = 0; i < 400 && killed === 0; i++) {
+      g.herds = [{ ...herd, size: 4, goal: { x: herd.x, y: herd.y } }]
+      g.tribe.food = 1000
+      step(g)
+      killed = g.events.filter((e) => e.type === 'hunterKilled').length
+      clearDirty(g)
+    }
+    expect(killed).toBe(1)
+    expect(g.units.filter((u) => u.kind === 'chasseur')).toHaveLength(1)
+  })
+
+  it('un chasseur oisif poursuit seul un troupeau en vue, sans avertir s’il renonce', () => {
+    const g = createGame(options)
+    const hunter = g.units.find((u) => u.kind === 'chasseur')!
+    g.units = [hunter]
+    const spot = { x: hunter.x + 4, y: hunter.y }
+    // Un troupeau en vue, sur une terre accessible : on prend la case connue la plus proche.
+    g.herds = [{ id: 1, kind: 'cerf', ...spot, size: 8, goal: { ...spot } }]
+    let chased = false
+    for (let i = 0; i < HUNT_RULES.chaseEvery + 1; i++) {
+      g.herds[0]!.x = spot.x
+      g.herds[0]!.y = spot.y
+      step(g)
+      chased ||= hunter.auto && hunter.target !== null
+    }
+    expect(herdVisible(g, g.herds[0]!)).toBe(true)
+    expect(chased).toBe(true)
+    expect(g.events.filter((e) => e.type === 'unitGaveUp')).toEqual([])
   })
 
   it('le territoire grandit avec le temps', () => {

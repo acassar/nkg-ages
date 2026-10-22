@@ -64,6 +64,7 @@ function loop(now: number) {
     const t0 = performance.now()
     renderer.render(camera, {
       deposits: game.view.deposits,
+      herds: game.view.herds,
       units: game.view.units,
       camps: game.view.camps,
       selected: game.selected,
@@ -151,7 +152,9 @@ function onPointerUp(event: PointerEvent) {
     const s = worldToScreen(camera, u.x, u.y)
     return Math.hypot(s.x - p.x, s.y - p.y) < 12
   })
-  game.select(hit ? [hit.id] : [])
+  // Maj + clic ajoute ou retire l'unité de la sélection.
+  if (event.shiftKey && hit) game.toggleSelected(hit.id)
+  else game.select(hit ? [hit.id] : [])
   dirty = true
 }
 
