@@ -5,7 +5,7 @@ export type { Speed, ClockState, GameDate } from './core/clock'
 export type { Rect } from './core/geometry'
 export { Biome, BIOMES, BIOME_COUNT, isWater } from './content/biomes'
 export type { BiomeId } from './content/biomes'
-export { ERAS, FIRST_ERA } from './content/eras'
+export { ERAS, FIRST_ERA, SCORE_RULES } from './content/eras'
 export { Visibility } from './fog/fog'
 export { PLAYER, NO_OWNER } from './territory/territory'
 export { UNIT_RULES } from './units/units'
@@ -38,11 +38,15 @@ export {
   foodCapacity,
   herdVisible,
   cannotRecruit,
+  currentScore,
+  tallyOf,
   cannotFoundCamp,
   maxCamps,
   maxHunters,
   huntersResting,
   START_CHOICES,
 } from './game'
-export type { GameState, GameEvent, NewGameOptions, Camp } from './game'
+export type { GameState, GameEvent, NewGameOptions, Camp, Outcome } from './game'
+export { goalSteps, goalReached, scoreOf } from './score/score'
+export type { Tally, GoalStep } from './score/score'
 export type { World } from './world/world'

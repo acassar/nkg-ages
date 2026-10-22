@@ -5,6 +5,7 @@ import {
   cannotFoundCamp,
   clearDirty,
   createGame,
+  currentScore,
   depositHeld,
   foodCapacity,
   herdVisible,
@@ -14,6 +15,8 @@ import {
   type GameState,
 } from '@/engine/game'
 import { HUNT_RULES } from '@/engine/content/fauna'
+import { FIRST_ERA, SCORE_RULES } from '@/engine/content/eras'
+import { INVENTION_KINDS } from '@/engine/content/inventions'
 import { CAMP_RULES } from '@/engine/content/camps'
 import { BIOMES, isWater, type BiomeId } from '@/engine/content/biomes'
 import { RIVER_RULES } from '@/engine/content/rivers'
@@ -319,6 +322,46 @@ describe('commandes', () => {
     }
     expect(deaths(true)).toBeLessThan(deaths(false))
   }, 30_000)
+
+  it('défaite : la tribu disparue, tout s’arrête', () => {
+    const g = createGame(options)
+    g.tribe.population = 0
+    g.clock.paused = false
+    step(g)
+    expect(g.outcome).toMatchObject({ type: 'defeat', tick: 1 })
+    expect(g.events).toContainEqual({ type: 'defeat' })
+    expect(g.clock.paused).toBe(true)
+    expect(applyCommand(g, { type: 'setPaused', paused: false })).toEqual({
+      ok: false,
+      reason: 'La tribu a disparu',
+    })
+    step(g)
+    expect(g.clock.tick).toBe(1)
+  })
+
+  it('victoire à l’objectif de l’ère, une seule fois, puis la partie continue', () => {
+    const g = createGame(options)
+    const goal = FIRST_ERA.goal
+    g.tribe.population = goal.population
+    g.tribe.food = 10_000
+    for (let i = 1; i < goal.camps; i++)
+      g.camps.push({ id: 100 + i, owner: PLAYER, x: 1.5 + i, y: 1.5 })
+    const kinds = INVENTION_KINDS.slice(0, goal.inventions)
+    for (const k of kinds) g.inventions.ranks[k] = 'E'
+    step(g)
+    expect(g.outcome?.type).toBe('victory')
+    expect(g.events).toContainEqual({ type: 'victory' })
+    expect(g.clock.paused).toBe(true)
+    const won = g.outcome!.score
+    expect(won).toBeGreaterThan(SCORE_RULES.victory * 0.9)
+    expect(currentScore(g)).toBe(won)
+    // On peut continuer : pas de seconde victoire.
+    expect(applyCommand(g, { type: 'setPaused', paused: false }).ok).toBe(true)
+    clearDirty(g)
+    for (let i = 0; i < 12; i++) step(g)
+    expect(g.events.filter((e) => e.type === 'victory')).toEqual([])
+    expect(g.outcome?.tick).toBe(1)
+  })
 
   it('refuse une commande inconnue sans planter', () => {
     const g = createGame(options)
