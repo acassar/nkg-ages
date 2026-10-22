@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import fc from 'fast-check'
 import { isWater } from '@/engine/content/biomes'
 import { createRng } from '@/engine/core/random'
 import {
@@ -141,5 +142,36 @@ describe('territoire', () => {
     expect(t.playerWeight).toBeCloseTo(0.5)
     claim(t, 1, 1, NO_OWNER)
     expect(t.playerWeight).toBeCloseTo(0)
+  })
+
+  it('avec plusieurs sièges, chaque cellule reste à portée de l’un d’eux', () => {
+    const world = generateWorld({ seed: 'deux-camps', width: 256, height: 128 })
+    const sites = findStarts(world, createRng('deux-camps'), 12)
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: sites.length - 1 }),
+        fc.integer({ min: 0, max: sites.length - 1 }),
+        fc.integer({ min: 4, max: 14 }),
+        (a, b, reach) => {
+          const territory = createTerritory(world.width, world.height)
+          const seats = [sites[a]!, sites[b]!].map((s) => ({
+            owner: PLAYER,
+            x: s.x + 0.5,
+            y: s.y + 0.5,
+            reach,
+          }))
+          for (const seat of seats) claimAround(territory, world, seat, 2)
+          growTerritory(territory, world, seats, createRng(`${a}-${b}`), 3000)
+          for (let i = 0; i < territory.owner.length; i++) {
+            if (territory.owner[i] === NO_OWNER) continue
+            const x = (i % world.width) + 0.5
+            const y = Math.floor(i / world.width) + 0.5
+            const near = seats.some((s) => Math.hypot(x - s.x, y - s.y) <= s.reach + 1)
+            expect(near).toBe(true)
+          }
+        },
+      ),
+      { numRuns: 25 },
+    )
   })
 })

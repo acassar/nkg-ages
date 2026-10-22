@@ -102,6 +102,7 @@ function onKey(event: KeyboardEvent, down: boolean) {
   if (!down || event.repeat) return
   if (intent.kind === 'togglePause') void game.togglePause()
   if (intent.kind === 'speed') void game.setSpeed(intent.speed)
+  if (intent.kind === 'foundCamp') void game.foundCamp()
 }
 
 // Souris : glisser pour déplacer la carte, molette pour zoomer,

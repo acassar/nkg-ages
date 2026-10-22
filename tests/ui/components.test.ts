@@ -7,6 +7,7 @@ import { ManualScheduler } from '@/host/scheduler'
 import StartScreen from '@/ui/components/StartScreen.vue'
 import GameScreen from '@/ui/components/GameScreen.vue'
 import InventionsPanel from '@/ui/components/InventionsPanel.vue'
+import SelectionBar from '@/ui/components/SelectionBar.vue'
 import TopBar from '@/ui/components/TopBar.vue'
 import { useClientFactory, useGameStore } from '@/ui/stores/game'
 import type { GameView } from '@/views/types'
@@ -85,6 +86,30 @@ describe('écran de jeu', () => {
     vi.advanceTimersByTime(4100)
     await flushPromises()
     expect(wrapper.find('[data-testid=notice]').exists()).toBe(false)
+  })
+
+  it('propose de fonder un campement quand un éclaireur est choisi, avec ce qui l’empêche', async () => {
+    vi.useFakeTimers()
+    const game = useGameStore()
+    await game.newGame({ seed: 'camp', randomStart: false, width: 128, height: 64 })
+    const wrapper = mount(SelectionBar)
+    const scout = game.view!.units.find((u) => u.kind === 'eclaireur')!
+    const hunter = game.view!.units.find((u) => u.kind === 'chasseur')!
+    game.select([hunter.id])
+    await flushPromises()
+    expect(wrapper.find('[data-testid=selection]').exists()).toBe(false)
+    // Sans éclaireur choisi, F prévient sans rien envoyer.
+    await game.foundCamp()
+    expect(game.error).toMatch(/éclaireur/)
+    game.select([scout.id, hunter.id])
+    await flushPromises()
+    const button = wrapper.find('[data-testid=found-camp]')
+    expect(button.attributes('disabled')).toBeDefined()
+    expect(wrapper.text()).toMatch(/habitants/)
+    // Le refus du moteur remonte jusqu'à l'avis.
+    await game.foundCamp()
+    await flushPromises()
+    expect(game.error).toMatch(/habitants/)
   })
 
   it('retour au menu : plus d’erreur ni de sélection', async () => {

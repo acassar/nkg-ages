@@ -2,6 +2,7 @@
 import { useGameStore } from '../stores/game'
 import InventionsPanel from './InventionsPanel.vue'
 import MapView from './MapView.vue'
+import SelectionBar from './SelectionBar.vue'
 import TopBar from './TopBar.vue'
 
 const game = useGameStore()
@@ -14,14 +15,15 @@ defineProps<{ benchmark?: boolean }>()
     <MapView :benchmark="benchmark" />
     <TopBar />
     <InventionsPanel />
+    <SelectionBar />
     <p v-if="game.error" class="notice parchment" role="alert" data-testid="notice">
       {{ game.error }}
       <button class="close" aria-label="Fermer" @click="game.dismissError()">×</button>
     </p>
     <p class="hint parchment">
       Clic : choisir une unité (Maj : en ajouter) · clic droit : l'envoyer · les chasseurs chassent
-      seuls les bêtes en vue · glisser ou ZQSD : déplacer la carte · molette : zoom · Espace : pause
-      · 1 à 5 : vitesse
+      seuls les bêtes en vue · F : l’éclaireur fonde un campement · glisser ou ZQSD : déplacer la
+      carte · molette : zoom · Espace : pause · 1 à 5 : vitesse
     </p>
   </div>
 </template>

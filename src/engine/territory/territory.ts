@@ -83,11 +83,11 @@ export function claim(territory: TerritoryState, x: number, y: number, owner: nu
   return true
 }
 
-/** Voisins libres, de terre et dans la portée du siège, d'une cellule tenue. */
+/** Voisins libres, de terre et dans la portée d'un des sièges, d'une cellule tenue. */
 function freeNeighbors(
   territory: TerritoryState,
   world: World,
-  seat: Seat,
+  seats: readonly Seat[],
   from: number,
 ): [number, number][] {
   const fx = from % territory.width
@@ -99,7 +99,7 @@ function freeNeighbors(
     if (x < 0 || y < 0 || x >= territory.width || y >= territory.height) continue
     const i = y * territory.width + x
     if (territory.owner[i] !== NO_OWNER || isWater(world.biome[i]!)) continue
-    if (Math.hypot(x + 0.5 - seat.x, y + 0.5 - seat.y) > seat.reach) continue
+    if (!seats.some((s) => Math.hypot(x + 0.5 - s.x, y + 0.5 - s.y) <= s.reach)) continue
     out.push([x, y])
   }
   return out
@@ -124,8 +124,9 @@ export function growTerritory(
     const k = rng.int(0, frontier.length - 1)
     const from = frontier[k]!
     const owner = territory.owner[from]!
-    const seat = seats.find((s) => s.owner === owner)
-    const options = seat ? freeNeighbors(territory, world, seat, from) : []
+    // Un propriétaire peut avoir plusieurs campements : chacun porte sa portée.
+    const own = seats.filter((s) => s.owner === owner)
+    const options = own.length > 0 ? freeNeighbors(territory, world, own, from) : []
     if (options.length === 0) {
       frontier[k] = frontier[frontier.length - 1]!
       frontier.pop()
@@ -155,7 +156,7 @@ export function claimAround(
   const queue = [sy * territory.width + sx]
   while (queue.length > 0) {
     const from = queue.pop()!
-    for (const [x, y] of freeNeighbors(territory, world, seatSmall, from)) {
+    for (const [x, y] of freeNeighbors(territory, world, [seatSmall], from)) {
       claim(territory, x, y, seat.owner)
       taken++
       queue.push(y * territory.width + x)

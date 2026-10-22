@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   applyCommand,
   cannotRecruit,
+  cannotFoundCamp,
   clearDirty,
   createGame,
   depositHeld,
@@ -12,6 +13,7 @@ import {
   type GameState,
 } from '@/engine/game'
 import { HUNT_RULES } from '@/engine/content/fauna'
+import { CAMP_RULES } from '@/engine/content/camps'
 import { isWater } from '@/engine/content/biomes'
 import { Visibility } from '@/engine/fog/fog'
 import { TRIBE_RULES } from '@/engine/content/tribe'
@@ -524,9 +526,73 @@ describe('scénarios', () => {
         const g = createGame({ seed, randomStart: true, width: 128, height: 64 })
         expect(g.deposits.some((d) => d.kind === 'silex' && depositHeld(g, d))).toBe(true)
       }),
-      { numRuns: 12 },
+      // " '" : départ sur un îlot dont le silex voisin n'était pas relié au territoire.
+      { numRuns: 12, examples: [[" '"]] },
     )
   }, 30_000)
+
+  it('l’éclaireur fonde un campement au loin, qui prend des terres et voit autour de lui', () => {
+    const g = createGame(options)
+    const scout = g.units.find((u) => u.kind === 'eclaireur')!
+    const home = g.camps[0]!
+    // Au départ : trop près du camp, et pas assez d'habitants pour un second campement.
+    expect(cannotFoundCamp(g, scout)).toMatch(/habitants/)
+    g.tribe.population = CAMP_RULES.peoplePerCamp
+    g.tribe.food = 100
+    expect(cannotFoundCamp(g, scout)).toMatch(/Trop près/)
+    expect(
+      cannotFoundCamp(
+        g,
+        g.units.find((u) => u.kind === 'chasseur')!,
+      ),
+    ).toMatch(/éclaireur/)
+    // On pose l'éclaireur sur une terre assez lointaine.
+    const spot = landAt(g, (x, y) => {
+      const d = Math.hypot(x + 0.5 - home.x, y + 0.5 - home.y)
+      return d >= CAMP_RULES.minDistance + 2 && d < CAMP_RULES.minDistance + 12
+    })
+    Object.assign(scout, { x: spot.x + 0.5, y: spot.y + 0.5 })
+    expect(cannotFoundCamp(g, scout)).toBeNull()
+    const owned = g.territory.ownedCount
+    expect(applyCommand(g, { type: 'foundCamp', unitId: scout.id })).toEqual({ ok: true })
+    expect(g.camps).toHaveLength(2)
+    expect(g.tribe.food).toBe(100 - CAMP_RULES.foodCost)
+    expect(g.territory.ownedCount).toBeGreaterThan(owned)
+    const i = spot.y * g.world.width + spot.x
+    expect(g.territory.owner[i]).toBe(PLAYER)
+    expect(g.fog.cells[i]).toBe(Visibility.Visible)
+    // Un troisième campement attend d'autres habitants.
+    expect(applyCommand(g, { type: 'foundCamp', unitId: scout.id }).ok).toBe(false)
+    // Le territoire grandit aussi autour du nouveau campement.
+    const near = () => {
+      let n = 0
+      for (let y = spot.y - 8; y <= spot.y + 8; y++)
+        for (let x = spot.x - 8; x <= spot.x + 8; x++)
+          if (g.territory.owner[y * g.world.width + x] === PLAYER) n++
+      return n
+    }
+    const before = near()
+    for (let k = 0; k < 120; k++) step(g)
+    expect(near()).toBeGreaterThan(before)
+  })
+
+  it('refuse de fonder un campement sans unité, ou sans vivres', () => {
+    const g = createGame(options)
+    expect(applyCommand(g, { type: 'foundCamp', unitId: 999 }).ok).toBe(false)
+    const scout = g.units.find((u) => u.kind === 'eclaireur')!
+    const home = g.camps[0]!
+    const spot = landAt(
+      g,
+      (x, y) => Math.hypot(x - home.x, y - home.y) > CAMP_RULES.minDistance + 2,
+    )
+    Object.assign(scout, { x: spot.x + 0.5, y: spot.y + 0.5 })
+    g.tribe.population = CAMP_RULES.peoplePerCamp
+    g.tribe.food = CAMP_RULES.foodCost - 1
+    expect(applyCommand(g, { type: 'foundCamp', unitId: scout.id })).toEqual({
+      ok: false,
+      reason: `Il faut ${CAMP_RULES.foodCost} rations`,
+    })
+  })
 
   it('le territoire grandit avec le temps', () => {
     const g = createGame(options)
@@ -556,3 +622,19 @@ describe('scénarios', () => {
     expect(perTick).toBeLessThan(10)
   })
 })
+
+/** Première cellule de terre qui satisfait `ok`, en partant du camp. */
+function landAt(g: GameState, ok: (x: number, y: number) => boolean): { x: number; y: number } {
+  const { width, height, biome } = g.world
+  const home = g.camps[0]!
+  let best: { x: number; y: number } | null = null
+  let bestD = Infinity
+  for (let y = 0; y < height; y++)
+    for (let x = 0; x < width; x++) {
+      if (isWater(biome[y * width + x]!) || !ok(x, y)) continue
+      const d = Math.hypot(x - home.x, y - home.y)
+      if (d < bestD) [best, bestD] = [{ x, y }, d]
+    }
+  if (!best) throw new Error('aucune terre convenable')
+  return best
+}

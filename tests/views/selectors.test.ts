@@ -97,6 +97,16 @@ describe('vues de partie', () => {
     expect(view.notices).toEqual(['Chasse : un chasseur est mort face aux mammouths.'])
   })
 
+  it('dit qui peut fonder un campement, et combien la tribu en tient', () => {
+    const g = game()
+    const view = buildGameView(g)
+    const scout = view.units.find((u) => u.kind === 'eclaireur')!
+    const hunter = view.units.find((u) => u.kind === 'chasseur')!
+    expect(hunter.foundCamp).toBeNull()
+    expect(scout.foundCamp?.blocked).toMatch(/habitants/)
+    expect(view.tribe).toMatchObject({ camps: 1, maxCamps: 1 })
+  })
+
   it('montre les chasseurs et ce qui empêche d’en former, et prévient de la viande perdue', () => {
     const g = game()
     g.events.push({ type: 'meatLost', amount: 7 })

@@ -14,6 +14,7 @@ import {
   type TerritoryState,
 } from './territory/territory'
 import { findPath, knownPassable, pathBlocked } from './units/path'
+import { CAMP_RULES } from './content/camps'
 import { ANIMAL_RULES, HUNT_RULES, type AnimalKind } from './content/fauna'
 import { INVENTION_KINDS, INVENTION_WORK, type InventionKind } from './content/inventions'
 import type { Rank } from './content/rarity'
@@ -101,10 +102,6 @@ export interface GameState {
 export const START_CHOICES = 3
 /** Chasseurs au départ (ils font partie de la population). */
 const START_HUNTERS = 2
-const CAMP_SIGHT = 7
-const CAMP_REACH = 26
-/** Cellules gagnées par le territoire à chaque tick. */
-const GROWTH_PER_TICK = 2
 const MAX_WORLD_RETRIES = 8
 
 export function createGame(options: NewGameOptions): GameState {
@@ -135,8 +132,9 @@ export function createGame(options: NewGameOptions): GameState {
   const cx = site.x + 0.5
   const cy = site.y + 0.5
   state.camps.push({ id: state.nextId++, owner: PLAYER, x: cx, y: cy })
-  ensureNearStart(state.deposits, world, site, createRng(`depart:${world.seed}`))
   claimAround(state.territory, world, seatsOf(state)[0]!, TRIBE_RULES.startTerritoryRadius)
+  const owner = state.territory.owner
+  ensureNearStart(state.deposits, world, owner, PLAYER, site, createRng(`depart:${world.seed}`))
   state.units.push(newUnit(state, 'eclaireur', cx, cy))
   for (let i = 0; i < START_HUNTERS; i++) state.units.push(newHunter(state, i))
   updateFog(state.fog, viewersOf(state))
@@ -176,6 +174,26 @@ export function cannotRecruit(state: GameState): string | null {
   if (hunters >= maxHunters(state))
     return `Un chasseur pour ${HUNT_RULES.peoplePerHunter} habitants au plus`
   if (state.tribe.food < HUNT_RULES.recruitFood) return `Il faut ${HUNT_RULES.recruitFood} rations`
+  return null
+}
+
+/** Campements que la tribu peut tenir : un de plus pour `peoplePerCamp` habitants. */
+export function maxCamps(state: GameState): number {
+  return 1 + Math.floor(state.tribe.population / CAMP_RULES.peoplePerCamp)
+}
+
+/** Pourquoi cette unité ne peut pas fonder de campement là où elle est, ou null. */
+export function cannotFoundCamp(state: GameState, unit: Unit): string | null {
+  if (unit.kind !== 'eclaireur') return 'Seul un éclaireur fonde un campement'
+  const mine = state.camps.filter((c) => c.owner === PLAYER)
+  if (mine.length >= maxCamps(state))
+    return `Un campement de plus pour ${CAMP_RULES.peoplePerCamp} habitants`
+  const x = Math.floor(unit.x) + 0.5
+  const y = Math.floor(unit.y) + 0.5
+  if (state.camps.some((c) => Math.hypot(c.x - x, c.y - y) < CAMP_RULES.minDistance))
+    return 'Trop près d’un autre campement'
+  if (!isPassable(state.world, x, y)) return 'Impossible de camper ici'
+  if (state.tribe.food < CAMP_RULES.foodCost) return `Il faut ${CAMP_RULES.foodCost} rations`
   return null
 }
 
@@ -237,6 +255,23 @@ export function applyCommand(state: GameState, command: Command): CommandResult 
       startInvention(state.inventions, command.invention, state.tribe.materials)
       return { ok: true }
     }
+    case 'foundCamp': {
+      const unit = state.units.find((u) => u.id === command.unitId)
+      if (!unit) return { ok: false, reason: 'Aucune unité choisie' }
+      const reason = cannotFoundCamp(state, unit)
+      if (reason) return { ok: false, reason }
+      state.tribe.food -= CAMP_RULES.foodCost
+      const camp: Camp = {
+        id: state.nextId++,
+        owner: PLAYER,
+        x: Math.floor(unit.x) + 0.5,
+        y: Math.floor(unit.y) + 0.5,
+      }
+      state.camps.push(camp)
+      claimAround(state.territory, state.world, seatOf(camp), CAMP_RULES.claimRadius)
+      updateFog(state.fog, viewersOf(state))
+      return { ok: true }
+    }
     case 'recruitHunter': {
       const reason = cannotRecruit(state)
       if (reason) return { ok: false, reason }
@@ -273,7 +308,13 @@ export function step(state: GameState): void {
   state.clock.tick++
   for (const unit of state.units) if (!moveUnit(unit, state.world)) replan(state, unit)
   hunt(state)
-  growTerritory(state.territory, state.world, seatsOf(state), state.rng, GROWTH_PER_TICK)
+  growTerritory(
+    state.territory,
+    state.world,
+    seatsOf(state),
+    state.rng,
+    CAMP_RULES.growthPerTick * state.camps.length,
+  )
   harvest(state)
   const invented = tickInventions(state.inventions, state.tribe.population, state.rng)
   if (invented)
@@ -318,12 +359,16 @@ export function startYear(): number {
 function viewersOf(state: GameState) {
   return [
     ...state.units.map((u) => ({ x: u.x, y: u.y, sight: UNIT_RULES[u.kind].sight })),
-    ...state.camps.map((c) => ({ x: c.x, y: c.y, sight: CAMP_SIGHT })),
+    ...state.camps.map((c) => ({ x: c.x, y: c.y, sight: CAMP_RULES.sight })),
   ]
 }
 
 function seatsOf(state: GameState): Seat[] {
-  return state.camps.map((c) => ({ owner: c.owner, x: c.x, y: c.y, reach: CAMP_REACH }))
+  return state.camps.map(seatOf)
+}
+
+function seatOf(camp: Camp): Seat {
+  return { owner: camp.owner, x: camp.x, y: camp.y, reach: CAMP_RULES.reach }
 }
 
 /** Richesse en nourriture de chaque cellule, d'après son biome. */
