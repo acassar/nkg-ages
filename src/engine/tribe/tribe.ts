@@ -1,0 +1,78 @@
+import { TRIBE_RULES, type TribeRules } from '../content/tribe'
+
+export interface TribeState {
+  population: number
+  /** Réserve de nourriture, en rations. */
+  food: number
+  /** Accumulateur de naissances : une personne de plus à chaque unité franchie. */
+  growth: number
+  /** Mois de famine consécutifs (0 hors famine). */
+  starvingMonths: number
+  /** Dernier bilan mensuel, pour l'affichage. */
+  lastProduction: number
+  lastConsumption: number
+}
+
+export function createTribe(rules: TribeRules = TRIBE_RULES): TribeState {
+  return {
+    population: rules.startPopulation,
+    food: rules.startPopulation * rules.rationPerPerson * rules.startReserveMonths,
+    growth: 0,
+    starvingMonths: 0,
+    lastProduction: 0,
+    lastConsumption: 0,
+  }
+}
+
+/** Ce qu'il s'est passé ce mois-ci, pour prévenir le joueur. */
+export type TribeOutcome = 'stable' | 'birth' | 'famineStarts' | 'famine'
+
+/** Rations récoltées en un mois : bornées par les bras et par la richesse du territoire. */
+export function production(
+  population: number,
+  territoryRichness: number,
+  rules: TribeRules = TRIBE_RULES,
+): number {
+  return Math.min(population * rules.gatherPerPerson, territoryRichness * rules.yieldPerCell)
+}
+
+export function storageCapacity(population: number, rules: TribeRules = TRIBE_RULES): number {
+  return Math.max(1, population) * rules.rationPerPerson * rules.storageMonths
+}
+
+/**
+ * Un mois de vie de la tribu : récolte, repas, puis naissances ou famine.
+ * `territoryRichness` : somme des richesses en nourriture des cellules tenues.
+ */
+export function tickTribe(
+  tribe: TribeState,
+  territoryRichness: number,
+  rules: TribeRules = TRIBE_RULES,
+): TribeOutcome {
+  if (tribe.population <= 0) return 'stable'
+  const produced = production(tribe.population, territoryRichness, rules)
+  const eaten = tribe.population * rules.rationPerPerson
+  tribe.lastProduction = produced
+  tribe.lastConsumption = eaten
+  tribe.food = Math.min(tribe.food + produced - eaten, storageCapacity(tribe.population, rules))
+
+  if (tribe.food < 0) {
+    tribe.food = 0
+    tribe.growth = 0
+    const lost = Math.max(1, Math.round(tribe.population * rules.famineLoss))
+    tribe.population = Math.max(0, tribe.population - lost)
+    tribe.starvingMonths++
+    return tribe.starvingMonths === 1 ? 'famineStarts' : 'famine'
+  }
+  tribe.starvingMonths = 0
+  if (tribe.food >= eaten * rules.comfortMonths) {
+    tribe.growth += tribe.population * rules.growthPerMonth
+    if (tribe.growth >= 1) {
+      const born = Math.floor(tribe.growth)
+      tribe.growth -= born
+      tribe.population += born
+      return 'birth'
+    }
+  }
+  return 'stable'
+}

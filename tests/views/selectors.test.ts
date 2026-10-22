@@ -50,6 +50,18 @@ describe('vues de partie', () => {
     expect(view.fog!.w * view.fog!.h).toBeLessThan(128 * 64)
   })
 
+  it('montre la tribu, arrondie, et prévient de la famine', () => {
+    const g = game()
+    g.tribe.food = 12.7
+    g.tribe.lastProduction = 10.04
+    g.tribe.lastConsumption = 12
+    g.events.push({ type: 'famine' })
+    const view = buildGameView(g)
+    expect(view.tribe).toMatchObject({ population: 12, food: 12, foodBalance: -2, starving: false })
+    expect(view.tribe.foodCapacity).toBeGreaterThan(0)
+    expect(view.notices[0]).toMatch(/^Famine/)
+  })
+
   it('rédige les événements du moteur pour le joueur', () => {
     const g = game()
     expect(buildGameView(g).notices).toEqual([])

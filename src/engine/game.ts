@@ -3,8 +3,10 @@ import { FIRST_ERA } from './content/eras'
 import { createClock, isSpeed, type ClockState } from './core/clock'
 import { createRng, type Rng } from './core/random'
 import { createFog, updateFog, type FogState } from './fog/fog'
+import { BIOMES, type BiomeId } from './content/biomes'
+import { TRIBE_RULES } from './content/tribe'
 import {
-  claim,
+  claimAround,
   createTerritory,
   growTerritory,
   PLAYER,
@@ -12,6 +14,7 @@ import {
   type TerritoryState,
 } from './territory/territory'
 import { findPath, knownPassable, pathBlocked } from './units/path'
+import { createTribe, tickTribe, type TribeState } from './tribe/tribe'
 import { moveUnit, stopUnit, UNIT_RULES, type Unit } from './units/units'
 import { generateWorld } from './world/generate'
 import { findStarts, type StartSite } from './world/starts'
@@ -34,7 +37,10 @@ export interface Camp {
 }
 
 /** Ce qui est arrivé pendant les ticks, pour prévenir le joueur ; vidé à chaque envoi. */
-export type GameEvent = { type: 'unitGaveUp'; unitId: number }
+export type GameEvent =
+  | { type: 'unitGaveUp'; unitId: number }
+  /** La réserve est vide : la tribu commence à perdre des siens. */
+  | { type: 'famine' }
 
 export interface GameState {
   options: NewGameOptions
@@ -46,6 +52,7 @@ export interface GameState {
   camps: Camp[]
   fog: FogState
   territory: TerritoryState
+  tribe: TribeState
   nextId: number
   events: GameEvent[]
 }
@@ -74,14 +81,15 @@ export function createGame(options: NewGameOptions): GameState {
     units: [],
     camps: [],
     fog: createFog(world.width, world.height),
-    territory: createTerritory(world.width, world.height),
+    territory: createTerritory(world.width, world.height, foodWeights(world)),
+    tribe: createTribe(),
     nextId: 1,
     events: [],
   }
   const cx = site.x + 0.5
   const cy = site.y + 0.5
   state.camps.push({ id: state.nextId++, owner: PLAYER, x: cx, y: cy })
-  claim(state.territory, site.x, site.y, PLAYER)
+  claimAround(state.territory, world, seatsOf(state)[0]!, TRIBE_RULES.startTerritoryRadius)
   state.units.push({
     id: state.nextId++,
     kind: 'eclaireur',
@@ -170,6 +178,8 @@ export function step(state: GameState): void {
   state.clock.tick++
   for (const unit of state.units) if (!moveUnit(unit, state.world)) replan(state, unit)
   growTerritory(state.territory, state.world, seatsOf(state), state.rng, GROWTH_PER_TICK)
+  if (tickTribe(state.tribe, state.territory.playerWeight) === 'famineStarts')
+    state.events.push({ type: 'famine' })
   updateFog(state.fog, viewersOf(state))
   // Le terrain découvert peut couper le chemin prévu : on le recalcule.
   for (const unit of state.units) {
@@ -215,4 +225,11 @@ function viewersOf(state: GameState) {
 
 function seatsOf(state: GameState): Seat[] {
   return state.camps.map((c) => ({ owner: c.owner, x: c.x, y: c.y, reach: CAMP_REACH }))
+}
+
+/** Richesse en nourriture de chaque cellule, d'après son biome. */
+function foodWeights(world: World): Float32Array {
+  const weights = new Float32Array(world.biome.length)
+  for (let i = 0; i < weights.length; i++) weights[i] = BIOMES[world.biome[i] as BiomeId].food
+  return weights
 }

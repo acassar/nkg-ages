@@ -41,10 +41,10 @@
       "features": [
         {
           "title": "Tribu : population, nourriture, famine",
-          "status": "todo"
+          "status": "done"
         },
         {
-          "title": "Ressources à rareté (4 rangs)",
+          "title": "Ressources à rareté (6 rangs, E à S)",
           "status": "todo"
         },
         {
@@ -52,8 +52,8 @@
           "status": "todo"
         },
         {
-          "title": "Chemins qui contournent l'eau (A*)",
-          "status": "todo"
+          "title": "Chemins qui contournent l'eau (A*), même dans le brouillard",
+          "status": "done"
         },
         {
           "title": "Inventions à rang E à S",
@@ -181,6 +181,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-22",
+      "text": "J1 : la tribu vit de son territoire (population, vivres, naissances, famine)"
+    },
     {
       "date": "2026-10-22",
       "text": "J1 : l'éclaireur prévient quand il renonce ; une unité sans chemin dans un ordre de groupe s'arrête"

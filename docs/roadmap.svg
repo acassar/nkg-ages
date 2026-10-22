@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 814" width="960" height="814" font-family="Georgia, 'Iowan Old Style', serif" role="img" aria-label="Roadmap de nkg-ages">
-<rect width="960" height="814" rx="10" fill="#eee2c4" stroke="#c9b283"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 835" width="960" height="835" font-family="Georgia, 'Iowan Old Style', serif" role="img" aria-label="Roadmap de nkg-ages">
+<rect width="960" height="835" rx="10" fill="#eee2c4" stroke="#c9b283"/>
 <text x="24" y="50" font-size="28" fill="#3a2c1e">nkg-ages · roadmap</text>
-<text x="936" y="48" font-size="15" text-anchor="end" fill="#6b5843">7 / 34 fonctionnalités livrées · en cours : J1</text>
+<text x="936" y="48" font-size="15" text-anchor="end" fill="#6b5843">9 / 34 fonctionnalités livrées · en cours : J1</text>
 <g><rect x="24" y="72" width="293.3333333333333" height="268" rx="6" fill="#e6d6b0" stroke="#3a2c1e" stroke-width="1.2"/>
 <text x="40" y="102" font-size="19" fill="#3a2c1e"><tspan fill="#6b5843">J0</tspan> · Fondations</text>
 <circle cx="46" cy="122" r="5" fill="#3a2c1e"/>
@@ -21,14 +21,14 @@
 </g>
 <g><rect x="333.3333333333333" y="72" width="293.3333333333333" height="268" rx="6" fill="#eee2c4" stroke="#8c2f1c" stroke-width="2.2"/>
 <text x="349.3333333333333" y="102" font-size="19" fill="#3a2c1e"><tspan fill="#8c2f1c">J1</tspan> · MVP Préhistoire</text>
-<circle cx="355.3333333333333" cy="122" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="369.3333333333333" y="126" font-size="14" fill="#6b5843">Tribu : population, nourriture, famine</text>
+<circle cx="355.3333333333333" cy="122" r="5" fill="#3a2c1e"/>
+<text x="369.3333333333333" y="126" font-size="14" fill="#3a2c1e">Tribu : population, nourriture, famine</text>
 <circle cx="355.3333333333333" cy="143" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="369.3333333333333" y="147" font-size="14" fill="#6b5843">Ressources à rareté (4 rangs)</text>
+<text x="369.3333333333333" y="147" font-size="14" fill="#6b5843">Ressources à rareté (6 rangs, E à S)</text>
 <circle cx="355.3333333333333" cy="164" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
 <text x="369.3333333333333" y="168" font-size="14" fill="#6b5843">Chasseurs, chasse et faune</text>
-<circle cx="355.3333333333333" cy="185" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="369.3333333333333" y="189" font-size="14" fill="#6b5843">Chemins qui contournent l'eau (A*)</text>
+<circle cx="355.3333333333333" cy="185" r="5" fill="#3a2c1e"/>
+<text x="369.3333333333333" y="189" font-size="14" fill="#3a2c1e">Chemins qui contournent l'eau (A*), même dans le brouillard</text>
 <circle cx="355.3333333333333" cy="206" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
 <text x="369.3333333333333" y="210" font-size="14" fill="#6b5843">Inventions à rang E à S</text>
 <circle cx="355.3333333333333" cy="227" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
@@ -92,14 +92,15 @@
 <text x="60" y="631" font-size="14" fill="#6b5843">Futur imaginé</text>
 </g>
 <text x="24" y="692" font-size="13" letter-spacing="1.5" fill="#6b5843">JOURNAL</text>
-<text x="24" y="716" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : l'éclaireur prévient quand il renonce ; une unité sans chemin dans un ordre de groupe s'arrête</text>
-<text x="24" y="737" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : l'éclaireur trouve son chemin sur la carte connue, un clic dans le brouillard ne trahit plus l'eau</text>
-<text x="24" y="758" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J0 : corrections de la revue (brouillard, territoire, arrêt du Worker, réponses tardives, avis en jeu, couverture)</text>
-<text x="24" y="779" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J0 : fondations, monde organique et carte d'explorateur</text>
-<circle cx="700" cy="788" r="5" fill="#3a2c1e"/>
-<text x="710" y="792" font-size="12" fill="#6b5843">fait</text>
-<circle cx="760" cy="788" r="5" fill="none" stroke="#8c2f1c" stroke-width="1.5"/><path d="M760 783a5 5 0 0 1 0 10z" fill="#8c2f1c"/>
-<text x="770" y="792" font-size="12" fill="#6b5843">en cours</text>
-<circle cx="840" cy="788" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="850" y="792" font-size="12" fill="#6b5843">à faire</text>
+<text x="24" y="716" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : la tribu vit de son territoire (population, vivres, naissances, famine)</text>
+<text x="24" y="737" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : l'éclaireur prévient quand il renonce ; une unité sans chemin dans un ordre de groupe s'arrête</text>
+<text x="24" y="758" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : l'éclaireur trouve son chemin sur la carte connue, un clic dans le brouillard ne trahit plus l'eau</text>
+<text x="24" y="779" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J0 : corrections de la revue (brouillard, territoire, arrêt du Worker, réponses tardives, avis en jeu, couverture)</text>
+<text x="24" y="800" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J0 : fondations, monde organique et carte d'explorateur</text>
+<circle cx="700" cy="809" r="5" fill="#3a2c1e"/>
+<text x="710" y="813" font-size="12" fill="#6b5843">fait</text>
+<circle cx="760" cy="809" r="5" fill="none" stroke="#8c2f1c" stroke-width="1.5"/><path d="M760 804a5 5 0 0 1 0 10z" fill="#8c2f1c"/>
+<text x="770" y="813" font-size="12" fill="#6b5843">en cours</text>
+<circle cx="840" cy="809" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
+<text x="850" y="813" font-size="12" fill="#6b5843">à faire</text>
 </svg>

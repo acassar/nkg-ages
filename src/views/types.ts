@@ -55,6 +55,17 @@ export interface GameView {
   territory: GridPatch | null
   /** Messages pour le joueur, nés depuis la vue précédente (déjà rédigés). */
   notices: string[]
+  tribe: TribeView
+}
+
+export interface TribeView {
+  population: number
+  /** Réserve de nourriture, en rations (une ration nourrit une personne un mois). */
+  food: number
+  foodCapacity: number
+  /** Récolte moins consommation au dernier mois. */
+  foodBalance: number
+  starving: boolean
 }
 
 /** Biomes, dans l'ordre de leurs identifiants (même table que le moteur). */

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { applyCommand, clearDirty, createGame, step, type GameState } from '@/engine/game'
 import { isWater } from '@/engine/content/biomes'
 import { Visibility } from '@/engine/fog/fog'
+import { TRIBE_RULES } from '@/engine/content/tribe'
 import { PLAYER } from '@/engine/territory/territory'
 import fc from 'fast-check'
 
@@ -73,7 +74,10 @@ describe('création de partie', () => {
     expect(isWater(g.world.biome[Math.floor(camp.y) * g.world.width + Math.floor(camp.x)]!)).toBe(
       false,
     )
-    expect(g.territory.ownedCount).toBe(1)
+    // Le camp tient d'emblée un petit territoire pour nourrir la tribu.
+    expect(g.territory.ownedCount).toBeGreaterThan(20)
+    expect(g.territory.playerWeight).toBeGreaterThan(0)
+    expect(g.tribe.population).toBe(TRIBE_RULES.startPopulation)
     expect(g.clock.paused).toBe(true)
   })
 
@@ -266,6 +270,27 @@ describe('scénarios', () => {
       { numRuns: 12 },
     )
   }, 60_000)
+
+  it('la tribu se nourrit de son territoire et grandit', () => {
+    const g = createGame(options)
+    for (let i = 0; i < 240; i++) step(g)
+    expect(g.tribe.population).toBeGreaterThan(TRIBE_RULES.startPopulation)
+    expect(g.tribe.starvingMonths).toBe(0)
+  })
+
+  it('sans rien à récolter, la famine prévient une fois puis décime la tribu', () => {
+    const g = createGame(options)
+    g.territory.playerWeight = 0
+    g.territory.weights = new Float32Array(g.territory.owner.length)
+    const famines: number[] = []
+    for (let i = 0; i < 200; i++) {
+      step(g)
+      if (g.events.some((e) => e.type === 'famine')) famines.push(i)
+      clearDirty(g)
+    }
+    expect(famines).toHaveLength(1)
+    expect(g.tribe.population).toBe(0)
+  })
 
   it('le territoire grandit avec le temps', () => {
     const g = createGame(options)
