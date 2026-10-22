@@ -14,6 +14,8 @@ jobs:
   check:
     # Playwright 1.56 ne gère pas encore ubuntu-latest (26.04).
     runs-on: ubuntu-24.04
+    # Une étape bloquée (miroir apt, navigateur) ne doit pas occuper le runner 6 h.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -22,7 +24,17 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
+      # Navigateurs Playwright en cache, clé = version de Playwright du lockfile.
+      - name: Version de Playwright
+        id: pw
+        run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+      # Sans --with-deps : l'image ubuntu-24.04 a déjà les bibliothèques de Chrome, et
+      # l'installation apt (polices comprises) prenait jusqu'à 15 min sur un miroir lent.
+      - run: pnpm exec playwright install chromium
       - name: Vérifications (format, lint, types, architecture, tests, build, mesures, bout en bout)
         run: |
           bash ci/checks.sh
