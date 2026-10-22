@@ -282,6 +282,7 @@ describe('scénarios', () => {
     const g = createGame(options)
     g.territory.playerWeight = 0
     g.territory.weights = new Float32Array(g.territory.owner.length)
+    g.deposits = []
     const famines: number[] = []
     for (let i = 0; i < 200; i++) {
       step(g)
@@ -290,6 +291,23 @@ describe('scénarios', () => {
     }
     expect(famines).toHaveLength(1)
     expect(g.tribe.population).toBe(0)
+  })
+
+  it('les gisements tenus nourrissent la tribu et remplissent ses réserves de matériaux', () => {
+    const g = createGame(options)
+    g.territory.playerWeight = 0
+    g.territory.weights = new Float32Array(g.territory.owner.length)
+    const cell = (x: number, y: number) => ({ x, y })
+    // Deux gisements riches posés sur le camp : sans eux, ce serait la famine.
+    const c = g.camps[0]!
+    const at = cell(Math.floor(c.x), Math.floor(c.y))
+    g.deposits = [
+      { id: 1, kind: 'baies', ...at, rank: 'S' },
+      { id: 2, kind: 'silex', ...at, rank: 'E' },
+    ]
+    for (let i = 0; i < 24; i++) step(g)
+    expect(g.tribe.starvingMonths).toBe(0)
+    expect(g.tribe.materials.silex).toBeCloseTo(24 * 0.5)
   })
 
   it('le territoire grandit avec le temps', () => {

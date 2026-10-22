@@ -1,3 +1,4 @@
+import type { ResourceKind } from '../content/resources'
 import { TRIBE_RULES, type TribeRules } from '../content/tribe'
 
 export interface TribeState {
@@ -11,6 +12,8 @@ export interface TribeState {
   /** Dernier bilan mensuel, pour l'affichage. */
   lastProduction: number
   lastConsumption: number
+  /** Matériaux entassés (silex…), sans limite pour l'instant. */
+  materials: Partial<Record<ResourceKind, number>>
 }
 
 export function createTribe(rules: TribeRules = TRIBE_RULES): TribeState {
@@ -21,19 +24,29 @@ export function createTribe(rules: TribeRules = TRIBE_RULES): TribeState {
     starvingMonths: 0,
     lastProduction: 0,
     lastConsumption: 0,
+    materials: {},
   }
 }
 
 /** Ce qu'il s'est passé ce mois-ci, pour prévenir le joueur. */
 export type TribeOutcome = 'stable' | 'birth' | 'famineStarts' | 'famine'
 
-/** Rations récoltées en un mois : bornées par les bras et par la richesse du territoire. */
-export function production(
-  population: number,
+/** Rations qu'offre le territoire en un mois, avant de compter les bras. */
+export function territoryFood(
   territoryRichness: number,
+  depositFood = 0,
   rules: TribeRules = TRIBE_RULES,
 ): number {
-  return Math.min(population * rules.gatherPerPerson, territoryRichness * rules.yieldPerCell)
+  return territoryRichness * rules.yieldPerCell + depositFood
+}
+
+/** Rations récoltées en un mois : bornées par les bras et par ce qu'offre le territoire. */
+export function production(
+  population: number,
+  available: number,
+  rules: TribeRules = TRIBE_RULES,
+): number {
+  return Math.min(population * rules.gatherPerPerson, available)
 }
 
 export function storageCapacity(population: number, rules: TribeRules = TRIBE_RULES): number {
@@ -42,15 +55,15 @@ export function storageCapacity(population: number, rules: TribeRules = TRIBE_RU
 
 /**
  * Un mois de vie de la tribu : récolte, repas, puis naissances ou famine.
- * `territoryRichness` : somme des richesses en nourriture des cellules tenues.
+ * `available` : rations qu'offre le territoire ce mois-ci (voir territoryFood).
  */
 export function tickTribe(
   tribe: TribeState,
-  territoryRichness: number,
+  available: number,
   rules: TribeRules = TRIBE_RULES,
 ): TribeOutcome {
   if (tribe.population <= 0) return 'stable'
-  const produced = production(tribe.population, territoryRichness, rules)
+  const produced = production(tribe.population, available, rules)
   const eaten = tribe.population * rules.rationPerPerson
   tribe.lastProduction = produced
   tribe.lastConsumption = eaten

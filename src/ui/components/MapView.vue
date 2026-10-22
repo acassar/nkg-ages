@@ -11,6 +11,7 @@ import {
   type Camera,
   type MapRenderer,
 } from '@/render'
+import { depositAt, describeDeposit } from '../deposits'
 import { intentOf } from '../keyboard'
 import { useGameStore } from '../stores/game'
 
@@ -62,6 +63,7 @@ function loop(now: number) {
   if ((dirty || props.benchmark) && renderer && game.view) {
     const t0 = performance.now()
     renderer.render(camera, {
+      deposits: game.view.deposits,
       units: game.view.units,
       camps: game.view.camps,
       selected: game.selected,
@@ -117,9 +119,18 @@ function onPointerDown(event: PointerEvent) {
   host.value?.setPointerCapture(event.pointerId)
 }
 
+/** Infobulle du gisement survolé. */
+const hover = ref<{ x: number; y: number; text: string } | null>(null)
+
+function updateHover(p: { x: number; y: number }) {
+  const d = game.view && depositAt(game.view.deposits, camera, p.x, p.y)
+  hover.value = d ? { x: p.x, y: p.y, text: describeDeposit(d) } : null
+}
+
 function onPointerMove(event: PointerEvent) {
-  if (!drag) return
   const p = local(event)
+  if (!drag) return updateHover(p)
+  hover.value = null
   const dx = p.x - drag.x
   const dy = p.y - drag.y
   if (!drag.moved && Math.hypot(dx, dy) < 4) return
@@ -219,6 +230,14 @@ onBeforeUnmount(() => {
   >
     <canvas ref="terrain" class="layer" />
     <canvas ref="overlay" class="layer" />
+    <p
+      v-if="hover"
+      class="tooltip parchment"
+      data-testid="tooltip"
+      :style="{ left: `${hover.x + 14}px`, top: `${hover.y + 14}px` }"
+    >
+      {{ hover.text }}
+    </p>
     <p v-if="benchmark && benchLabel" class="bench parchment" data-testid="bench">
       {{ benchLabel }}
     </p>
@@ -254,6 +273,14 @@ onBeforeUnmount(() => {
   margin: 0;
   padding: 6px 10px;
   font-variant-numeric: tabular-nums;
+}
+.tooltip {
+  position: absolute;
+  margin: 0;
+  padding: 4px 8px;
+  font-size: 13px;
+  pointer-events: none;
+  white-space: nowrap;
 }
 .failure {
   position: absolute;

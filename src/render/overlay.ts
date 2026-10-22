@@ -1,6 +1,9 @@
 import { worldToScreen, type Camera } from './camera'
 import type { OverlayState } from './MapRenderer'
-import { cssColor, INK, PAPER, PLAYER_INK } from './palette'
+import { cssColor, INK, PAPER, PLAYER_INK, RANK_COLORS } from './palette'
+
+/** En deçà de ce zoom (pixels par cellule), les gisements encombreraient la carte. */
+const DEPOSIT_MIN_ZOOM = 2.5
 
 /** Pions et campements, dessinés à l'encre sur un calque 2D au-dessus du terrain. */
 export class OverlayPainter {
@@ -26,6 +29,8 @@ export class OverlayPainter {
     const ink = cssColor(INK)
     const red = cssColor(PLAYER_INK)
     const paper = cssColor(PAPER)
+
+    if (camera.zoom >= DEPOSIT_MIN_ZOOM) this.paintDeposits(camera, state, red)
 
     for (const camp of state.camps) {
       const p = worldToScreen(camera, camp.x, camp.y)
@@ -79,6 +84,36 @@ export class OverlayPainter {
       ctx.strokeStyle = ink
       ctx.lineWidth = 1.2
       ctx.stroke()
+    }
+  }
+
+  /** Gisements : rond pour la nourriture, losange pour un matériau, lettre du rang. */
+  private paintDeposits(camera: Camera, state: OverlayState, red: string): void {
+    const { ctx } = this
+    const r = Math.min(7, Math.max(4, camera.zoom * 0.9))
+    ctx.font = `bold ${Math.round(r * 1.25)}px Georgia, serif`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    for (const d of state.deposits) {
+      const p = worldToScreen(camera, d.x, d.y)
+      if (p.x < -r || p.y < -r || p.x > camera.viewWidth + r || p.y > camera.viewHeight + r)
+        continue
+      ctx.beginPath()
+      if (d.category === 'food') ctx.arc(p.x, p.y, r, 0, Math.PI * 2)
+      else {
+        ctx.moveTo(p.x, p.y - r * 1.2)
+        ctx.lineTo(p.x + r * 1.2, p.y)
+        ctx.lineTo(p.x, p.y + r * 1.2)
+        ctx.lineTo(p.x - r * 1.2, p.y)
+        ctx.closePath()
+      }
+      ctx.fillStyle = cssColor(RANK_COLORS[d.rank], 0.9)
+      ctx.fill()
+      ctx.lineWidth = d.held ? 2 : 1
+      ctx.strokeStyle = d.held ? red : cssColor(INK, 0.8)
+      ctx.stroke()
+      ctx.fillStyle = cssColor(PAPER)
+      ctx.fillText(d.rank, p.x, p.y + 0.5)
     }
   }
 }

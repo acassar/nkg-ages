@@ -1,4 +1,4 @@
-import { BIOME_IDS } from '@/views/types'
+import { BIOME_IDS, type RankLetter } from '@/views/types'
 
 /** Palette « carte d'explorateur » : encres et lavis d'aquarelle. Couleurs RVB 0..1. */
 export type Rgb = readonly [number, number, number]
@@ -24,6 +24,16 @@ export const BIOME_COLORS: Readonly<Record<number, Rgb>> = {
 export const PAPER = hex('#eee2c4')
 export const INK = hex('#3a2c1e')
 export const PLAYER_INK = hex('#8c2f1c')
+
+/** Encres des rangs de rareté, du terne (E) à l'or (S). */
+export const RANK_COLORS: Readonly<Record<RankLetter, Rgb>> = {
+  E: hex('#8a8170'),
+  D: hex('#5f7d4c'),
+  C: hex('#3e6e8e'),
+  B: hex('#6b4b8f'),
+  A: hex('#b8622a'),
+  S: hex('#c9a227'),
+}
 
 export function cssColor(rgb: Rgb, alpha = 1): string {
   const [r, g, b] = rgb.map((c) => Math.round(c * 255))

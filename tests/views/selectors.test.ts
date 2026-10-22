@@ -62,6 +62,22 @@ describe('vues de partie', () => {
     expect(view.notices[0]).toMatch(/^Famine/)
   })
 
+  it('ne montre que les gisements déjà vus, avec leur rang et leur exploitation', () => {
+    const g = game()
+    const c = g.camps[0]!
+    const at = { x: Math.floor(c.x), y: Math.floor(c.y) }
+    g.deposits = [
+      { id: 1, kind: 'baies', ...at, rank: 'B' },
+      { id: 2, kind: 'silex', x: 0, y: 0, rank: 'S' },
+    ]
+    g.tribe.materials.silex = 3.7
+    const view = buildGameView(g)
+    expect(view.deposits).toEqual([
+      expect.objectContaining({ id: 1, name: 'Baies', rank: 'B', held: true, category: 'food' }),
+    ])
+    expect(view.tribe.materials).toEqual([{ kind: 'silex', name: 'Silex', amount: 3 }])
+  })
+
   it('rédige les événements du moteur pour le joueur', () => {
     const g = game()
     expect(buildGameView(g).notices).toEqual([])

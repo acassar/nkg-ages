@@ -1,8 +1,9 @@
-import type { CampView, GameView, UnitView, WorldSnapshot } from '@/views/types'
+import type { CampView, DepositView, GameView, UnitView, WorldSnapshot } from '@/views/types'
 import type { Camera } from './camera'
 
 /** Ce que la carte affiche par-dessus le terrain. */
 export interface OverlayState {
+  deposits: readonly DepositView[]
   units: readonly UnitView[]
   camps: readonly CampView[]
   selected: ReadonlySet<number>

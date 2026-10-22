@@ -14,7 +14,9 @@ import {
   type TerritoryState,
 } from './territory/territory'
 import { findPath, knownPassable, pathBlocked } from './units/path'
-import { createTribe, tickTribe, type TribeState } from './tribe/tribe'
+import { RESOURCE_RULES } from './content/resources'
+import { depositYield, heldBy, placeDeposits, type Deposit } from './resources/deposits'
+import { createTribe, territoryFood, tickTribe, type TribeState } from './tribe/tribe'
 import { moveUnit, stopUnit, UNIT_RULES, type Unit } from './units/units'
 import { generateWorld } from './world/generate'
 import { findStarts, type StartSite } from './world/starts'
@@ -53,6 +55,8 @@ export interface GameState {
   fog: FogState
   territory: TerritoryState
   tribe: TribeState
+  /** Gisements de ressources, tous connus du moteur ; la vue ne montre que les découverts. */
+  deposits: Deposit[]
   nextId: number
   events: GameEvent[]
 }
@@ -83,6 +87,7 @@ export function createGame(options: NewGameOptions): GameState {
     fog: createFog(world.width, world.height),
     territory: createTerritory(world.width, world.height, foodWeights(world)),
     tribe: createTribe(),
+    deposits: placeDeposits(world, createRng(`ressources:${world.seed}`)),
     nextId: 1,
     events: [],
   }
@@ -178,8 +183,7 @@ export function step(state: GameState): void {
   state.clock.tick++
   for (const unit of state.units) if (!moveUnit(unit, state.world)) replan(state, unit)
   growTerritory(state.territory, state.world, seatsOf(state), state.rng, GROWTH_PER_TICK)
-  if (tickTribe(state.tribe, state.territory.playerWeight) === 'famineStarts')
-    state.events.push({ type: 'famine' })
+  harvest(state)
   updateFog(state.fog, viewersOf(state))
   // Le terrain découvert peut couper le chemin prévu : on le recalcule.
   for (const unit of state.units) {
@@ -232,4 +236,25 @@ function foodWeights(world: World): Float32Array {
   const weights = new Float32Array(world.biome.length)
   for (let i = 0; i < weights.length; i++) weights[i] = BIOMES[world.biome[i] as BiomeId].food
   return weights
+}
+
+/** Un mois de récolte : le territoire et ses gisements nourrissent la tribu et la fournissent. */
+function harvest(state: GameState): void {
+  const { owner, width, height } = state.territory
+  const { tribe } = state
+  let depositFood = 0
+  for (const d of state.deposits) {
+    if (!heldBy(owner, width, height, d, PLAYER)) continue
+    const amount = depositYield(d)
+    if (RESOURCE_RULES[d.kind].category === 'food') depositFood += amount
+    else if (tribe.population > 0) tribe.materials[d.kind] = (tribe.materials[d.kind] ?? 0) + amount
+  }
+  const available = territoryFood(state.territory.playerWeight, depositFood)
+  if (tickTribe(tribe, available) === 'famineStarts') state.events.push({ type: 'famine' })
+}
+
+/** Le gisement est-il exploité par le joueur ? */
+export function depositHeld(state: GameState, deposit: Deposit): boolean {
+  const { owner, width, height } = state.territory
+  return heldBy(owner, width, height, deposit, PLAYER)
 }
