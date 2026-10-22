@@ -82,6 +82,7 @@ export function buildWorldSnapshot(state: GameState): WorldSnapshot {
     height: world.height,
     elevation,
     biome: world.biome.slice(),
+    river: world.river.slice(),
   }
 }
 

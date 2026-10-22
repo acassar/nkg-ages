@@ -14,7 +14,8 @@ import {
 } from '@/engine/game'
 import { HUNT_RULES } from '@/engine/content/fauna'
 import { CAMP_RULES } from '@/engine/content/camps'
-import { isWater } from '@/engine/content/biomes'
+import { BIOMES, isWater, type BiomeId } from '@/engine/content/biomes'
+import { RIVER_RULES } from '@/engine/content/rivers'
 import { Visibility } from '@/engine/fog/fog'
 import { TRIBE_RULES } from '@/engine/content/tribe'
 import { PLAYER } from '@/engine/territory/territory'
@@ -87,6 +88,13 @@ function otherIsland(g: GameState): { x: number; y: number } | null {
 }
 
 describe('création de partie', () => {
+  it('les berges des fleuves nourrissent davantage', () => {
+    const g = createGame(options)
+    const i = g.world.river.findIndex((r) => r > 0)
+    const food = BIOMES[g.world.biome[i] as BiomeId].food
+    expect(g.territory.weights![i]).toBeCloseTo(food + RIVER_RULES.food)
+  })
+
   it('pose un campement et un éclaireur sur un départ viable', () => {
     const g = createGame(options)
     expect(g.camps).toHaveLength(1)

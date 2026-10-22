@@ -19,6 +19,7 @@ function worldOf(rows: string[]): World {
     moisture: zeros,
     temperature: zeros,
     biome,
+    river: new Uint8Array(width * height),
   }
 }
 

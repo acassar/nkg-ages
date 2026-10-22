@@ -65,7 +65,7 @@
         },
         {
           "title": "Fleuves",
-          "status": "todo"
+          "status": "done"
         },
         {
           "title": "Une dizaine de techniques",
@@ -181,6 +181,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-22",
+      "text": "J1 : fleuves tracés de la source à la mer ; berges fertiles, poisson, gués qui ralentissent, eau douce pour les départs"
+    },
     {
       "date": "2026-10-22",
       "text": "J1 : un chasseur ne cueille plus (il coûte vraiment), la barre dit quand les chasseurs se reposent, et plus de départ sur un îlot"

@@ -81,7 +81,7 @@ describe('génération du monde', () => {
 })
 
 describe('sites de départ', () => {
-  it('trouve toujours des départs viables : eau et nourriture à portée', () => {
+  it('trouve toujours des départs viables : eau (mer ou fleuve) et nourriture à portée', () => {
     fc.assert(
       fc.property(fc.string({ maxLength: 12 }), (seed) => {
         const w = generateWorld({ seed, width: 256, height: 128 })
@@ -93,7 +93,9 @@ describe('sites de départ', () => {
           for (let dy = -START_RADIUS; dy <= START_RADIUS; dy++)
             for (let dx = -START_RADIUS; dx <= START_RADIUS; dx++)
               if (dx * dx + dy * dy <= START_RADIUS ** 2)
-                water ||= isWater(w.biome[(s.y + dy) * w.width + s.x + dx]!)
+                water ||=
+                  isWater(w.biome[(s.y + dy) * w.width + s.x + dx]!) ||
+                  w.river[(s.y + dy) * w.width + s.x + dx]! > 0
           expect(water).toBe(true)
         }
       }),

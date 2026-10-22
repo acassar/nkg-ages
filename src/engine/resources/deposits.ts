@@ -24,8 +24,11 @@ export function placeDeposits(world: World, rng: Rng, firstId = 1): Deposit[] {
       const biome = world.biome[i] as BiomeId
       for (const kind of RESOURCE_KINDS) {
         const rules = RESOURCE_RULES[kind]
-        if (!rules.biomes.includes(biome)) continue
-        if (rules.coast && !touchesLand(world, x, y)) continue
+        const onRiver = rules.river === true && world.river[i]! > 0
+        if (!onRiver) {
+          if (!rules.biomes.includes(biome)) continue
+          if (rules.coast && !touchesLand(world, x, y)) continue
+        }
         if (rng.next() >= rules.density) continue
         deposits.push({ id: id++, kind, x, y, rank: rollRank(rng) })
         break

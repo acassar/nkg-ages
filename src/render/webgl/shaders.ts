@@ -16,6 +16,7 @@ uniform float uZoom;    // pixels écran par cellule
 uniform vec2 uWorld;    // taille du monde en cellules
 uniform sampler2D uElevation;
 uniform sampler2D uBiome;
+uniform sampler2D uRiver;
 uniform sampler2D uFog;
 uniform sampler2D uTerritory;
 uniform vec3 uPalette[10];
@@ -106,6 +107,13 @@ void main() {
     float d = min(fract(level), 1.0 - fract(level));
     float contour = 1.0 - smoothstep(0.0, max(fwidth(level), 1e-4) * 1.2, d);
     color = mix(color, color * 0.75, contour * 0.55 * step(0.12, e));
+    // Fleuves : un trait d'eau dont la largeur suit le débit, cerné d'encre.
+    float r = texture(uRiver, wp / uWorld).r;
+    float aa = max(fwidth(r), 1e-4);
+    float water = smoothstep(0.45 - aa, 0.45 + aa, r);
+    float bank = smoothstep(0.37 - aa, 0.37 + aa, r) - water;
+    color = mix(color, uInk * 0.9 + uPalette[1] * 0.1, bank * 0.5 * smoothstep(1.0, 3.0, uZoom));
+    color = mix(color, mix(uPalette[1], uPalette[0], 0.35), water);
   }
   // Lavis d'aquarelle : variations lentes de pigment.
   color *= 0.92 + 0.16 * fbm(w * 0.07 + 3.1);

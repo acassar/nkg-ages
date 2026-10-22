@@ -36,10 +36,16 @@ describe('gisements', () => {
     expect(placeDeposits(world, createRng('autre'))).not.toEqual(deposits)
   })
 
-  it('apparaissent seulement dans leurs biomes, le poisson près des côtes', () => {
+  it('apparaissent seulement dans leurs biomes, le poisson près des côtes ou sur un fleuve', () => {
     expect(deposits.length).toBeGreaterThan(50)
+    let riverFish = 0
     for (const d of deposits) {
-      const biome = world.biome[d.y * world.width + d.x]!
+      const i = d.y * world.width + d.x
+      const biome = world.biome[i]!
+      if (d.kind === 'poisson' && world.river[i]! > 0) {
+        riverFish++
+        continue
+      }
       expect(RESOURCE_RULES[d.kind].biomes).toContain(biome)
       if (d.kind === 'poisson') {
         const near = [
@@ -51,6 +57,7 @@ describe('gisements', () => {
         expect(near).toBe(true)
       }
     }
+    expect(riverFish).toBeGreaterThan(0)
     // Une cellule porte au plus un gisement, et chacun a son identifiant.
     expect(new Set(deposits.map((d) => d.y * world.width + d.x)).size).toBe(deposits.length)
     expect(new Set(deposits.map((d) => d.id)).size).toBe(deposits.length)

@@ -1,6 +1,5 @@
-import { BIOMES, type BiomeId } from '../content/biomes'
 import { Visibility, type FogState } from '../fog/fog'
-import { inBounds, type World } from '../world/world'
+import { inBounds, moveCostAt, type World } from '../world/world'
 
 export interface Point {
   x: number
@@ -44,7 +43,7 @@ const DIRS = [
  */
 export function knownCost(world: World, knowledge: Knowledge, i: number): number {
   if (knowledge.cells[i] === Visibility.Unknown) return UNKNOWN_COST
-  return BIOMES[world.biome[i] as BiomeId].moveCost
+  return moveCostAt(world, i)
 }
 
 /** Le point est-il franchissable d'après ce que sait le joueur ? */

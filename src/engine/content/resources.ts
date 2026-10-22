@@ -13,6 +13,8 @@ export interface ResourceRules {
   /** Biomes où le gisement peut apparaître. `coast` : eau qui touche la terre. */
   biomes: readonly BiomeId[]
   coast?: boolean
+  /** Le gisement peut aussi naître sur un fleuve, quel que soit le biome des berges. */
+  river?: boolean
   /** Chance qu'une cellule éligible porte un gisement. */
   density: number
   /** Production par mois d'un gisement de rang E tenu par la tribu. */
@@ -34,6 +36,7 @@ export const RESOURCE_RULES: Readonly<Record<ResourceKind, ResourceRules>> = {
     category: 'food',
     biomes: [Biome.Ocean],
     coast: true,
+    river: true,
     density: 1 / 60,
     yield: 3,
   },
