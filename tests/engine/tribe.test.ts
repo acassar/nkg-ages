@@ -53,6 +53,22 @@ describe('tribu', () => {
     expect(all.lastProduction).toBe(0)
   })
 
+  it('le feu fait naître plus vite, les peaux limitent les pertes de famine', () => {
+    const grow = (growth: number) => {
+      const t = tribe({ population: 100, food: storageCapacity(100) })
+      for (let m = 0; m < 24; m++) tickTribe(t, PLENTY, { gather: 0, storageMonths: 0, growth })
+      return t.population
+    }
+    expect(grow(0.5)).toBeGreaterThan(grow(0))
+    const starve = (famineShield: number) => {
+      const t = tribe({ population: 100, food: 0 })
+      tickTribe(t, 0, { gather: 0, storageMonths: 0, famineShield })
+      return 100 - t.population
+    }
+    expect(starve(0.5)).toBeLessThan(starve(0))
+    expect(starve(1)).toBe(1) // au moins une perte : la famine reste une famine
+  })
+
   it('ne stocke pas au-delà de sa capacité', () => {
     const t = tribe({ population: 10, food: storageCapacity(10) })
     tickTribe(t, PLENTY)

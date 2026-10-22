@@ -63,6 +63,10 @@ export interface TribeBonus {
   gather: number
   /** Mois de réserve en plus. */
   storageMonths: number
+  /** Natalité en plus (0,2 = +20 %). */
+  growth?: number
+  /** Pertes de famine en moins (0,3 = -30 %). */
+  famineShield?: number
 }
 
 export const NO_BONUS: TribeBonus = { gather: 0, storageMonths: 0 }
@@ -93,14 +97,19 @@ export function tickTribe(
   if (tribe.food < 0) {
     tribe.food = 0
     tribe.growth = 0
-    const lost = Math.max(1, Math.round(tribe.population * rules.famineLoss))
+    const loss = rules.famineLoss * (1 - Math.min(1, bonus.famineShield ?? 0))
+    const lost = Math.max(1, Math.round(tribe.population * loss))
     tribe.population = Math.max(0, tribe.population - lost)
     tribe.starvingMonths++
     return tribe.starvingMonths === 1 ? 'famineStarts' : 'famine'
   }
   tribe.starvingMonths = 0
   if (tribe.food >= eaten * rules.comfortMonths) {
-    tribe.growth += tribe.population * rules.growthPerMonth * growthFactor(produced, eaten, rules)
+    tribe.growth +=
+      tribe.population *
+      rules.growthPerMonth *
+      (1 + (bonus.growth ?? 0)) *
+      growthFactor(produced, eaten, rules)
     if (tribe.growth >= 1) {
       const born = Math.floor(tribe.growth)
       tribe.growth -= born

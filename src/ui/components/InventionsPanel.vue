@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useGameStore } from '../stores/game'
 
 const game = useGameStore()
 /** Repliable, surtout pour les petits écrans. */
 const open = ref(true)
+/** Une invention en cours bloque toutes les autres : inutile de le répéter partout. */
+const busy = computed(() => game.view?.inventions.some((i) => i.progress !== null) ?? false)
 </script>
 
 <template>
@@ -40,6 +42,7 @@ const open = ref(true)
           {{ inv.rank ? 'Réinventer' : 'Inventer' }}
           <span v-if="inv.cost.length" class="cost">({{ inv.cost.join(', ') }})</span>
         </button>
+        <p v-if="inv.blocked && !busy" class="why">{{ inv.blocked }}</p>
       </li>
     </ul>
   </aside>
@@ -67,7 +70,9 @@ const open = ref(true)
 ul {
   list-style: none;
   margin: 6px 0 0;
-  padding: 0;
+  padding: 0 4px 0 0;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -132,11 +137,20 @@ ul {
 .cost {
   color: var(--ink-soft);
 }
+.why {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-style: italic;
+}
 @media (max-width: 560px) {
   .inventions {
     top: auto;
     bottom: 64px;
     width: 200px;
+  }
+  ul {
+    max-height: 38vh;
   }
 }
 </style>

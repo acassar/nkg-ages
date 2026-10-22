@@ -216,7 +216,8 @@ const statNumber = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 })
 export function formatStat(stat: RankedStat, unit: string): string {
   const suffix = unit === '' ? '' : unit === '%' ? ' %' : ` ${unit}`
   const spread = stat.spread > 0 ? ` ± ${statNumber.format(stat.spread)}` : ''
-  return `${unit === '%' ? '+' : ''}${statNumber.format(stat.mean)}${spread}${suffix}`
+  const sign = unit === '%' && stat.mean > 0 ? '+' : ''
+  return `${sign}${statNumber.format(stat.mean)}${spread}${suffix}`
 }
 
 /** Inventions : faites, en cours ou possibles, avec leur coût et ce qui les bloque. */

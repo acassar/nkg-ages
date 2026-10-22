@@ -69,7 +69,7 @@
         },
         {
           "title": "Une dizaine de techniques",
-          "status": "todo"
+          "status": "done"
         },
         {
           "title": "Victoire, défaite, score",
@@ -181,6 +181,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-22",
+      "text": "J1 : dix techniques avec prérequis (feu, peaux, pistage, propulseur, taille du silex, harpon, portage…), chacune à rang E à S"
+    },
     {
       "date": "2026-10-22",
       "text": "J1 : fleuves tracés de la source à la mer ; berges fertiles, poisson, gués qui ralentissent, eau douce pour les départs"

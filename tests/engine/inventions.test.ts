@@ -1,6 +1,6 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
-import { INVENTION_RULES, INVENTION_WORK } from '@/engine/content/inventions'
+import { INVENTION_KINDS, INVENTION_RULES, INVENTION_WORK } from '@/engine/content/inventions'
 import { RANKS } from '@/engine/content/rarity'
 import { createRng } from '@/engine/core/random'
 import {
@@ -101,5 +101,35 @@ describe('inventions', () => {
     tickInventions(inv, 10, createRng('moins bien'))
     expect(inv.ranks.panier).toBe('S')
     expect(inv.attempts.panier).toBe(1)
+  })
+})
+
+describe('techniques', () => {
+  it('une dizaine, aux règles cohérentes et sans prérequis circulaire', () => {
+    expect(INVENTION_KINDS.length).toBeGreaterThanOrEqual(10)
+    for (const kind of INVENTION_KINDS) {
+      const rules = INVENTION_RULES[kind]
+      expect(rules.work).toBeGreaterThan(0)
+      // Le rang S fait toujours mieux que le rang E, dans le sens de la statistique.
+      expect(Math.abs(rules.range.s.mean)).toBeGreaterThan(Math.abs(rules.range.e.mean))
+      // On remonte les prérequis sans jamais revenir sur ses pas.
+      const seen = new Set([kind])
+      const stack = [...(rules.requires ?? [])]
+      while (stack.length > 0) {
+        const k = stack.pop()!
+        expect(INVENTION_KINDS).toContain(k)
+        expect(seen.has(k)).toBe(false)
+        seen.add(k)
+        stack.push(...(INVENTION_RULES[k].requires ?? []))
+      }
+    }
+  })
+
+  it('attend ses prérequis', () => {
+    const inv = createInventions()
+    expect(cannotStart(inv, 'propulseur', { silex: 99 })).toBe("Il faut d'abord : Lance")
+    inv.ranks.lance = 'E'
+    expect(cannotStart(inv, 'propulseur', { silex: 99 })).toBeNull()
+    expect(cannotStart(inv, 'propulseur', {})).toBe('Il faut 10 silex')
   })
 })
