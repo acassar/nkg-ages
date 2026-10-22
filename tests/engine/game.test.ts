@@ -526,7 +526,8 @@ describe('scénarios', () => {
         const g = createGame({ seed, randomStart: true, width: 128, height: 64 })
         expect(g.deposits.some((d) => d.kind === 'silex' && depositHeld(g, d))).toBe(true)
       }),
-      { numRuns: 12 },
+      // " '" : départ sur un îlot dont le silex voisin n'était pas relié au territoire.
+      { numRuns: 12, examples: [[" '"]] },
     )
   }, 30_000)
 

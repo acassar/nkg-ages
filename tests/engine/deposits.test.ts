@@ -76,19 +76,29 @@ describe('gisements', () => {
     expect(heldBy(owner, 3, 3, d, 2)).toBe(true)
   })
 
-  it('garantissent un silex près du départ, sans en ajouter s’il y en a déjà un', () => {
+  it('garantissent un silex tenu au départ, sans en ajouter s’il y en a déjà un', () => {
     const land = world.biome.findIndex((b) => !isWater(b))
     const start = { x: land % world.width, y: Math.floor(land / world.width) }
     const radius = RESOURCE_RULES.silex.nearStart!
+    const owner = new Uint8Array(world.width * world.height)
+    const own = (x: number, y: number) => (owner[y * world.width + x] = 1)
+    own(start.x, start.y)
     const deposits: ReturnType<typeof placeDeposits> = []
-    ensureNearStart(deposits, world, start, createRng('départ'))
-    const silex = deposits.filter((d) => d.kind === 'silex')
-    expect(silex).toHaveLength(1)
-    const d = silex[0]!
-    expect(Math.hypot(d.x - start.x, d.y - start.y)).toBeLessThanOrEqual(radius)
-    expect(isWater(world.biome[d.y * world.width + d.x]!)).toBe(false)
+    // Territoire réduit au camp : le silex y est posé.
+    ensureNearStart(deposits, world, owner, 1, start, createRng('départ'))
+    expect(deposits).toMatchObject([{ kind: 'silex', ...start }])
+    // Sinon, sur une terre tenue autre que le camp, à portée.
+    deposits.length = 0
+    own(start.x + 1, start.y)
+    own(start.x + 2, start.y)
+    owner[start.y * world.width + start.x + 1] = 0
+    ensureNearStart(deposits, world, owner, 1, start, createRng('départ'))
+    expect(deposits).toHaveLength(1)
+    const d = deposits[0]!
+    expect(owner[d.y * world.width + d.x]).toBe(1)
     expect(d.x === start.x && d.y === start.y).toBe(false)
-    ensureNearStart(deposits, world, start, createRng('départ'))
+    expect(Math.hypot(d.x - start.x, d.y - start.y)).toBeLessThanOrEqual(radius)
+    ensureNearStart(deposits, world, owner, 1, start, createRng('départ'))
     expect(deposits).toHaveLength(1)
   })
 })

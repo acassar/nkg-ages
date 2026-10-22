@@ -132,8 +132,9 @@ export function createGame(options: NewGameOptions): GameState {
   const cx = site.x + 0.5
   const cy = site.y + 0.5
   state.camps.push({ id: state.nextId++, owner: PLAYER, x: cx, y: cy })
-  ensureNearStart(state.deposits, world, site, createRng(`depart:${world.seed}`))
   claimAround(state.territory, world, seatsOf(state)[0]!, TRIBE_RULES.startTerritoryRadius)
+  const owner = state.territory.owner
+  ensureNearStart(state.deposits, world, owner, PLAYER, site, createRng(`depart:${world.seed}`))
   state.units.push(newUnit(state, 'eclaireur', cx, cy))
   for (let i = 0; i < START_HUNTERS; i++) state.units.push(newHunter(state, i))
   updateFog(state.fog, viewersOf(state))

@@ -36,42 +36,39 @@ export function placeDeposits(world: World, rng: Rng, firstId = 1): Deposit[] {
 }
 
 /**
- * Garantit près du départ les gisements que les règles promettent (`nearStart`) :
- * s'il n'y en a aucun à portée, on en pose un sur une terre libre, hors du camp.
+ * Garantit au départ les gisements que les règles promettent (`nearStart`) : si la tribu
+ * n'en tient aucun, on en pose un sur une de ses terres à portée du camp, hors du camp
+ * lui-même quand c'est possible. Appelée une fois le territoire de départ pris.
  */
 export function ensureNearStart(
   deposits: Deposit[],
   world: World,
+  owner: Uint8Array,
+  who: number,
   start: { x: number; y: number },
   rng: Rng,
 ): void {
-  const taken = new Set(deposits.map((d) => d.y * world.width + d.x))
+  const { width, height } = world
+  const taken = new Set(deposits.map((d) => d.y * width + d.x))
   let id = deposits.reduce((m, d) => Math.max(m, d.id), 0) + 1
   for (const kind of RESOURCE_KINDS) {
     const radius = RESOURCE_RULES[kind].nearStart
     if (radius === undefined) continue
-    const near = (x: number, y: number) => Math.hypot(x - start.x, y - start.y) <= radius
-    if (deposits.some((d) => d.kind === kind && near(d.x, d.y))) continue
+    if (deposits.some((d) => d.kind === kind && heldBy(owner, width, height, d, who))) continue
     const spots: { x: number; y: number }[] = []
-    for (
-      let y = Math.max(0, start.y - radius);
-      y <= Math.min(world.height - 1, start.y + radius);
-      y++
-    ) {
-      for (
-        let x = Math.max(0, start.x - radius);
-        x <= Math.min(world.width - 1, start.x + radius);
-        x++
-      ) {
-        const i = y * world.width + x
-        if ((x === start.x && y === start.y) || taken.has(i) || !near(x, y)) continue
-        if (!isWater(world.biome[i] as BiomeId)) spots.push({ x, y })
+    for (let y = Math.max(0, start.y - radius); y <= Math.min(height - 1, start.y + radius); y++) {
+      for (let x = Math.max(0, start.x - radius); x <= Math.min(width - 1, start.x + radius); x++) {
+        const i = y * width + x
+        if ((x === start.x && y === start.y) || taken.has(i) || owner[i] !== who) continue
+        if (Math.hypot(x - start.x, y - start.y) <= radius) spots.push({ x, y })
       }
     }
+    // Territoire réduit au seul camp (îlot) : le gisement est au camp même.
+    if (spots.length === 0 && !taken.has(start.y * width + start.x)) spots.push(start)
     if (spots.length === 0) continue
     const spot = rng.pick(spots)
-    taken.add(spot.y * world.width + spot.x)
-    deposits.push({ id: id++, kind, ...spot, rank: rollRank(rng) })
+    taken.add(spot.y * width + spot.x)
+    deposits.push({ id: id++, kind, x: spot.x, y: spot.y, rank: rollRank(rng) })
   }
 }
 
