@@ -78,6 +78,19 @@ describe('vues de partie', () => {
     expect(view.tribe.materials).toEqual([{ kind: 'silex', name: 'Silex', amount: 3 }])
   })
 
+  it('ne montre que les troupeaux en vue, et prévient d’un chasseur tué', () => {
+    const g = game()
+    const c = g.camps[0]!
+    g.herds = [
+      { id: 1, kind: 'cerf', x: c.x, y: c.y, size: 5, goal: { x: c.x, y: c.y } },
+      { id: 2, kind: 'mammouth', x: 0.5, y: 0.5, size: 4, goal: { x: 0.5, y: 0.5 } },
+    ]
+    g.events.push({ type: 'hunterKilled', animal: 'mammouth' })
+    const view = buildGameView(g)
+    expect(view.herds).toEqual([{ id: 1, kind: 'cerf', name: 'Cerfs', x: c.x, y: c.y, size: 5 }])
+    expect(view.notices).toEqual(['Chasse : un chasseur est mort face aux mammouths.'])
+  })
+
   it('rédige les événements du moteur pour le joueur', () => {
     const g = game()
     expect(buildGameView(g).notices).toEqual([])

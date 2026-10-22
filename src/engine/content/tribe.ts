@@ -15,8 +15,14 @@ export const TRIBE_RULES = {
   yieldPerCell: 0.2,
   /** Réserve maximale, en mois de consommation (sans conservation, la nourriture se perd). */
   storageMonths: 8,
-  /** Croissance par mois quand la réserve dépasse `comfortMonths` (≈ 5 % par an). */
+  /**
+   * Croissance par mois quand la réserve dépasse `comfortMonths`, pour un surplus mensuel
+   * égal à `surplusForGrowth` fois la consommation (≈ 5 % par an). Elle suit le surplus,
+   * jusqu'au double : une tribu bien nourrie (gisements riches, chasse) grandit plus vite.
+   */
   growthPerMonth: 0.004,
+  surplusForGrowth: 0.25,
+  maxGrowthFactor: 2,
   comfortMonths: 2,
   /** Part de la population perdue chaque mois de famine (au moins une personne). */
   famineLoss: 0.06,

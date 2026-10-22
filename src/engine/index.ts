@@ -10,6 +10,9 @@ export { Visibility } from './fog/fog'
 export { PLAYER, NO_OWNER } from './territory/territory'
 export { UNIT_RULES } from './units/units'
 export { TRIBE_RULES } from './content/tribe'
+export { ANIMAL_KINDS, ANIMAL_RULES, HUNT_RULES } from './content/fauna'
+export type { AnimalKind } from './content/fauna'
+export type { Herd } from './fauna/fauna'
 export { RANKS, RANK_RULES } from './content/rarity'
 export type { Rank } from './content/rarity'
 export { RESOURCE_KINDS, RESOURCE_RULES } from './content/resources'
@@ -26,6 +29,7 @@ export {
   clearDirty,
   startYear,
   depositHeld,
+  herdVisible,
   START_CHOICES,
 } from './game'
 export type { GameState, GameEvent, NewGameOptions, Camp } from './game'

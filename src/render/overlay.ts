@@ -32,6 +32,8 @@ export class OverlayPainter {
 
     if (camera.zoom >= DEPOSIT_MIN_ZOOM) this.paintDeposits(camera, state, red)
 
+    this.paintHerds(camera, state)
+
     for (const camp of state.camps) {
       const p = worldToScreen(camera, camp.x, camp.y)
       const s = 9
@@ -75,15 +77,50 @@ export class OverlayPainter {
       ctx.lineWidth = selected ? 2.4 : 1.4
       ctx.strokeStyle = selected ? red : ink
       ctx.stroke()
-      // Petit fanion : l'éclaireur.
       ctx.beginPath()
-      ctx.moveTo(p.x, p.y - 6)
-      ctx.lineTo(p.x, p.y - 15)
-      ctx.lineTo(p.x + 7, p.y - 12)
-      ctx.lineTo(p.x, p.y - 9)
+      if (unit.kind === 'chasseur') {
+        // Une lance en travers : le chasseur.
+        ctx.moveTo(p.x - 5, p.y + 9)
+        ctx.lineTo(p.x + 8, p.y - 14)
+        ctx.moveTo(p.x + 8, p.y - 14)
+        ctx.lineTo(p.x + 4, p.y - 12)
+        ctx.moveTo(p.x + 8, p.y - 14)
+        ctx.lineTo(p.x + 8, p.y - 9.5)
+      } else {
+        // Petit fanion : l'éclaireur.
+        ctx.moveTo(p.x, p.y - 6)
+        ctx.lineTo(p.x, p.y - 15)
+        ctx.lineTo(p.x + 7, p.y - 12)
+        ctx.lineTo(p.x, p.y - 9)
+      }
       ctx.strokeStyle = ink
       ctx.lineWidth = 1.2
       ctx.stroke()
+    }
+  }
+
+  /** Troupeaux : quelques traces de bêtes à l'encre brune, et leur nombre. */
+  private paintHerds(camera: Camera, state: OverlayState): void {
+    const { ctx } = this
+    ctx.font = 'bold 11px Georgia, serif'
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'middle'
+    const brown = cssColor(INK, 0.85)
+    for (const herd of state.herds) {
+      const p = worldToScreen(camera, herd.x, herd.y)
+      if (p.x < -20 || p.y < -20 || p.x > camera.viewWidth + 20 || p.y > camera.viewHeight + 20)
+        continue
+      const shown = Math.min(herd.size, 4)
+      for (let i = 0; i < shown; i++) {
+        const ox = ((i % 2) - 0.5) * 7
+        const oy = (Math.floor(i / 2) - 0.5) * 6
+        ctx.beginPath()
+        ctx.ellipse(p.x + ox, p.y + oy, 3.2, 2, 0, 0, Math.PI * 2)
+        ctx.fillStyle = brown
+        ctx.fill()
+      }
+      ctx.fillStyle = brown
+      ctx.fillText(String(herd.size), p.x + 9, p.y)
     }
   }
 

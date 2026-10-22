@@ -79,7 +79,7 @@ export function tickTribe(
   }
   tribe.starvingMonths = 0
   if (tribe.food >= eaten * rules.comfortMonths) {
-    tribe.growth += tribe.population * rules.growthPerMonth
+    tribe.growth += tribe.population * rules.growthPerMonth * growthFactor(produced, eaten, rules)
     if (tribe.growth >= 1) {
       const born = Math.floor(tribe.growth)
       tribe.growth -= born
@@ -88,4 +88,14 @@ export function tickTribe(
     }
   }
   return 'stable'
+}
+
+/**
+ * Multiplicateur de croissance selon le surplus du mois. Une réserve pleine sans surplus
+ * garde une croissance minimale (un quart), pour qu'une tribu à l'équilibre vive encore.
+ */
+export function growthFactor(produced: number, eaten: number, rules: TribeRules = TRIBE_RULES) {
+  if (eaten <= 0) return 0
+  const surplus = (produced - eaten) / eaten / rules.surplusForGrowth
+  return Math.min(rules.maxGrowthFactor, Math.max(0.25, surplus))
 }

@@ -111,6 +111,12 @@ export const useGameStore = defineStore('game', () => {
     selected.value = new Set(ids)
   }
 
+  function toggleSelected(id: number) {
+    const next = new Set(selected.value)
+    if (!next.delete(id)) next.add(id)
+    selected.value = next
+  }
+
   function moveSelectedTo(x: number, y: number) {
     const unitIds = [...selected.value]
     if (unitIds.length === 0) return
@@ -140,6 +146,7 @@ export const useGameStore = defineStore('game', () => {
     togglePause,
     setPaused,
     select,
+    toggleSelected,
     moveSelectedTo,
     quit,
     dismissError,

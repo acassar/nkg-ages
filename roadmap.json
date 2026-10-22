@@ -49,7 +49,7 @@
         },
         {
           "title": "Chasseurs, chasse et faune",
-          "status": "todo"
+          "status": "done"
         },
         {
           "title": "Chemins qui contournent l'eau (A*), même dans le brouillard",
@@ -181,6 +181,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-22",
+      "text": "J1 : chasseurs, troupeaux (cerfs, sangliers, mammouths) et chasse ; croissance liée au surplus de nourriture"
+    },
     {
       "date": "2026-10-22",
       "text": "J1 : gisements à rareté E à S (baies, poisson, silex) qui nourrissent et fournissent la tribu"

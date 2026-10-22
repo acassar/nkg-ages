@@ -58,6 +58,18 @@ export interface GameView {
   tribe: TribeView
   /** Gisements découverts par le joueur (hors brouillard inconnu). */
   deposits: DepositView[]
+  /** Troupeaux en vue en ce moment (ils bougent : le déjà-vu ne suffit pas). */
+  herds: HerdView[]
+}
+
+export interface HerdView {
+  id: number
+  kind: string
+  name: string
+  x: number
+  y: number
+  /** Bêtes restantes. */
+  size: number
 }
 
 export type RankLetter = 'E' | 'D' | 'C' | 'B' | 'A' | 'S'
