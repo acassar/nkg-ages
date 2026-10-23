@@ -145,7 +145,7 @@
         },
         {
           "title": "Options de partie",
-          "status": "todo"
+          "status": "done"
         },
         {
           "title": "Jouable sur téléphone",
@@ -181,6 +181,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-23",
+      "text": "J5 : options de partie à l'écran de départ : taille du monde (petit, normal, grand), nombre de peuples voisins (0 à 5), événements rares"
+    },
     {
       "date": "2026-10-23",
       "text": "J4 : merveilles très rares (cercle de pierres, source sacrée, grotte ornée) : présentes ou non selon la carte, loin du départ ; les tenir donne leur effet et des points"
