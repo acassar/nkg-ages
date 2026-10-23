@@ -163,7 +163,7 @@
         },
         {
           "title": "Carte lisible : pictogrammes et rareté",
-          "status": "todo"
+          "status": "done"
         },
         {
           "title": "Éclaireurs, ordre Explorer, choix du campement",
@@ -223,6 +223,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-23",
+      "text": "Jouabilité : un pictogramme par ressource sur la carte, couleurs de rareté franches (gris, vert, bleu, violet, orange, or) et leur légende"
+    },
     {
       "date": "2026-10-23",
       "text": "Jouabilité : le mois se joue en quatre semaines (vitesse 1 = une saison en 12 s, unités toujours fluides) ; panneau d'alertes rétractable qui centre la carte"

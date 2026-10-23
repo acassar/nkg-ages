@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted } from 'vue'
+import { cssColor, inkOn, RANK_COLORS } from '@/render'
 import { useGameStore } from '../stores/game'
 import AlertsPanel from './AlertsPanel.vue'
 import GoalsPanel from './GoalsPanel.vue'
@@ -21,6 +22,13 @@ onMounted(() => document.addEventListener('visibilitychange', onHidden))
 onBeforeUnmount(() => document.removeEventListener('visibilitychange', onHidden))
 
 defineProps<{ benchmark?: boolean }>()
+
+/** Légende des rangs de rareté, aux couleurs des pastilles de la carte. */
+const ranks = (['E', 'D', 'C', 'B', 'A', 'S'] as const).map((rank) => ({
+  rank,
+  background: cssColor(RANK_COLORS[rank]),
+  color: cssColor(inkOn(RANK_COLORS[rank])),
+}))
 </script>
 
 <template>
@@ -40,9 +48,18 @@ defineProps<{ benchmark?: boolean }>()
       <button class="close" aria-label="Fermer" @click="game.dismissError()">×</button>
     </p>
     <p class="hint parchment">
-      Clic : choisir une unité (Maj : en ajouter) · clic droit : l'envoyer · les chasseurs chassent
-      seuls les bêtes en vue · F : l’éclaireur fonde un campement · glisser ou ZQSD : déplacer la
-      carte · molette : zoom · Espace : pause · 1 à 5 : vitesse
+      Clic : choisir (Maj : ajouter) · clic droit : envoyer · F : fonder un campement · glisser ou
+      ZQSD : carte · molette : zoom · Espace : pause · 1 à 5 : vitesse ·
+      <span class="legend" data-testid="rarity-legend" title="Rareté des gisements, de E à S"
+        >rareté
+        <span
+          v-for="r in ranks"
+          :key="r.rank"
+          class="rank"
+          :style="{ background: r.background, color: r.color }"
+          >{{ r.rank }}</span
+        ></span
+      >
     </p>
     <OutcomeDialog />
   </div>
@@ -102,5 +119,16 @@ defineProps<{ benchmark?: boolean }>()
   color: var(--ink-soft);
   border-radius: 3px;
   max-width: calc(100% - 24px);
+}
+.legend {
+  white-space: nowrap;
+}
+.rank {
+  display: inline-block;
+  min-width: 15px;
+  margin-left: 2px;
+  text-align: center;
+  font-weight: bold;
+  border-radius: 2px;
 }
 </style>
