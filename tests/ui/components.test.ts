@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createInMemoryClient } from '@/client/inMemoryClient'
+import { createSaveSlot, memoryStorage, type SaveSlot } from '@/client/saveSlot'
 import { ManualScheduler } from '@/host/scheduler'
 import StartScreen from '@/ui/components/StartScreen.vue'
 import GameScreen from '@/ui/components/GameScreen.vue'
@@ -11,15 +12,18 @@ import InventionsPanel from '@/ui/components/InventionsPanel.vue'
 import OutcomeDialog from '@/ui/components/OutcomeDialog.vue'
 import SelectionBar from '@/ui/components/SelectionBar.vue'
 import TopBar from '@/ui/components/TopBar.vue'
-import { useClientFactory, useGameStore } from '@/ui/stores/game'
+import { AUTOSAVE_MS, useClientFactory, useGameStore, useSaveSlotFactory } from '@/ui/stores/game'
 import type { GameView } from '@/views/types'
 
 let scheduler: ManualScheduler
+let slot: SaveSlot
 
 beforeEach(() => {
   setActivePinia(createPinia())
   scheduler = new ManualScheduler()
   useClientFactory(() => createInMemoryClient(scheduler))
+  slot = createSaveSlot(memoryStorage(), () => 0)
+  useSaveSlotFactory(() => slot)
 })
 
 describe('écran de départ', () => {
@@ -234,5 +238,82 @@ describe('fin de partie', () => {
     expect(wrapper.find('[data-testid=keep-playing]').exists()).toBe(false)
     await wrapper.findAll('button').at(-1)!.trigger('click')
     expect(game.world).toBeNull()
+  })
+})
+
+describe('sauvegarde automatique', () => {
+  afterEach(() => vi.useRealTimers())
+
+  it('range la partie en quittant, puis la reprend depuis l’accueil, en pause', async () => {
+    const game = useGameStore()
+    await game.newGame({ seed: 'reprise', randomStart: false, width: 128, height: 64 })
+    await game.setPaused(false)
+    scheduler.advance(3000)
+    const tick = game.view!.tick
+    const dateLabel = game.view!.dateLabel
+    expect(tick).toBeGreaterThan(0)
+    game.quit()
+    expect(game.world).toBeNull()
+    await flushPromises()
+    expect(slot.summary()).toEqual({ seed: 'reprise', dateLabel, savedAt: 0 })
+
+    const wrapper = mount(StartScreen)
+    expect(wrapper.find('[data-testid=resume]').text()).toContain('reprise')
+    await wrapper.find('[data-testid=resume]').trigger('click')
+    await flushPromises()
+    expect(game.world?.seed).toBe('reprise')
+    expect(game.view!.tick).toBe(tick)
+    expect(game.view!.paused).toBe(true)
+  })
+
+  it('sauvegarde d’elle-même à intervalle régulier', async () => {
+    vi.useFakeTimers()
+    const game = useGameStore()
+    await game.newGame({ seed: 'minuterie', randomStart: false, width: 128, height: 64 })
+    expect(slot.read()).toBeNull()
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_MS)
+    expect(slot.read()?.options.seed).toBe('minuterie')
+    expect(game.savedGame?.seed).toBe('minuterie')
+  })
+
+  it('une partie de mesure ne remplace pas la sauvegarde du joueur', async () => {
+    const game = useGameStore()
+    await game.newGame({ seed: 'mesure', randomStart: false, width: 128, height: 64 }, false)
+    await game.saveNow()
+    game.quit()
+    await flushPromises()
+    expect(slot.read()).toBeNull()
+  })
+
+  it('une défaite efface la sauvegarde', async () => {
+    let push: ((view: GameView) => void) | null = null
+    useClientFactory(() => {
+      const inner = createInMemoryClient(scheduler)
+      return {
+        ...inner,
+        subscribe(listener) {
+          push = listener
+          return inner.subscribe(listener)
+        },
+      }
+    })
+    const game = useGameStore()
+    await game.newGame({ seed: 'perdue', randomStart: false, width: 128, height: 64 })
+    await game.saveNow()
+    expect(slot.read()).not.toBeNull()
+    push!({ ...game.view!, outcome: { type: 'defeat', score: 0, dateLabel: 'x' } })
+    expect(slot.read()).toBeNull()
+    expect(game.savedGame).toBeNull()
+    await game.saveNow()
+    expect(slot.read()).toBeNull()
+  })
+
+  it('une sauvegarde illisible est oubliée avec un message', async () => {
+    const game = useGameStore()
+    slot.write({ version: -1, options: { seed: 'vieille' } } as never, 'hier')
+    await game.resume()
+    expect(game.world).toBeNull()
+    expect(game.error).toMatch(/autre version/)
+    expect(slot.read()).toBeNull()
   })
 })

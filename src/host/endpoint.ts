@@ -19,8 +19,10 @@ export function createHostEndpoint(host: GameHost, post: Post, close: () => void
   return (request: HostRequest): void => {
     switch (request.kind) {
       case 'newGame':
+      case 'load':
         try {
-          const { world, view } = host.newGame(request.options)
+          const { world, view } =
+            request.kind === 'newGame' ? host.newGame(request.options) : host.load(request.save)
           post({ kind: 'started', requestId: request.requestId, world, view }, [
             world.elevation.buffer as ArrayBuffer,
             world.biome.buffer as ArrayBuffer,
@@ -32,6 +34,13 @@ export function createHostEndpoint(host: GameHost, post: Post, close: () => void
       case 'command':
         try {
           post({ kind: 'result', requestId: request.requestId, result: host.send(request.command) })
+        } catch (error) {
+          post({ kind: 'error', requestId: request.requestId, message: messageOf(error) })
+        }
+        break
+      case 'save':
+        try {
+          post({ kind: 'saved', requestId: request.requestId, save: host.save() })
         } catch (error) {
           post({ kind: 'error', requestId: request.requestId, message: messageOf(error) })
         }
