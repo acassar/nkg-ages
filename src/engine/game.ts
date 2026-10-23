@@ -3,6 +3,7 @@ import { FIRST_ERA } from './content/eras'
 import { goalReached, scoreOf, type Tally } from './score/score'
 import { createClock, isSpeed, STEPS_PER_MONTH, type ClockState } from './core/clock'
 import { createRng, type Rng } from './core/random'
+import { unionRect, type Rect } from './core/geometry'
 import { createFog, updateFog, Visibility, type FogState } from './fog/fog'
 import { BIOMES, type BiomeId } from './content/biomes'
 import { climateAmplitude, seasonalYield, seasonStarting, spoilage } from './climate/seasons'
@@ -24,6 +25,7 @@ import { CAMP_RULES } from './content/camps'
 import { BAND_RULES } from './content/bands'
 import {
   bandEfficiency,
+  cellsRect,
   createAbundance,
   exploit,
   forageAround,
@@ -215,6 +217,8 @@ export interface GameState {
   abundance: Float32Array
   /** Cellules dont l'abondance n'est pas pleine (elles repoussent) : déduit de `abundance`. */
   depleted: number[]
+  /** Zone où l'abondance a changé depuis le dernier envoi (le rendu montre la terre usée). */
+  abundanceDirty: Rect | null
   /** Cellules que tiennent les zones des bandes (rendues quand la bande s'en va). */
   bandCells: number[]
   inventions: InventionsState
@@ -258,6 +262,7 @@ export function createGame(options: NewGameOptions): GameState {
     herds: placeHerds(world, createRng(`faune:${world.seed}`)),
     abundance: createAbundance(world.width * world.height),
     depleted: [],
+    abundanceDirty: null,
     bandCells: [],
     inventions: createInventions(),
     outcome: null,
@@ -972,6 +977,7 @@ function replan(state: GameState, unit: Unit): void {
 export function clearDirty(state: GameState): void {
   state.fog.dirty = null
   state.territory.dirty = null
+  state.abundanceDirty = null
   state.events = []
 }
 
@@ -1059,6 +1065,9 @@ function harvest(state: GameState): void {
   // Part de ce qu'offraient les terres qui a été cueillie : c'est elle qui les épuise.
   const gathered = tribe.lastProduction / (1 + bonus.gather)
   const share = available > 0 ? gathered / available : 0
+  // Changent ce mois : les cellules cueillies et toutes celles qui repoussent.
+  for (const rect of [cellsRect(cells, width), cellsRect(state.depleted, width)])
+    if (rect) state.abundanceDirty = unionRect(state.abundanceDirty, rect)
   exploit(cells, state.abundance, state.depleted, share, season)
   // La réserve se gâte, surtout l'été ; la conservation (fumage) en sauve une part.
   const spoiled = tribe.food * spoilage(month, TRIBE_RULES.storageMonths, bonus.storageMonths)

@@ -192,6 +192,7 @@ export function buildGameView(state: GameState, full = false): GameView {
       state,
       full ? whole : changed(state.territory.dirty, state.fog.dirty),
     ),
+    abundance: abundancePatch(state, full ? whole : state.abundanceDirty),
     notices: state.events.map((e) => noticeOf(state, e)),
     tribe: tribeView(state),
     deposits: depositViews(state),
@@ -457,6 +458,20 @@ function territoryPatch(state: GameState, rect: Rect | null): GridPatch | null {
     }
   }
   return patch
+}
+
+/** Abondance de la zone modifiée, en octets (255 : intacte). */
+export function abundancePatch(state: GameState, rect: Rect | null): GridPatch | null {
+  if (!rect || rect.w <= 0 || rect.h <= 0) return null
+  const { width } = state.world
+  const data = new Uint8Array(rect.w * rect.h)
+  for (let y = 0; y < rect.h; y++) {
+    for (let x = 0; x < rect.w; x++) {
+      const a = state.abundance[(rect.y + y) * width + rect.x + x]!
+      data[y * rect.w + x] = Math.round(Math.min(1, Math.max(0, a)) * 255)
+    }
+  }
+  return { ...rect, data }
 }
 
 export function patchOf(cells: Uint8Array, width: number, rect: Rect | null): GridPatch | null {

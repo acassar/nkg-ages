@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   bandEfficiency,
   createAbundance,
+  cellsRect,
   depletedCells,
   exploit,
   forageAround,
@@ -78,6 +79,12 @@ describe('efficacité d’une bande', () => {
 })
 
 describe('épuisement des terres', () => {
+  it('englobe les cellules usées dans un rectangle (pour n’envoyer que lui au rendu)', () => {
+    expect(cellsRect([], 10)).toBeNull()
+    // Cellules (3, 1), (7, 2) et (5, 4) d'une grille de 10 de large.
+    expect(cellsRect([13, 27, 45], 10)).toEqual({ x: 3, y: 1, w: 5, h: 4 })
+  })
+
   it('les terres du joueur s’épuisent selon la part cueillie, toutes repoussent', () => {
     const abundance = createAbundance(4)
     abundance[3] = 0.5
