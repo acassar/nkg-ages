@@ -15,6 +15,8 @@ import {
   cityCount,
   inventionBoost,
   CITY_RULES,
+  WONDER_RULES,
+  wonderHeld,
   dateOfTick,
   seasonOf,
   seasonalYield,
@@ -153,6 +155,16 @@ export function buildGameView(state: GameState, full = false): GameView {
     notices: state.events.map((e) => noticeOf(state, e)),
     tribe: tribeView(state),
     deposits: depositViews(state),
+    wonders: state.wonders
+      .filter((w) => known(state, w.x + 0.5, w.y + 0.5))
+      .map((w) => ({
+        kind: w.kind,
+        name: WONDER_RULES[w.kind].name,
+        description: WONDER_RULES[w.kind].description,
+        x: w.x + 0.5,
+        y: w.y + 0.5,
+        held: wonderHeld(state, w),
+      })),
     inventions: inventionViews(state),
     herds: state.herds
       .filter((h) => herdVisible(state, h))

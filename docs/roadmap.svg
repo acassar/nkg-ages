@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 835" width="960" height="835" font-family="Georgia, 'Iowan Old Style', serif" role="img" aria-label="Roadmap de nkg-ages">
 <rect width="960" height="835" rx="10" fill="#eee2c4" stroke="#c9b283"/>
 <text x="24" y="50" font-size="28" fill="#3a2c1e">nkg-ages · roadmap</text>
-<text x="936" y="48" font-size="15" text-anchor="end" fill="#6b5843">25 / 34 fonctionnalités livrées · en cours : J4</text>
+<text x="936" y="48" font-size="15" text-anchor="end" fill="#6b5843">26 / 34 fonctionnalités livrées · en cours : J5</text>
 <g><rect x="24" y="72" width="293.3333333333333" height="268" rx="6" fill="#e6d6b0" stroke="#3a2c1e" stroke-width="1.2"/>
 <text x="40" y="102" font-size="19" fill="#3a2c1e"><tspan fill="#6b5843">J0</tspan> · Fondations</text>
 <circle cx="46" cy="122" r="5" fill="#3a2c1e"/>
@@ -60,17 +60,17 @@
 <circle cx="46" cy="448" r="5" fill="#3a2c1e"/>
 <text x="60" y="452" font-size="14" fill="#3a2c1e">Tensions et raids</text>
 </g>
-<g><rect x="333.3333333333333" y="356" width="293.3333333333333" height="121" rx="6" fill="#eee2c4" stroke="#8c2f1c" stroke-width="2.2"/>
-<text x="349.3333333333333" y="386" font-size="19" fill="#3a2c1e"><tspan fill="#8c2f1c">J4</tspan> · Antiquité</text>
+<g><rect x="333.3333333333333" y="356" width="293.3333333333333" height="121" rx="6" fill="#e6d6b0" stroke="#3a2c1e" stroke-width="1.2"/>
+<text x="349.3333333333333" y="386" font-size="19" fill="#3a2c1e"><tspan fill="#6b5843">J4</tspan> · Antiquité</text>
 <circle cx="355.3333333333333" cy="406" r="5" fill="#3a2c1e"/>
 <text x="369.3333333333333" y="410" font-size="14" fill="#3a2c1e">Bronze : cuivre et étain</text>
 <circle cx="355.3333333333333" cy="427" r="5" fill="#3a2c1e"/>
 <text x="369.3333333333333" y="431" font-size="14" fill="#3a2c1e">Cités, routes, écriture</text>
-<circle cx="355.3333333333333" cy="448" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="369.3333333333333" y="452" font-size="14" fill="#6b5843">Merveilles très rares</text>
+<circle cx="355.3333333333333" cy="448" r="5" fill="#3a2c1e"/>
+<text x="369.3333333333333" y="452" font-size="14" fill="#3a2c1e">Merveilles très rares</text>
 </g>
-<g><rect x="642.6666666666666" y="356" width="293.3333333333333" height="121" rx="6" fill="#eee2c4" stroke="#3a2c1e" stroke-width="1.2"/>
-<text x="658.6666666666666" y="386" font-size="19" fill="#3a2c1e"><tspan fill="#6b5843">J5</tspan> · Finition</text>
+<g><rect x="642.6666666666666" y="356" width="293.3333333333333" height="121" rx="6" fill="#eee2c4" stroke="#8c2f1c" stroke-width="2.2"/>
+<text x="658.6666666666666" y="386" font-size="19" fill="#3a2c1e"><tspan fill="#8c2f1c">J5</tspan> · Finition</text>
 <circle cx="664.6666666666666" cy="406" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
 <text x="678.6666666666666" y="410" font-size="14" fill="#6b5843">Tutoriel, score, succès</text>
 <circle cx="664.6666666666666" cy="427" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
@@ -92,11 +92,11 @@
 <text x="60" y="631" font-size="14" fill="#6b5843">Futur imaginé</text>
 </g>
 <text x="24" y="692" font-size="13" letter-spacing="1.5" fill="#6b5843">JOURNAL</text>
-<text x="24" y="716" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  J4 : écriture (inventions plus rapides), routes (on marche plus vite sur ses terres) et cités : un village grandi qui porte plus loin, stocke plus et fait avancer le savoir</text>
-<text x="24" y="737" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  J4 : bronze : gisements de cuivre et d'étain (rares, au moins un de chaque à portée d'exploration) et invention Bronze, qui fait rendre davantage la cueillette et les champs</text>
-<text x="24" y="758" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  J3 : tensions et raids : des campements trop proches aigrissent la relation ; un peuple hostile pille la réserve, les chasseurs en sauvent une part</text>
-<text x="24" y="779" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  J3 : relations avec les peuples rencontrés (de hostile à allié), présents de vivres et échange de silex contre des vivres</text>
-<text x="24" y="800" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  J3 : peuples voisins sous le brouillard (jusqu'à 3) : ils cueillent, grandissent, fondent des campements et s'étendent ; on les rencontre en explorant, leurs frontières sont tracées à l'encre d'ardoise</text>
+<text x="24" y="716" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  J4 : merveilles très rares (cercle de pierres, source sacrée, grotte ornée) : présentes ou non selon la carte, loin du départ ; les tenir donne leur effet et des points</text>
+<text x="24" y="737" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  J4 : écriture (inventions plus rapides), routes (on marche plus vite sur ses terres) et cités : un village grandi qui porte plus loin, stocke plus et fait avancer le savoir</text>
+<text x="24" y="758" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  J4 : bronze : gisements de cuivre et d'étain (rares, au moins un de chaque à portée d'exploration) et invention Bronze, qui fait rendre davantage la cueillette et les champs</text>
+<text x="24" y="779" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  J3 : tensions et raids : des campements trop proches aigrissent la relation ; un peuple hostile pille la réserve, les chasseurs en sauvent une part</text>
+<text x="24" y="800" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  J3 : relations avec les peuples rencontrés (de hostile à allié), présents de vivres et échange de silex contre des vivres</text>
 <circle cx="700" cy="809" r="5" fill="#3a2c1e"/>
 <text x="710" y="813" font-size="12" fill="#6b5843">fait</text>
 <circle cx="760" cy="809" r="5" fill="none" stroke="#8c2f1c" stroke-width="1.5"/><path d="M760 804a5 5 0 0 1 0 10z" fill="#8c2f1c"/>
