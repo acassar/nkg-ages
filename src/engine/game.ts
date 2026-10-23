@@ -452,36 +452,70 @@ export function cannotSplit(state: GameState, camp: Camp | undefined): string | 
 
 /**
  * Meilleur site connu où migrer depuis un point : parmi des points à quelques rayons de là,
- * celui dont les terres offrent le plus, loin des autres bandes. null si aucun n'est atteignable.
+ * celui dont les terres offrent le plus, loin des autres bandes. Il doit offrir plus que
+ * `floor` (par défaut, ce qu'offrent les terres actuelles). null si aucun ne convient.
  */
-function migrationSite(state: GameState, from: Camp): { x: number; y: number } | null {
+function migrationSite(
+  state: GameState,
+  from: Camp,
+  floor?: number,
+): { x: number; y: number } | null {
   const weights = state.territory.weights
   if (!weights) return null
   const others = bandsOf(state).filter((c) => c !== from)
   const r = BAND_RULES.radius
-  const distance = r * BAND_RULES.migrateDistance
   let best: { x: number; y: number } | null = null
-  let bestOffer = forageAround(state.world, weights, state.abundance, from.x, from.y, r).offered
-  for (let k = 0; k < BAND_RULES.migrateDirections; k++) {
-    const angle = (k / BAND_RULES.migrateDirections) * Math.PI * 2
-    const x = Math.floor(from.x + Math.cos(angle) * distance) + 0.5
-    const y = Math.floor(from.y + Math.sin(angle) * distance) + 0.5
-    if (!inBounds(state.world, x, y) || !knownCell(state, x, y)) continue
-    if (!knownPassable(state.world, state.fog, x, y)) continue
-    // Deux bandes sur les mêmes terres s'affament l'une l'autre.
-    const crowded = others.some(
-      (o) => Math.hypot((o.target?.x ?? o.x) - x, (o.target?.y ?? o.y) - y) < 2 * r,
-    )
-    if (crowded) continue
-    const held = state.territory.owner[cellOf(state, x, y)]
-    if (held !== NO_OWNER && held !== PLAYER) continue
-    const { offered } = forageAround(state.world, weights, state.abundance, x, y, r)
-    if (offered > bestOffer) {
-      best = { x, y }
-      bestOffer = offered
+  let bestOffer =
+    floor ?? forageAround(state.world, weights, state.abundance, from.x, from.y, r).offered
+  for (const rings of BAND_RULES.migrateDistances) {
+    const distance = r * rings
+    for (let k = 0; k < BAND_RULES.migrateDirections; k++) {
+      const angle = (k / BAND_RULES.migrateDirections) * Math.PI * 2
+      const x = Math.floor(from.x + Math.cos(angle) * distance) + 0.5
+      const y = Math.floor(from.y + Math.sin(angle) * distance) + 0.5
+      if (!inBounds(state.world, x, y) || !knownCell(state, x, y)) continue
+      if (!knownPassable(state.world, state.fog, x, y)) continue
+      if (crowdedBy(others, x, y)) continue
+      const held = state.territory.owner[cellOf(state, x, y)]
+      if (held !== NO_OWNER && held !== PLAYER) continue
+      const { offered } = forageAround(state.world, weights, state.abundance, x, y, r)
+      if (offered > bestOffer) {
+        best = { x, y }
+        bestOffer = offered
+      }
     }
   }
   return best
+}
+
+/** Une autre bande est-elle (ou va-t-elle) trop près de ce point ? Deux bandes sur les mêmes terres s'affament l'une l'autre. */
+function crowdedBy(others: readonly Camp[], x: number, y: number): boolean {
+  const r = BAND_RULES.radius
+  return others.some((o) => Math.hypot((o.target?.x ?? o.x) - x, (o.target?.y ?? o.y) - y) < 2 * r)
+}
+
+/**
+ * Pourquoi une bande qui migre seule devrait partir, ou null : terres épuisées, terres qui
+ * ne la nourrissent pas (même intactes mais pauvres), ou une autre bande collée à elle.
+ */
+function restless(state: GameState, band: Camp): 'épuisées' | 'pauvres' | 'serrées' | null {
+  const weights = state.territory.weights
+  if (!weights) return null
+  const { mean, offered } = forageAround(
+    state.world,
+    weights,
+    state.abundance,
+    band.x,
+    band.y,
+    BAND_RULES.radius,
+  )
+  if (mean < BAND_RULES.exhausted) return 'épuisées'
+  const others = bandsOf(state).filter((c) => c !== band)
+  if (others.some((o) => Math.hypot(o.x - band.x, o.y - band.y) < BAND_RULES.radius))
+    return 'serrées'
+  const fed = offered * BAND_RULES.yieldPerCell * bandEfficiency(band.members ?? 0)
+  if (fed < (band.members ?? 0) * TRIBE_RULES.rationPerPerson) return 'pauvres'
+  return null
 }
 
 /** Envoie une bande vers un point par un chemin connu ; rend false s'il n'y en a pas. */
@@ -657,8 +691,9 @@ export function applyCommand(state: GameState, command: Command): CommandResult 
       const young = newBand(state, band.x + side, band.y, leaving)
       young.roaming = band.roaming
       state.camps.push(young)
-      // La nouvelle bande part d'elle-même vers d'autres terres, si elle en connaît.
-      const site = migrationSite(state, young)
+      // La nouvelle bande part d'elle-même vers d'autres terres, si elle en connaît : même
+      // moins riches, elles valent mieux que celles qu'elle partage avec sa mère.
+      const site = migrationSite(state, young, 0)
       if (site) orderBand(state, young, site.x, site.y)
       refreshBands(state)
       return { ok: true }
@@ -828,12 +863,16 @@ function replanBand(state: GameState, band: Camp): void {
   band.plannedFog = state.fog.version
 }
 
-/** Les bandes qui migrent seules partent quand leurs terres s'épuisent. */
+/**
+ * Les bandes qui migrent seules partent quand leurs terres s'épuisent ou ne les nourrissent
+ * pas, vers de meilleures ; une bande collée à une autre part vers n'importe quelles terres libres.
+ */
 function roam(state: GameState): void {
   for (const band of bandsOf(state)) {
     if (!band.roaming || band.target) continue
-    if (bandAbundance(state, band) >= BAND_RULES.exhausted) continue
-    const site = migrationSite(state, band)
+    const why = restless(state, band)
+    if (!why) continue
+    const site = migrationSite(state, band, why === 'serrées' ? 0 : undefined)
     if (site) orderBand(state, band, site.x, site.y)
   }
 }

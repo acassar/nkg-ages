@@ -277,6 +277,59 @@ describe('bandes en jeu', () => {
     expect(band.target).not.toBeNull()
   })
 
+  it('une bande qui migre seule quitte aussi des terres intactes mais trop pauvres pour elle', () => {
+    // Scénario de la graine sonde-5 : abondance 0,58, jamais « épuisée », et la bande stagnait.
+    const g = createGame({ ...options, rareEvents: false })
+    const band = bandsOf(g)[0]!
+    g.fog.cells.fill(1)
+    const weights = g.territory.weights!
+    const { width } = g.world
+    for (let i = 0; i < weights.length; i++) {
+      const d = Math.hypot((i % width) + 0.5 - band.x, Math.floor(i / width) + 0.5 - band.y)
+      if (d < BAND_RULES.radius * 1.5) weights[i] = weights[i]! * 0.05
+    }
+    band.roaming = true
+    step(g)
+    expect(bandAbundance(g, band)).toBeGreaterThanOrEqual(BAND_RULES.exhausted)
+    expect(band.target).not.toBeNull()
+  })
+
+  it('après une scission, la jeune bande part même vers des terres moins riches', () => {
+    // Scénario de la graine sonde-3 : sans site plus riche, la jeune bande restait collée.
+    const g = createGame({ ...options, rareEvents: false })
+    const band = bandsOf(g)[0]!
+    g.fog.cells.fill(1)
+    const weights = g.territory.weights!
+    const { width } = g.world
+    for (let i = 0; i < weights.length; i++) {
+      const d = Math.hypot((i % width) + 0.5 - band.x, Math.floor(i / width) + 0.5 - band.y)
+      if (d >= BAND_RULES.radius) weights[i] = weights[i]! * 0.3
+    }
+    g.tribe.population = 40
+    syncMembers(g)
+    applyCommand(g, { type: 'splitBand', campId: band.id })
+    const young = bandsOf(g)[1]!
+    expect(young.target).not.toBeNull()
+    const { x, y } = young.target!
+    expect(Math.hypot(x - band.x, y - band.y)).toBeGreaterThanOrEqual(BAND_RULES.radius * 2 - 1)
+  })
+
+  it('deux bandes collées qui migrent seules se séparent', () => {
+    const g = createGame({ ...options, rareEvents: false })
+    const band = bandsOf(g)[0]!
+    g.fog.cells.fill(1)
+    g.tribe.population = 40
+    syncMembers(g)
+    applyCommand(g, { type: 'splitBand', campId: band.id })
+    const young = bandsOf(g)[1]!
+    young.target = null
+    young.path = []
+    band.roaming = true
+    young.roaming = true
+    step(g)
+    expect(bandsOf(g).some((b) => b.target)).toBe(true)
+  })
+
   it('devenue village, elle ne marche plus et garde ses terres', () => {
     const g = createGame(options)
     const band = bandsOf(g)[0]!

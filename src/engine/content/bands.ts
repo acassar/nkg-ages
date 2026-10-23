@@ -30,8 +30,11 @@ export const BAND_RULES = {
   regrowth: 0.06,
   /** Sous cette abondance moyenne, la zone est dite épuisée (alerte, migration seule). */
   exhausted: 0.5,
-  /** Migration seule : distance des sites essayés, en rayons de zone, et nombre de directions. */
-  migrateDistance: 2,
+  /**
+   * Migration seule : distances des sites essayés, en rayons de zone (les plus proches
+   * d'abord ne sont pas préférés : le meilleur site connu l'emporte), et nombre de directions.
+   */
+  migrateDistances: [2, 3, 4],
   migrateDirections: 12,
 } as const
 

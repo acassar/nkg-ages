@@ -225,6 +225,10 @@
   "log": [
     {
       "date": "2026-10-23",
+      "text": "Équilibrage : une bande qui migre seule quitte aussi des terres trop pauvres pour elle ou trop proches d'une autre bande, cherche plus loin, et plus aucun départ sur un îlot ; les 40 parties de la sonde atteignent l'agriculture"
+    },
+    {
+      "date": "2026-10-23",
       "text": "Jeu : le campement de départ devient une bande nomade qui épuise ses terres et doit migrer (ou « Migrer seule ») ; au-delà de 25 personnes elle cueille moins bien et se scinde ; fonder un campement disparaît au profit de la scission"
     },
     {

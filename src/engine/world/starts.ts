@@ -13,6 +13,17 @@ export interface StartSite {
 export const START_RADIUS = 8
 const MIN_FOOD = 0.4
 const MIN_SPACING = 40
+/**
+ * Une bande nomade doit pouvoir migrer : un départ doit avoir au moins `MIN_ROOM` cellules
+ * de terre reliées dans un rayon de `ROOM_RADIUS` (quatre zones de bande). Un îlot ne suffit pas.
+ */
+const ROOM_RADIUS = 28
+export const MIN_ROOM = 600
+
+/** Terres reliées au départ, à portée de migration. */
+export function roomAround(world: World, x: number, y: number): number {
+  return reachableLand(world, x, y, ROOM_RADIUS)
+}
 
 /**
  * Évalue un site de départ : il faut de l'eau à portée et assez de nourriture.
@@ -63,6 +74,7 @@ function reachableLand(world: World, x: number, y: number, r: number): number {
       const nx = cx + dx
       const ny = cy + dy
       if ((nx - x) ** 2 + (ny - y) ** 2 > r * r) continue
+      if (nx < 0 || ny < 0 || nx >= world.width || ny >= world.height) continue
       const i = cellIndex(world, nx, ny)
       if (seen.has(i) || isWater(world.biome[i]!)) continue
       seen.add(i)
@@ -85,7 +97,12 @@ export function findStarts(world: World, rng: Rng, count: number): StartSite[] {
   candidates.sort((a, b) => b.score - a.score)
   const chosen: StartSite[] = []
   for (const c of candidates) {
-    if (chosen.every((s) => Math.hypot(s.x - c.x, s.y - c.y) >= MIN_SPACING)) chosen.push(c)
+    // Le plus coûteux en dernier : seuls les sites retenus sont mesurés.
+    if (
+      chosen.every((s) => Math.hypot(s.x - c.x, s.y - c.y) >= MIN_SPACING) &&
+      roomAround(world, c.x, c.y) >= MIN_ROOM
+    )
+      chosen.push(c)
     if (chosen.length === count) break
   }
   return chosen
