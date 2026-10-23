@@ -183,6 +183,10 @@
   "log": [
     {
       "date": "2026-10-23",
+      "text": "Performance : le brouillard compte ses cellules découvertes au fil de l'eau ; le conseil d'exploration ne parcourt plus la carte à chaque vue"
+    },
+    {
+      "date": "2026-10-23",
       "text": "J5 : le conseil d'exploration ne revient plus quand l'éclaireur rentre au camp après avoir exploré"
     },
     {

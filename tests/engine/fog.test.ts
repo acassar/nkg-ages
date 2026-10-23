@@ -1,10 +1,27 @@
 import { describe, expect, it } from 'vitest'
 import fc from 'fast-check'
-import { createFog, updateFog, Visibility } from '@/engine/fog/fog'
+import { countKnown, createFog, updateFog, Visibility } from '@/engine/fog/fog'
 
 const at = (fog: ReturnType<typeof createFog>, x: number, y: number) => fog.cells[y * fog.width + x]
 
 describe('brouillard de guerre', () => {
+  it('tient le compte des cellules découvertes sans parcourir la carte', () => {
+    const viewer = fc.record({
+      x: fc.double({ min: -5, max: 45, noNaN: true }),
+      y: fc.double({ min: -5, max: 45, noNaN: true }),
+      sight: fc.double({ min: 0, max: 12, noNaN: true }),
+    })
+    fc.assert(
+      fc.property(fc.array(fc.array(viewer, { maxLength: 4 }), { maxLength: 10 }), (passes) => {
+        const fog = createFog(40, 40)
+        for (const viewers of passes) {
+          updateFog(fog, viewers)
+          expect(fog.known).toBe(countKnown(fog.cells))
+        }
+      }),
+    )
+  })
+
   it('commence entièrement inconnu', () => {
     expect(createFog(10, 10).cells.every((c) => c === Visibility.Unknown)).toBe(true)
   })

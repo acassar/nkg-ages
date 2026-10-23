@@ -3,7 +3,6 @@ import fc from 'fast-check'
 import { ACHIEVEMENTS } from '@/engine/content/achievements'
 import { unlockAchievements, type AchievementFacts } from '@/engine/achievements/achievements'
 import { createGame, step, type GameState } from '@/engine/game'
-import { Visibility } from '@/engine/fog/fog'
 import { loadGame, saveGame } from '@/engine/save/save'
 import { buildGameView, hintOf } from '@/views/selectors'
 
@@ -70,6 +69,7 @@ describe('succès', () => {
     expect(view.achievements.find((a) => a.id === 'essaimer')!.done).toBe(true)
     const loaded = loadGame(saveGame(g))
     expect(loaded.achievements).toEqual(g.achievements)
+    expect(loaded.fog.known).toBe(g.fog.known)
     const old = saveGame(g) as { achievements?: unknown }
     delete old.achievements
     expect(loadGame(old as ReturnType<typeof saveGame>).achievements).toEqual({})
@@ -100,7 +100,7 @@ describe('conseils', () => {
     scout.target = null
     expect(hintOf(g)).toMatch(/éclaireur/)
     // Après une vraie exploration, il ne revient plus.
-    for (let i = 0; i < 400; i++) g.fog.cells[i] = Visibility.Seen
+    g.fog.known = 400
     expect(hintOf(g)).toMatch(/invention/)
   })
 })
