@@ -4,6 +4,8 @@ import { RELATION_RULES } from '@/engine/content/relations'
 import {
   applyCommand,
   cannotTrade,
+  closeCamps,
+  type GameEvent,
   createGame,
   foodCapacity,
   moodOf,
@@ -11,6 +13,11 @@ import {
   type GameState,
 } from '@/engine/game'
 import { loadGame, saveGame } from '@/engine/save/save'
+import { buildGameView } from '@/views/selectors'
+
+function run(g: GameState, ticks: number): void {
+  for (let i = 0; i < ticks; i++) step(g)
+}
 
 const options = { seed: 'voisins', randomStart: false, width: 320, height: 160, rareEvents: false }
 
@@ -107,4 +114,80 @@ describe('relations', () => {
     delete old.peoples[0].relation
     expect(loadGame(old).peoples[0]!.relation).toBe(0)
   })
+})
+
+describe('tensions et raids', () => {
+  /** Le premier peuple, rencontré et posé tout près du camp du joueur. */
+  function close(): GameState {
+    const g = neighbours()
+    const p = g.peoples[0]!
+    const home = g.camps.find((c) => c.owner === p.owner)!
+    const mine = g.camps[0]!
+    Object.assign(home, { x: mine.x + 10, y: mine.y })
+    return g
+  }
+
+  it('des campements trop proches aigrissent la relation, mois après mois', () => {
+    const g = close()
+    const p = g.peoples[0]!
+    expect(closeCamps(g, p.owner)).toBe(1)
+    run(g, 24)
+    expect(p.relation).toBeLessThan(-5)
+    expect(buildGameView(g).peoples[0]!.tension).toMatch(/trop proches/)
+  })
+
+  it('un peuple hostile pille la réserve ; les chasseurs en sauvent une part', () => {
+    const g = close()
+    const p = g.peoples[0]!
+    p.tribe.population = 100
+    p.relation = -100
+    const raids: Extract<GameEvent, { type: 'raid' }>[] = []
+    for (let i = 0; i < 120 && raids.length === 0; i++) {
+      g.tribe.food = 100
+      p.relation = -100
+      step(g)
+      for (const e of g.events) if (e.type === 'raid') raids.push(e)
+      g.events = []
+    }
+    expect(raids.length).toBe(1)
+    const r = raids[0]!
+    expect(r.name).toBe(p.name)
+    expect(r.stolen).toBeGreaterThan(0)
+    // Deux chasseurs au départ : 20 % du butin sauvé.
+    expect(r.saved).toBeGreaterThan(0)
+    expect(r.killed).toBe(0)
+  })
+
+  it('une réserve vide coûte une vie, jamais la dernière', () => {
+    const g = close()
+    const p = g.peoples[0]!
+    let killed = 0
+    for (let i = 0; i < 300; i++) {
+      g.tribe.food = 0
+      g.tribe.population = 2
+      p.relation = -100
+      p.tribe.population = 50
+      step(g)
+      for (const e of g.events) if (e.type === 'raid') killed += e.killed
+      g.events = []
+      expect(g.tribe.population).toBeGreaterThanOrEqual(1)
+    }
+    expect(killed).toBeGreaterThan(0)
+  }, 30_000)
+
+  it('un peuple jamais rencontré ou content ne pille pas', () => {
+    for (const setup of [
+      (p: GameState['peoples'][number]) => ((p.met = false), (p.relation = -100)),
+      (p: GameState['peoples'][number]) => (p.relation = 0),
+    ]) {
+      const g = close()
+      const p = g.peoples[0]!
+      for (let i = 0; i < 200; i++) {
+        setup(p)
+        step(g)
+        expect(g.events.some((e) => e.type === 'raid')).toBe(false)
+        g.events = []
+      }
+    }
+  }, 30_000)
 })

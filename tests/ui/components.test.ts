@@ -259,11 +259,13 @@ describe('peuples voisins', () => {
       giftBlocked: null,
       trade: '10 silex → 25 rations',
       tradeBlocked: 'Ils ne vous font pas assez confiance',
+      tension: 'Vos campements sont trop proches des leurs',
     }
     game.view = { ...game.view!, peoples: [people] }
     await flushPromises()
     expect(wrapper.find('[data-testid=people-7]').text()).toContain('Neutre (0)')
     expect(wrapper.find('[data-testid=trade]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('[data-testid=tension]').text()).toMatch(/trop proches/)
     await wrapper.find('[data-testid=gift]').trigger('click')
     await flushPromises()
     // Le moteur ne connaît pas ce peuple : il refuse, et le refus s'affiche.
