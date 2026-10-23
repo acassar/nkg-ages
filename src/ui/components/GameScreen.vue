@@ -2,6 +2,7 @@
 import { onBeforeUnmount, onMounted } from 'vue'
 import { useGameStore } from '../stores/game'
 import GoalsPanel from './GoalsPanel.vue'
+import HintBox from './HintBox.vue'
 import InventionsPanel from './InventionsPanel.vue'
 import MapView from './MapView.vue'
 import OutcomeDialog from './OutcomeDialog.vue'
@@ -29,6 +30,7 @@ defineProps<{ benchmark?: boolean }>()
     <SelectionBar />
     <GoalsPanel />
     <PeoplesPanel />
+    <HintBox />
     <p v-if="game.error" class="notice parchment" role="alert" data-testid="notice">
       {{ game.error }}
       <button class="close" aria-label="Fermer" @click="game.dismissError()">×</button>

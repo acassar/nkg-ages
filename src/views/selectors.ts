@@ -17,6 +17,7 @@ import {
   CITY_RULES,
   WONDER_RULES,
   wonderHeld,
+  ACHIEVEMENTS,
   dateOfTick,
   seasonOf,
   seasonalYield,
@@ -177,6 +178,13 @@ export function buildGameView(state: GameState, full = false): GameView {
         size: h.size,
       })),
     score: currentScore(state),
+    achievements: ACHIEVEMENTS.map((a) => ({
+      id: a.id,
+      name: a.name,
+      description: a.description,
+      done: state.achievements[a.id] !== undefined,
+    })),
+    hint: hintOf(state),
     goal: goalSteps(FIRST_ERA.goal, tallyOf(state)).map((s) => ({
       label: GOAL_LABELS[s.kind],
       have: s.have,
@@ -261,6 +269,8 @@ function noticeOf(state: GameState, event: GameEvent): string {
     }
     case 'peopleGone':
       return `Le ${event.name} a disparu : ses terres sont désertes.`
+    case 'achievement':
+      return `Succès : ${event.name}.`
     case 'meatLost':
       return `Chasse : la réserve est pleine, ${event.amount} rations de viande sont perdues.`
     case 'hunterKilled':
@@ -428,4 +438,29 @@ function inventionViews(state: GameState): InventionView[] {
       blocked: current ? null : cannotStart(inv, kind, state.tribe.materials),
     }
   })
+}
+
+/**
+ * Conseil du moment pour qui découvre le jeu : la première étape pas encore franchie, ou
+ * null une fois les bases acquises.
+ */
+export function hintOf(state: GameState): string | null {
+  const camps = state.camps.filter((c) => c.owner === PLAYER)
+  const home = camps[0]
+  const scout = state.units.find((u) => u.kind === 'eclaireur')
+  const explored =
+    camps.length > 1 ||
+    (home !== undefined &&
+      scout !== undefined &&
+      (Math.hypot(scout.x - home.x, scout.y - home.y) > 8 || scout.target !== null))
+  if (!explored)
+    return 'Choisissez l’éclaireur (clic) puis cliquez sur la carte : il explore et dissipe le brouillard.'
+  const { ranks, current } = state.inventions
+  if (Object.keys(ranks).length === 0 && !current)
+    return 'Lancez une invention dans le panneau des inventions : le panier nourrit mieux, la lance rend la chasse plus sûre.'
+  if (camps.length < 2)
+    return 'Menez l’éclaireur sur une bonne terre, loin du camp, puis « Fonder un campement » (F) : le territoire s’étend.'
+  if (villageCount(state) === 0)
+    return 'Inventez l’agriculture (après le panier et la taille du silex), puis faites d’un campement un village (« + » des villages).'
+  return null
 }

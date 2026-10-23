@@ -32,6 +32,8 @@ export interface SaveData {
   eventRng?: number
   /** Peuples voisins et leur aléa : absents d'avant les peuples (la tribu y était seule). */
   peoples?: People[]
+  /** Succès gagnés (absents des sauvegardes d'avant les succès). */
+  achievements?: Record<string, number>
   peopleRng?: number
   /** Empreinte du monde : si la génération a changé depuis, la sauvegarde n'a plus de sens. */
   world?: number
@@ -110,6 +112,7 @@ export function saveGame(state: GameState): SaveData {
     faunaRng: state.faunaRng.state,
     eventRng: state.eventRng.state,
     peoples: copy(state.peoples),
+    achievements: copy(state.achievements),
     peopleRng: state.peopleRng.state,
     world: worldPrint(state),
     units: copy(state.units),
@@ -156,6 +159,7 @@ export function loadGame(data: SaveData): GameState {
   // Un peuple d'une sauvegarde d'avant les relations part de la neutralité.
   state.peoples = copy(data.peoples ?? []).map((p) => ({ ...p, relation: p.relation ?? 0 }))
   if (data.peopleRng !== undefined) state.peopleRng = createRng(data.peopleRng)
+  state.achievements = copy(data.achievements ?? {})
   state.units = copy(data.units)
   state.camps = copy(data.camps)
   // Un champ ajouté depuis la sauvegarde garde sa valeur de départ au lieu de manquer.

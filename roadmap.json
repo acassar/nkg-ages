@@ -141,7 +141,7 @@
       "features": [
         {
           "title": "Tutoriel, score, succès",
-          "status": "todo"
+          "status": "done"
         },
         {
           "title": "Options de partie",
@@ -181,6 +181,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-23",
+      "text": "J5 : conseils pour débuter (explorer, inventer, fonder, cultiver), neuf succès annoncés et gardés par la sauvegarde ; le score existait déjà"
+    },
     {
       "date": "2026-10-23",
       "text": "J5 : options de partie à l'écran de départ : taille du monde (petit, normal, grand), nombre de peuples voisins (0 à 5), événements rares"

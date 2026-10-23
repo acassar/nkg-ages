@@ -22,6 +22,8 @@ import { CAMP_RULES } from './content/camps'
 import { PEOPLE_NAMES, PEOPLE_RULES } from './content/peoples'
 import { MOODS, RELATION_RULES } from './content/relations'
 import { CITY_RULES } from './content/cities'
+import { ACHIEVEMENTS } from './content/achievements'
+import { unlockAchievements, type AchievementFacts } from './achievements/achievements'
 import { WONDER_PLACEMENT, WONDER_RULES } from './content/wonders'
 import { placeWonders, type Wonder } from './wonders/wonders'
 import { FERTILITY, VILLAGE_RULES } from './content/villages'
@@ -134,6 +136,8 @@ export type GameEvent =
   | { type: 'peopleGone'; name: string }
   /** La réserve était pleine : une part de la viande rapportée est perdue. */
   | { type: 'meatLost'; amount: number }
+  /** Un succès est gagné (voir content/achievements). */
+  | { type: 'achievement'; id: string; name: string }
 
 export interface Outcome {
   type: 'victory' | 'defeat'
@@ -164,6 +168,8 @@ export interface GameState {
   deposits: Deposit[]
   /** Merveilles du monde (souvent aucune ou une ou deux) : fixées à la création. */
   wonders: Wonder[]
+  /** Succès gagnés : identifiant → tick où il l'a été. */
+  achievements: Record<string, number>
   /** Troupeaux de la faune, qui errent et que l'on chasse. */
   herds: Herd[]
   inventions: InventionsState
@@ -203,6 +209,7 @@ export function createGame(options: NewGameOptions): GameState {
     tribe: createTribe(),
     deposits: placeDeposits(world, createRng(`ressources:${world.seed}`)),
     wonders: placeWonders(world, site, createRng(`merveilles:${world.seed}`)),
+    achievements: {},
     herds: placeHerds(world, createRng(`faune:${world.seed}`)),
     inventions: createInventions(),
     outcome: null,
@@ -565,6 +572,7 @@ export function step(state: GameState): void {
     unit.plannedFog = state.fog.version
     if (pathBlocked(state.world, state.fog, unit, unit.path)) replan(state, unit)
   }
+  reward(state)
   judge(state)
 }
 
@@ -1131,6 +1139,37 @@ function wonderScore(state: GameState): number {
 }
 
 /** Défaite si la tribu a disparu, victoire la première fois que l'objectif de l'ère est atteint. */
+/** Ce que mesurent les succès, relevé sur la partie. */
+export function achievementFacts(state: GameState): AchievementFacts {
+  const met = state.peoples.filter((p) => p.met)
+  return {
+    camps: state.camps.filter((c) => c.owner === PLAYER).length,
+    villages: villageCount(state),
+    cities: cityCount(state),
+    population: state.tribe.population,
+    peoplesMet: met.length,
+    // La meilleure humeur (alliée), d'après les données.
+    allies: met.filter((p) => p.relation >= MOODS[0]!.from).length,
+    rankS: Object.values(state.inventions.ranks).filter((r) => r === 'S').length,
+    wonders: state.wonders.filter((w) => wonderHeld(state, w)).length,
+    inventions: Object.keys(state.inventions.ranks).length,
+  }
+}
+
+/** Annonce les succès gagnés ce mois-ci. */
+function reward(state: GameState): void {
+  for (const id of unlockAchievements(
+    state.achievements,
+    achievementFacts(state),
+    state.clock.tick,
+  ))
+    state.events.push({
+      type: 'achievement',
+      id,
+      name: ACHIEVEMENTS.find((a) => a.id === id)!.name,
+    })
+}
+
 function judge(state: GameState): void {
   if (state.outcome?.type === 'defeat') return
   if (state.tribe.population <= 0) {
