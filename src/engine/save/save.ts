@@ -2,6 +2,7 @@ import type { ClockState } from '../core/clock'
 import type { Rect } from '../core/geometry'
 import { createRng } from '../core/random'
 import type { Herd } from '../fauna/fauna'
+import { countKnown } from '../fog/fog'
 import {
   createGame,
   type Camp,
@@ -172,6 +173,7 @@ export function loadGame(data: SaveData): GameState {
 
   const fog = state.fog
   fog.cells = decodeRuns(data.fog.cells, size)
+  fog.known = countKnown(fog.cells)
   fog.version = data.fog.version
   fog.pass = data.fog.pass
   fog.lastViewed = copy(data.fog.lastViewed)

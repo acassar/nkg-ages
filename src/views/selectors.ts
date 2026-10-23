@@ -446,12 +446,6 @@ function inventionViews(state: GameState): InventionView[] {
  */
 const HINT_EXPLORED_CELLS = 400
 
-function knownCells(state: GameState): number {
-  let n = 0
-  for (const c of state.fog.cells) if (c !== Visibility.Unknown) n++
-  return n
-}
-
 /**
  * Conseil du moment pour qui découvre le jeu : la première étape pas encore franchie, ou
  * null une fois les bases acquises.
@@ -465,7 +459,7 @@ export function hintOf(state: GameState): string | null {
   const explored =
     camps.length > 1 ||
     scout?.target != null ||
-    (home !== undefined && knownCells(state) >= HINT_EXPLORED_CELLS)
+    (home !== undefined && state.fog.known >= HINT_EXPLORED_CELLS)
   if (!explored)
     return 'Choisissez l’éclaireur (clic) puis cliquez sur la carte : il explore et dissipe le brouillard.'
   const { ranks, current } = state.inventions

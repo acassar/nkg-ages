@@ -15,6 +15,8 @@ export interface FogState {
   cells: Uint8Array
   /** Augmente seulement quand au moins une cellule change. */
   version: number
+  /** Cellules découvertes (vues ou déjà vues), tenu à jour sans parcourir la carte. */
+  known: number
   /** Rectangle englobant les cellules modifiées depuis la dernière lecture par l'hôte. */
   dirty: Rect | null
   /** Zones visibles au calcul précédent : seules candidates au passage en « déjà vu ». */
@@ -30,6 +32,7 @@ export function createFog(width: number, height: number): FogState {
     height,
     cells: new Uint8Array(width * height),
     version: 0,
+    known: 0,
     dirty: null,
     lastViewed: [],
     seenAt: new Uint32Array(width * height),
@@ -91,6 +94,7 @@ export function updateFog(fog: FogState, viewers: readonly Viewer[]): void {
       for (let x = r.x; x < r.x + r.w; x++) {
         const i = y * width + x
         if (seenAt[i] === pass && cells[i] !== Visibility.Visible) {
+          if (cells[i] === Visibility.Unknown) fog.known++
           cells[i] = Visibility.Visible
           touch(x, y)
         }
@@ -102,4 +106,11 @@ export function updateFog(fog: FogState, viewers: readonly Viewer[]): void {
     fog.version++
     fog.dirty = unionRect(fog.dirty, { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 })
   }
+}
+
+/** Compte les cellules découvertes (pour un brouillard rechargé, une seule fois). */
+export function countKnown(cells: Uint8Array): number {
+  let n = 0
+  for (const c of cells) if (c !== Visibility.Unknown) n++
+  return n
 }
