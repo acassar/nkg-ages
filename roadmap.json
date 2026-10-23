@@ -113,7 +113,7 @@
         },
         {
           "title": "Tensions et raids",
-          "status": "todo"
+          "status": "done"
         }
       ]
     },
@@ -184,6 +184,10 @@
     {
       "date": "2026-10-23",
       "text": "J4 : bronze : gisements de cuivre et d'étain (rares, au moins un de chaque à portée d'exploration) et invention Bronze, qui fait rendre davantage la cueillette et les champs"
+    },
+    {
+      "date": "2026-10-23",
+      "text": "J3 : tensions et raids : des campements trop proches aigrissent la relation ; un peuple hostile pille la réserve, les chasseurs en sauvent une part"
     },
     {
       "date": "2026-10-23",

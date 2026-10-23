@@ -48,6 +48,7 @@ export {
   climateOf,
   cannotGift,
   cannotTrade,
+  closeCamps,
   moodOf,
   cannotBuildVillage,
   maxVillages,
