@@ -279,20 +279,19 @@ function searchBuffers(size: number): SearchBuffers {
   return { ...buffers, mark }
 }
 
-/** Tas binaire minimal sur des priorités numériques. */
+/**
+ * Tas binaire minimal sur des priorités numériques. Ses tableaux typés sont gardés
+ * d'une recherche à l'autre et ne font que grandir : pas de ramasse-miettes en plein pas.
+ */
 class MinHeap {
-  private readonly items: number[] = []
-  private readonly priorities: number[] = []
-
-  get size(): number {
-    return this.items.length
-  }
+  private static items = new Int32Array(1024)
+  private static priorities = new Float64Array(1024)
+  size = 0
 
   push(item: number, priority: number): void {
-    const { items, priorities } = this
-    let i = items.length
-    items.push(item)
-    priorities.push(priority)
+    if (this.size === MinHeap.items.length) MinHeap.grow()
+    const { items, priorities } = MinHeap
+    let i = this.size++
     while (i > 0) {
       const parent = (i - 1) >> 1
       if (priorities[parent]! <= priority) break
@@ -305,12 +304,12 @@ class MinHeap {
   }
 
   pop(): number {
-    const { items, priorities } = this
+    const { items, priorities } = MinHeap
     const top = items[0]!
-    const lastItem = items.pop()!
-    const lastPriority = priorities.pop()!
-    const n = items.length
+    const n = --this.size
     if (n > 0) {
+      const lastItem = items[n]!
+      const lastPriority = priorities[n]!
       let i = 0
       for (;;) {
         const left = 2 * i + 1
@@ -326,5 +325,14 @@ class MinHeap {
       priorities[i] = lastPriority
     }
     return top
+  }
+
+  private static grow(): void {
+    const items = new Int32Array(MinHeap.items.length * 2)
+    const priorities = new Float64Array(MinHeap.priorities.length * 2)
+    items.set(MinHeap.items)
+    priorities.set(MinHeap.priorities)
+    MinHeap.items = items
+    MinHeap.priorities = priorities
   }
 }

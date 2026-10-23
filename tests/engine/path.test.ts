@@ -165,6 +165,22 @@ describe('chemins sur la carte connue', () => {
     const w = worldOf(['PP'])
     expect(knownLineClear(w, known(w), { x: 0.5, y: 0.5 }, { x: 3, y: 0.5 })).toBe(false)
   })
+
+  it('ne garde rien d’une recherche à l’autre, même après une très grande', () => {
+    // Le tas de la recherche est réutilisé : une recherche qui le fait grandir
+    // (tout un continent fouillé en vain) ne doit pas fausser la suivante.
+    const lake = worldOf(LAKE)
+    const from = { x: 1.5, y: 2.5 }
+    const to = { x: 8.5, y: 2.5 }
+    const before = findPath(lake, known(lake), from, to)
+    const rows = Array.from({ length: 120 }, () => 'P'.repeat(160))
+    rows[60] = 'P'.repeat(150) + '~~~' + 'P' + '~~~' + 'P'.repeat(3)
+    rows[59] = 'P'.repeat(150) + '~~~~~~~' + 'P'.repeat(3)
+    rows[61] = 'P'.repeat(150) + '~~~~~~~' + 'P'.repeat(3)
+    const wide = worldOf(rows)
+    expect(findPath(wide, known(wide), { x: 0.5, y: 0.5 }, { x: 153.5, y: 60.5 })).toBeNull()
+    expect(findPath(lake, known(lake), from, to)).toEqual(before)
+  })
 })
 
 /** Accessibilité par voisins directs (4 directions), pour comparer avec A*. */

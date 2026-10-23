@@ -225,6 +225,10 @@
   "log": [
     {
       "date": "2026-10-23",
+      "text": "Performance : la recherche de chemin réutilise son tas (plus de ramasse-miettes en plein pas) ; pire semaine du banc ramenée de 35-60 ms à moins de 20 ms"
+    },
+    {
+      "date": "2026-10-23",
       "text": "Jouabilité : un pictogramme par ressource sur la carte, couleurs de rareté franches (gris, vert, bleu, violet, orange, or) et leur légende"
     },
     {
