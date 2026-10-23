@@ -87,6 +87,8 @@ export interface People {
   met: boolean
   /** Relation avec le joueur, de -100 (hostile) à 100 (allié). */
   relation: number
+  /** Tick du dernier présent ou échange : un par mois, pas de relation achetée en rafale. */
+  lastDeal?: number
 }
 
 export interface Camp {
@@ -423,6 +425,7 @@ export function applyCommand(state: GameState, command: Command): CommandResult 
       if (reason || !people) return { ok: false, reason: reason ?? 'Peuple inconnu' }
       state.tribe.food -= RELATION_RULES.giftFood
       people.tribe.food += RELATION_RULES.giftFood
+      people.lastDeal = state.clock.tick
       shiftRelation(people, RELATION_RULES.giftRelation)
       return { ok: true }
     }
@@ -432,7 +435,8 @@ export function applyCommand(state: GameState, command: Command): CommandResult 
       if (reason || !people) return { ok: false, reason: reason ?? 'Peuple inconnu' }
       state.tribe.materials.silex = (state.tribe.materials.silex ?? 0) - RELATION_RULES.tradeSilex
       people.tribe.food -= RELATION_RULES.tradeFood
-      state.tribe.food = Math.min(foodCapacity(state), state.tribe.food + RELATION_RULES.tradeFood)
+      state.tribe.food += RELATION_RULES.tradeFood
+      people.lastDeal = state.clock.tick
       shiftRelation(people, RELATION_RULES.tradeRelation)
       return { ok: true }
     }
@@ -623,6 +627,7 @@ export function climateOf(state: GameState): number {
 /** Pourquoi le joueur ne peut pas faire de présent à ce peuple, ou null. */
 export function cannotGift(state: GameState, people: People | undefined): string | null {
   if (!people || !people.met || people.tribe.population <= 0) return 'Peuple inconnu'
+  if (dealTooSoon(state, people)) return 'Un seul présent ou échange par mois'
   if (state.tribe.food < RELATION_RULES.giftFood)
     return `Il faut ${RELATION_RULES.giftFood} rations`
   return null
@@ -633,12 +638,22 @@ export function cannotTrade(state: GameState, people: People | undefined): strin
   if (!people || !people.met || people.tribe.population <= 0) return 'Peuple inconnu'
   if (people.relation < RELATION_RULES.tradeMinRelation)
     return 'Ils ne vous font pas assez confiance'
+  if (dealTooSoon(state, people)) return 'Un seul présent ou échange par mois'
   if ((state.tribe.materials.silex ?? 0) < RELATION_RULES.tradeSilex)
     return `Il faut ${RELATION_RULES.tradeSilex} silex`
   const keep =
     people.tribe.population * TRIBE_RULES.rationPerPerson * RELATION_RULES.tradeReserveMonths
   if (people.tribe.food - RELATION_RULES.tradeFood < keep) return 'Leurs réserves sont trop maigres'
+  // Sans place pour leurs vivres, l'échange payerait du silex pour rien.
+  if (foodCapacity(state) - state.tribe.food < RELATION_RULES.tradeFood)
+    return 'Vos réserves sont pleines'
   return null
+}
+
+function dealTooSoon(state: GameState, people: People): boolean {
+  return (
+    people.lastDeal !== undefined && state.clock.tick - people.lastDeal < RELATION_RULES.dealMonths
+  )
 }
 
 function shiftRelation(people: People, delta: number): void {
