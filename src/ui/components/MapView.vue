@@ -11,7 +11,7 @@ import {
   type Camera,
   type MapRenderer,
 } from '@/render'
-import { depositAt, describeDeposit } from '../deposits'
+import { depositAt, describeDeposit, describeWonder } from '../deposits'
 import { intentOf } from '../keyboard'
 import { useGameStore } from '../stores/game'
 
@@ -64,6 +64,7 @@ function loop(now: number) {
     const t0 = performance.now()
     renderer.render(camera, {
       deposits: game.view.deposits,
+      wonders: game.view.wonders,
       herds: game.view.herds,
       units: game.view.units,
       camps: game.view.camps,
@@ -125,8 +126,10 @@ function onPointerDown(event: PointerEvent) {
 const hover = ref<{ x: number; y: number; text: string } | null>(null)
 
 function updateHover(p: { x: number; y: number }) {
+  const w = game.view && depositAt(game.view.wonders, camera, p.x, p.y)
   const d = game.view && depositAt(game.view.deposits, camera, p.x, p.y)
-  hover.value = d ? { x: p.x, y: p.y, text: describeDeposit(d) } : null
+  const text = w ? describeWonder(w) : d ? describeDeposit(d) : null
+  hover.value = text ? { x: p.x, y: p.y, text } : null
 }
 
 function onPointerMove(event: PointerEvent) {

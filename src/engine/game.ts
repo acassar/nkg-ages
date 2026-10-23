@@ -22,6 +22,8 @@ import { CAMP_RULES } from './content/camps'
 import { PEOPLE_NAMES, PEOPLE_RULES } from './content/peoples'
 import { MOODS, RELATION_RULES } from './content/relations'
 import { CITY_RULES } from './content/cities'
+import { WONDER_PLACEMENT, WONDER_RULES } from './content/wonders'
+import { placeWonders, type Wonder } from './wonders/wonders'
 import { FERTILITY, VILLAGE_RULES } from './content/villages'
 import { RIVER_RULES } from './content/rivers'
 import { ANIMAL_RULES, HUNT_RULES, type AnimalKind } from './content/fauna'
@@ -160,6 +162,8 @@ export interface GameState {
   tribe: TribeState
   /** Gisements de ressources, tous connus du moteur ; la vue ne montre que les découverts. */
   deposits: Deposit[]
+  /** Merveilles du monde (souvent aucune ou une ou deux) : fixées à la création. */
+  wonders: Wonder[]
   /** Troupeaux de la faune, qui errent et que l'on chasse. */
   herds: Herd[]
   inventions: InventionsState
@@ -198,6 +202,7 @@ export function createGame(options: NewGameOptions): GameState {
     territory: createTerritory(world.width, world.height, foodWeights(world)),
     tribe: createTribe(),
     deposits: placeDeposits(world, createRng(`ressources:${world.seed}`)),
+    wonders: placeWonders(world, site, createRng(`merveilles:${world.seed}`)),
     herds: placeHerds(world, createRng(`faune:${world.seed}`)),
     inventions: createInventions(),
     outcome: null,
@@ -653,7 +658,7 @@ function harvest(state: GameState): void {
       (basket ? Math.max(0, rollStat(basket, state.rng)) / 100 : 0) +
       inventionMean(inv, 'bronze') / 100,
     storageMonths: storageBonus(state),
-    growth: inventionMean(inv, 'feu') / 100,
+    growth: inventionMean(inv, 'feu') / 100 + wonderEffect(state, 'growth'),
     famineShield: -inventionMean(inv, 'peaux') / 100,
   }
   const hunters = state.units.filter((u) => u.kind === 'chasseur').length
@@ -946,13 +951,31 @@ function storageBonus(state: GameState): number {
   return (
     inventionMean(state.inventions, 'fumage') +
     villageCount(state) * VILLAGE_RULES.storageMonths +
-    cityCount(state) * CITY_RULES.storageMonths
+    cityCount(state) * CITY_RULES.storageMonths +
+    wonderEffect(state, 'storageMonths')
   )
+}
+
+/** La merveille est-elle sur les terres du joueur ? */
+export function wonderHeld(state: GameState, wonder: Wonder): boolean {
+  return state.territory.owner[wonder.y * state.world.width + wonder.x] === PLAYER
+}
+
+/** Somme d'un effet sur les merveilles que tient le joueur. */
+function wonderEffect(state: GameState, effect: 'work' | 'growth' | 'storageMonths'): number {
+  let sum = 0
+  for (const w of state.wonders)
+    if (wonderHeld(state, w)) sum += WONDER_RULES[w.kind].effect[effect] ?? 0
+  return sum
 }
 
 /** Travail d'invention en plus (0,2 = +20 %) : écriture et scribes des cités. */
 export function inventionBoost(state: GameState): number {
-  return inventionMean(state.inventions, 'ecriture') / 100 + cityCount(state) * CITY_RULES.workBonus
+  return (
+    inventionMean(state.inventions, 'ecriture') / 100 +
+    cityCount(state) * CITY_RULES.workBonus +
+    wonderEffect(state, 'work')
+  )
 }
 
 /** Indice de la cellule sous un point du monde, borné à la carte. */
@@ -1099,7 +1122,12 @@ function territoryOf(state: GameState): number {
 /** Score courant ; après une victoire, il garde le bonus gagné ce jour-là. */
 export function currentScore(state: GameState): number {
   const won = state.outcome?.type === 'victory' ? state.outcome.tick / 12 : null
-  return scoreOf(tallyOf(state), won)
+  return scoreOf(tallyOf(state), won) + wonderScore(state)
+}
+
+/** Points des merveilles tenues. */
+function wonderScore(state: GameState): number {
+  return state.wonders.filter((w) => wonderHeld(state, w)).length * WONDER_PLACEMENT.score
 }
 
 /** Défaite si la tribu a disparu, victoire la première fois que l'objectif de l'ère est atteint. */
@@ -1114,7 +1142,11 @@ function judge(state: GameState): void {
   if (state.outcome) return
   if (goalReached(FIRST_ERA.goal, tallyOf(state))) {
     const tick = state.clock.tick
-    state.outcome = { type: 'victory', tick, score: scoreOf(tallyOf(state), tick / 12) }
+    state.outcome = {
+      type: 'victory',
+      tick,
+      score: scoreOf(tallyOf(state), tick / 12) + wonderScore(state),
+    }
     state.clock.paused = true
     state.events.push({ type: 'victory' })
   }

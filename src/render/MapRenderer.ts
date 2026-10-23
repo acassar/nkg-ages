@@ -4,6 +4,7 @@ import type {
   GameView,
   HerdView,
   UnitView,
+  WonderView,
   WorldSnapshot,
 } from '@/views/types'
 import type { Camera } from './camera'
@@ -11,6 +12,7 @@ import type { Camera } from './camera'
 /** Ce que la carte affiche par-dessus le terrain. */
 export interface OverlayState {
   deposits: readonly DepositView[]
+  wonders: readonly WonderView[]
   herds: readonly HerdView[]
   units: readonly UnitView[]
   camps: readonly CampView[]

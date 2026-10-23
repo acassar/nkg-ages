@@ -34,6 +34,7 @@ export class OverlayPainter {
     if (camera.zoom >= DEPOSIT_MIN_ZOOM) this.paintDeposits(camera, state, red)
 
     this.paintHerds(camera, state)
+    this.paintWonders(camera, state, red)
 
     for (const camp of state.camps) {
       const p = worldToScreen(camera, camp.x, camp.y)
@@ -164,6 +165,39 @@ export class OverlayPainter {
       ctx.stroke()
       ctx.fillStyle = cssColor(PAPER)
       ctx.fillText(d.rank, p.x, p.y + 0.5)
+    }
+  }
+
+  /** Merveilles : une étoile à cinq branches, cerclée de rouge quand on la tient, et son nom. */
+  private paintWonders(camera: Camera, state: OverlayState, red: string): void {
+    const { ctx } = this
+    const r = 8
+    ctx.font = 'italic 12px Georgia, serif'
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'middle'
+    for (const w of state.wonders) {
+      const p = worldToScreen(camera, w.x, w.y)
+      if (p.x < -120 || p.y < -r || p.x > camera.viewWidth + r || p.y > camera.viewHeight + r)
+        continue
+      ctx.beginPath()
+      for (let i = 0; i < 10; i++) {
+        const a = -Math.PI / 2 + (i * Math.PI) / 5
+        const d = i % 2 ? r * 0.45 : r
+        const x = p.x + Math.cos(a) * d
+        const y = p.y + Math.sin(a) * d
+        if (i === 0) ctx.moveTo(x, y)
+        else ctx.lineTo(x, y)
+      }
+      ctx.closePath()
+      ctx.fillStyle = cssColor(RANK_COLORS.S, 0.95)
+      ctx.fill()
+      ctx.lineWidth = w.held ? 2 : 1
+      ctx.strokeStyle = w.held ? red : cssColor(INK, 0.85)
+      ctx.stroke()
+      if (camera.zoom >= DEPOSIT_MIN_ZOOM) {
+        ctx.fillStyle = cssColor(INK, 0.85)
+        ctx.fillText(w.name, p.x + r + 3, p.y)
+      }
     }
   }
 }

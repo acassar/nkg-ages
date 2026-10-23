@@ -75,6 +75,7 @@ export interface GameView {
   tribe: TribeView
   /** Gisements découverts par le joueur (hors brouillard inconnu). */
   deposits: DepositView[]
+  wonders: WonderView[]
   inventions: InventionView[]
   /** Troupeaux en vue en ce moment (ils bougent : le déjà-vu ne suffit pas). */
   herds: HerdView[]
@@ -154,6 +155,18 @@ export interface HerdView {
 }
 
 export type RankLetter = 'E' | 'D' | 'C' | 'B' | 'A' | 'S'
+
+/** Merveille déjà découverte par le joueur. */
+export interface WonderView {
+  kind: string
+  name: string
+  description: string
+  /** Centre de la cellule de la merveille. */
+  x: number
+  y: number
+  /** Sur les terres du joueur : son effet joue. */
+  held: boolean
+}
 
 export interface DepositView {
   id: number
