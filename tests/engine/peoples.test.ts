@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import fc from 'fast-check'
 import { PEOPLE_RULES } from '@/engine/content/peoples'
 import { Visibility } from '@/engine/fog/fog'
-import { createGame, step, type GameState } from '@/engine/game'
+import { applyCommand, cannotFoundCamp, createGame, step, type GameState } from '@/engine/game'
+import { CAMP_RULES } from '@/engine/content/camps'
+import { isWater } from '@/engine/content/biomes'
 import { NO_OWNER, PLAYER } from '@/engine/territory/territory'
 import { buildGameView } from '@/views/selectors'
 
@@ -65,20 +67,90 @@ describe('peuples voisins', () => {
 
   it('invariant : les comptes par propriétaire suivent la grille, nul ne prend la terre d’un autre', () => {
     fc.assert(
-      fc.property(fc.string({ maxLength: 6 }), fc.integer({ min: 1, max: 300 }), (seed, ticks) => {
-        const g = createGame({ ...options, seed, width: 192, height: 96 })
-        const before = new Uint8Array(g.territory.owner)
-        run(g, ticks)
-        const counts = recount(g)
-        for (let o = 1; o < g.territory.ownerCells.length; o++)
-          expect(g.territory.ownerCells[o] ?? 0).toBe(counts.get(o) ?? 0)
-        // Une terre prise ne change jamais de maître (pas encore de conquête).
-        for (let i = 0; i < before.length; i++)
-          if (before[i] !== NO_OWNER) expect(g.territory.owner[i]).toBe(before[i])
-      }),
+      fc.property(
+        fc.string({ maxLength: 6 }),
+        fc.integer({ min: 1, max: 300 }),
+        fc.array(fc.tuple(fc.nat(191), fc.nat(95)), { maxLength: 6 }),
+        (seed, ticks, spots) => {
+          const g = createGame({ ...options, seed, width: 192, height: 96 })
+          g.tribe.population = 200
+          const before = new Uint8Array(g.territory.owner)
+          // L'éclaireur tente de camper n'importe où, terres voisines comprises.
+          const scout = g.units.find((u) => u.kind === 'eclaireur')!
+          for (const [x, y] of spots) {
+            Object.assign(scout, { x: x + 0.5, y: y + 0.5, target: null, path: [] })
+            g.tribe.food = 1000
+            applyCommand(g, { type: 'foundCamp', unitId: scout.id })
+          }
+          run(g, ticks)
+          const counts = recount(g)
+          for (let o = 1; o < g.territory.ownerCells.length; o++)
+            expect(g.territory.ownerCells[o] ?? 0).toBe(counts.get(o) ?? 0)
+          // Une terre prise ne change jamais de maître (pas encore de conquête).
+          for (let i = 0; i < before.length; i++)
+            if (before[i] !== NO_OWNER) expect(g.territory.owner[i]).toBe(before[i])
+        },
+      ),
       { numRuns: 6 },
     )
   }, 60_000)
+
+  it('les voisins ne changent rien à la croissance du joueur tant qu’ils ne le touchent pas', () => {
+    const alone = createGame({ ...options, peoples: 0 })
+    const crowded = createGame(options)
+    run(alone, 200)
+    run(crowded, 200)
+    const mine = (g: GameState) => g.territory.owner.map((o) => (o === PLAYER ? 1 : 0))
+    expect(mine(crowded)).toEqual(mine(alone))
+  })
+
+  it('sur 40 ans, ils ne font jamais grandir le joueur plus vite que seul', () => {
+    for (const seed of ['a', 'b']) {
+      const alone = createGame({ ...options, seed, peoples: 0 })
+      const crowded = createGame({ ...options, seed })
+      run(alone, 480)
+      run(crowded, 480)
+      expect(crowded.territory.ownerCells[PLAYER]).toBeLessThanOrEqual(
+        alone.territory.ownerCells[PLAYER]!,
+      )
+    }
+  }, 60_000)
+
+  it('on ne campe pas sur leurs terres, et leurs camps cachés ne se trahissent pas', () => {
+    const g = createGame(options)
+    g.tribe.population = 200
+    g.tribe.food = 1000
+    const people = g.peoples[0]!
+    const camp = g.camps.find((c) => c.owner === people.owner)!
+    const scout = g.units.find((u) => u.kind === 'eclaireur')!
+    // Sous le brouillard, à côté de leur camp mais hors de leurs terres : pas d'indice.
+    const w = g.world.width
+    let spot: { x: number; y: number } | null = null
+    for (let d = 2; d < CAMP_RULES.minDistance && !spot; d++)
+      for (const [dx, dy] of [
+        [d, 0],
+        [-d, 0],
+        [0, d],
+        [0, -d],
+      ] as const) {
+        const x = Math.floor(camp.x) + dx
+        const y = Math.floor(camp.y) + dy
+        if (g.territory.owner[y * w + x] === NO_OWNER && !isWater(g.world.biome[y * w + x]!)) {
+          spot = { x, y }
+          break
+        }
+      }
+    expect(spot).not.toBeNull()
+    if (spot) {
+      Object.assign(scout, { x: spot.x + 0.5, y: spot.y + 0.5 })
+      expect(cannotFoundCamp(g, scout)).not.toBe('Trop près d’un autre campement')
+    }
+    // Sur leurs terres : refus net, et rien n'est pris.
+    Object.assign(scout, { x: camp.x + 1, y: camp.y })
+    expect(cannotFoundCamp(g, scout)).toBe('Ces terres appartiennent à un autre peuple')
+    expect(applyCommand(g, { type: 'foundCamp', unitId: scout.id }).ok).toBe(false)
+    expect(g.territory.owner[Math.floor(camp.y) * w + Math.floor(camp.x) + 1]).toBe(people.owner)
+  })
 
   it('le joueur les rencontre en voyant leurs terres, une seule fois', () => {
     const g = createGame(options)
@@ -126,5 +198,8 @@ describe('peuples voisins', () => {
     expect(people.tribe.population).toBe(0)
     expect(g.camps.some((c) => c.owner === people.owner)).toBe(false)
     expect(g.events).toContainEqual({ type: 'peopleGone', name: people.name })
+    // Ses terres redeviennent libres.
+    expect(g.territory.owner.some((o) => o === people.owner)).toBe(false)
+    expect(g.territory.ownerCells[people.owner]).toBe(0)
   })
 })

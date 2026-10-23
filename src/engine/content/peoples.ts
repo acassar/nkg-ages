@@ -9,8 +9,9 @@ export const PEOPLE_RULES = {
   spacing: 40,
   /** Population au départ. */
   startPopulation: 12,
-  /** Un campement de plus pour tant d'habitants (le premier est offert). */
-  peoplePerCamp: 25,
+  /** Un campement de plus pour tant d'habitants (le premier est offert), sans dépasser `maxCamps`. */
+  peoplePerCamp: 40,
+  maxCamps: 4,
   /** Rations dépensées pour fonder un campement. */
   campCost: 40,
   /** Un nouveau campement s'installe à cette distance d'un des leurs. */

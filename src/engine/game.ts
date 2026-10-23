@@ -8,6 +8,7 @@ import { BIOMES, type BiomeId } from './content/biomes'
 import { climateAmplitude, seasonalYield, seasonStarting, spoilage } from './climate/seasons'
 import { TRIBE_RULES } from './content/tribe'
 import {
+  claim,
   claimAround,
   createTerritory,
   growTerritory,
@@ -283,9 +284,16 @@ export function cannotFoundCamp(state: GameState, unit: Unit): string | null {
     return `Un campement de plus pour ${CAMP_RULES.peoplePerCamp} habitants`
   const x = Math.floor(unit.x) + 0.5
   const y = Math.floor(unit.y) + 0.5
-  if (state.camps.some((c) => Math.hypot(c.x - x, c.y - y) < CAMP_RULES.minDistance))
-    return 'Trop près d’un autre campement'
+  // Un camp voisin caché sous le brouillard ne se trahit pas par un refus.
+  const near = state.camps.some(
+    (c) =>
+      (c.owner === PLAYER || knownCell(state, c.x, c.y)) &&
+      Math.hypot(c.x - x, c.y - y) < CAMP_RULES.minDistance,
+  )
+  if (near) return 'Trop près d’un autre campement'
   if (!isPassable(state.world, x, y)) return 'Impossible de camper ici'
+  const held = state.territory.owner[Math.floor(y) * state.world.width + Math.floor(x)]!
+  if (held !== NO_OWNER && held !== PLAYER) return 'Ces terres appartiennent à un autre peuple'
   if (state.tribe.food < CAMP_RULES.foodCost) return `Il faut ${CAMP_RULES.foodCost} rations`
   return null
 }
@@ -320,6 +328,11 @@ function villageSite(state: GameState, campId?: number): Camp | undefined {
   return state.camps.find(
     (c) => c.owner === PLAYER && !c.village && (campId === undefined || c.id === campId),
   )
+}
+
+/** Cellule déjà découverte par le joueur. */
+function knownCell(state: GameState, x: number, y: number): boolean {
+  return state.fog.cells[Math.floor(y) * state.world.width + Math.floor(x)] !== Visibility.Unknown
 }
 
 /**
@@ -443,13 +456,13 @@ export function step(state: GameState): void {
   const pace = 1 + inventionMean(state.inventions, 'portage') / 100
   for (const unit of state.units) if (!moveUnit(unit, state.world, pace)) replan(state, unit)
   hunt(state)
-  growTerritory(
-    state.territory,
-    state.world,
-    seatsOf(state),
-    state.rng,
-    CAMP_RULES.growthPerTick * state.camps.length,
-  )
+  // Le joueur et les peuples poussent chacun avec leur aléa : tant qu'ils ne se touchent pas,
+  // la présence des voisins ne change rien au territoire du joueur.
+  const seats = seatsOf(state)
+  const mine = seats.filter((s) => s.owner === PLAYER)
+  const theirs = seats.filter((s) => s.owner !== PLAYER)
+  growTerritory(state.territory, state.world, mine, state.rng, CAMP_RULES.growthPerTick)
+  growTerritory(state.territory, state.world, theirs, state.peopleRng, CAMP_RULES.growthPerTick)
   harvest(state)
   for (const people of state.peoples) livePeople(state, people)
   fortune(state)
@@ -600,10 +613,18 @@ function livePeople(state: GameState, people: People): void {
   tickTribe(tribe, available)
   if (tribe.population <= 0) {
     state.camps = state.camps.filter((c) => c.owner !== owner)
+    // Ses terres redeviennent libres : d'autres pourront s'y étendre.
+    const { width } = state.world
+    state.territory.owner.forEach((o, i) => {
+      if (o === owner) claim(state.territory, i % width, Math.floor(i / width), NO_OWNER)
+    })
     if (people.met) state.events.push({ type: 'peopleGone', name: people.name })
     return
   }
-  const allowed = 1 + Math.floor(tribe.population / PEOPLE_RULES.peoplePerCamp)
+  const allowed = Math.min(
+    PEOPLE_RULES.maxCamps,
+    1 + Math.floor(tribe.population / PEOPLE_RULES.peoplePerCamp),
+  )
   if (camps.length === 0 || camps.length >= allowed || tribe.food < PEOPLE_RULES.campCost) return
   const rng = state.peopleRng
   const { min, max } = PEOPLE_RULES.campDistance

@@ -25,7 +25,6 @@ export function riverTexels(river: Uint8Array): Uint8Array {
   return out
 }
 
-/** Territoire : 255 où le propriétaire est `owner`. */
 /** Terres de tous les peuples voisins (propriétaires au-delà du joueur), en un seul masque. */
 export function rivalMask(patch: GridPatch, player: number): Uint8Array {
   const out = new Uint8Array(patch.data.length)
@@ -33,6 +32,7 @@ export function rivalMask(patch: GridPatch, player: number): Uint8Array {
   return out
 }
 
+/** Territoire : 255 où le propriétaire est `owner`. */
 export function ownerMask(patch: GridPatch, owner: number): Uint8Array {
   const out = new Uint8Array(patch.data.length)
   for (let i = 0; i < out.length; i++) out[i] = patch.data[i] === owner ? 255 : 0

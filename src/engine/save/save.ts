@@ -48,7 +48,9 @@ export interface SaveData {
     owner: number[]
     version: number
     ownedCount: number
-    frontier: number[]
+    /** Frontières par propriétaire ; `frontier` : celle du joueur, d'avant les peuples. */
+    frontiers?: number[][]
+    frontier?: number[]
     playerWeight: number
     ownerCells?: number[]
     ownerWeight?: number[]
@@ -128,7 +130,7 @@ export function saveGame(state: GameState): SaveData {
       owner: encodeRuns(state.territory.owner),
       version: state.territory.version,
       ownedCount: state.territory.ownedCount,
-      frontier: [...state.territory.frontier],
+      frontiers: state.territory.frontiers.map((f) => [...f]),
       playerWeight: state.territory.playerWeight,
       ownerCells: [...state.territory.ownerCells],
       ownerWeight: [...state.territory.ownerWeight],
@@ -176,7 +178,9 @@ export function loadGame(data: SaveData): GameState {
   territory.owner = decodeRuns(data.territory.owner, size)
   territory.version = data.territory.version
   territory.ownedCount = data.territory.ownedCount
-  territory.frontier = [...data.territory.frontier]
+  territory.frontiers = data.territory.frontiers
+    ? data.territory.frontiers.map((f) => [...f])
+    : [[], [...(data.territory.frontier ?? [])]]
   territory.playerWeight = data.territory.playerWeight
   if (data.territory.ownerCells && data.territory.ownerWeight) {
     territory.ownerCells = [...data.territory.ownerCells]
