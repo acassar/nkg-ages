@@ -225,6 +225,10 @@
   "log": [
     {
       "date": "2026-10-23",
+      "text": "Correction : les naissances se partagent enfin entre tous les campements selon leur taille ; arrondies au plus gros, elles allaient toutes au plus grand village ou à la plus grande bande, et les autres stagnaient"
+    },
+    {
+      "date": "2026-10-23",
       "text": "Équilibrage : une bande qui migre seule quitte aussi des terres trop pauvres pour elle ou trop proches d'une autre bande, cherche plus loin, et plus aucun départ sur un îlot ; les 40 parties de la sonde atteignent l'agriculture"
     },
     {
