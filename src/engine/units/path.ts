@@ -1,4 +1,6 @@
 import { Visibility, type FogState } from '../fog/fog'
+import { BIOMES, type BiomeId } from '../content/biomes'
+import { RIVER_RULES } from '../content/rivers'
 import { inBounds, moveCostAt, type World } from '../world/world'
 
 export interface Point {
@@ -26,16 +28,20 @@ const SMOOTH_LOOKAHEAD = 24
  */
 const HEURISTIC_WEIGHT = 1.3
 const DIAGONAL = Math.SQRT2
-const DIRS = [
-  [1, 0, 1],
-  [-1, 0, 1],
-  [0, 1, 1],
-  [0, -1, 1],
-  [1, 1, DIAGONAL],
-  [1, -1, DIAGONAL],
-  [-1, 1, DIAGONAL],
-  [-1, -1, DIAGONAL],
-] as const
+/** Les 8 directions : les 4 droites (0 à 3) puis les 4 diagonales (4 à 7). */
+const DX = Int8Array.of(1, -1, 0, 0, 1, 1, -1, -1)
+const DY = Int8Array.of(0, 0, 1, -1, 1, -1, 1, -1)
+const DD = Float64Array.of(1, 1, 1, 1, DIAGONAL, DIAGONAL, DIAGONAL, DIAGONAL)
+/** Pour chaque diagonale, les deux directions droites qui bordent le coin. */
+const CORNER_A = Int8Array.of(0, 0, 0, 0, 0, 0, 1, 1)
+const CORNER_B = Int8Array.of(0, 0, 0, 0, 2, 3, 2, 3)
+/** Coûts des 8 voisins de la cellule en cours d'examen (réutilisé, sans allocation). */
+const around = new Float64Array(8)
+/** Coût de base de chaque biome, en tableau typé pour la boucle de recherche. */
+const BIOME_COST = Float64Array.from(
+  { length: 256 },
+  (_, id) => BIOMES[id as BiomeId]?.moveCost ?? Infinity,
+)
 
 /**
  * Coût de traversée d'une cellule selon ce que le joueur en sait.
@@ -137,8 +143,13 @@ export function findPath(
 
   const { g, came, stamp, mark } = searchBuffers(width * height)
   // Une cellule n'a de valeurs valides que si son tampon vaut `mark` ; fermée : `mark + 1`.
-  const touched = (i: number) => stamp[i]! >= mark
   const open = new MinHeap()
+  const { biome, river } = world
+  const known = knowledge.cells
+  const cross = RIVER_RULES.crossCost
+  // Le coût (règle de `knownCost`) et l'heuristique sont écrits en ligne dans la boucle :
+  // appelés hors ligne, ils rendraient des nombres alloués sur le tas, des dizaines de
+  // milliers par chemin, et le ramasse-miettes passerait en plein pas.
   const h = (x: number, y: number) => {
     const dx = Math.abs(x - tx)
     const dy = Math.abs(y - ty)
@@ -160,30 +171,40 @@ export function findPath(
     stamp[current] = mark + 1
     const cx = current % width
     const cy = (current - cx) / width
-    const here = knownCost(world, knowledge, current)
+    const here =
+      known[current] === Visibility.Unknown
+        ? UNKNOWN_COST
+        : BIOME_COST[biome[current]!]! + (river[current] ? cross : 0)
     // L'unité peut se trouver sur une cellule devenue infranchissable : on l'en laisse sortir.
     const hereCost = Number.isFinite(here) ? here : UNKNOWN_COST
-    for (const [dx, dy, d] of DIRS) {
-      const nx = cx + dx
-      const ny = cy + dy
-      if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue
+    // Coûts des voisins droits d'abord : les diagonales s'en servent pour ne pas couper un coin.
+    for (let k = 0; k < 8; k++) {
+      const nx = cx + DX[k]!
+      const ny = cy + DY[k]!
       const n = ny * width + nx
-      if (stamp[n] === mark + 1) continue
-      const cost = knownCost(world, knowledge, n)
-      if (!Number.isFinite(cost)) continue
-      if (
-        dx !== 0 &&
-        dy !== 0 &&
-        (!Number.isFinite(knownCost(world, knowledge, cy * width + nx)) ||
-          !Number.isFinite(knownCost(world, knowledge, ny * width + cx)))
-      )
+      around[k] =
+        nx < 0 || ny < 0 || nx >= width || ny >= height
+          ? Infinity
+          : known[n] === Visibility.Unknown
+            ? UNKNOWN_COST
+            : BIOME_COST[biome[n]!]! + (river[n] ? cross : 0)
+    }
+    for (let k = 0; k < 8; k++) {
+      const step = around[k]!
+      if (step === Infinity) continue
+      if (k >= 4 && (around[CORNER_A[k]!] === Infinity || around[CORNER_B[k]!] === Infinity))
         continue
-      const tentative = g[current]! + (d * (hereCost + cost)) / 2
-      if (!touched(n) || tentative < g[n]!) {
+      const n = (cy + DY[k]!) * width + cx + DX[k]!
+      if (stamp[n] === mark + 1) continue
+      const tentative = g[current]! + (DD[k]! * (hereCost + step)) / 2
+      // Valeurs d'une recherche précédente si le tampon n'est pas `mark` : comme vierge.
+      if (stamp[n] !== mark || tentative < g[n]!) {
         stamp[n] = mark
         g[n] = tentative
         came[n] = current
-        const rest = h(nx, ny)
+        const ax = Math.abs(cx + DX[k]! - tx)
+        const ay = Math.abs(cy + DY[k]! - ty)
+        const rest = ax > ay ? ax + (DIAGONAL - 1) * ay : ay + (DIAGONAL - 1) * ax
         // Au-delà du plafond même en ligne droite : inutile d'explorer.
         if (tentative + rest > maxCost) continue
         open.push(n, tentative + HEURISTIC_WEIGHT * rest)
