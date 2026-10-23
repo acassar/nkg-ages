@@ -14,8 +14,12 @@ export type Command =
   | { type: 'invent'; invention: InventionKind }
   /** L'éclaireur fonde un campement là où il se trouve. */
   | { type: 'foundCamp'; unitId: number }
-  /** Forme un chasseur parmi la tribu ; il paraît au camp. */
-  | { type: 'recruitHunter' }
+  /** Forme un chasseur parmi la tribu ; il paraît au campement choisi (au premier, sans `campId`). */
+  | { type: 'recruitHunter'; campId?: number }
+  /** Forme un éclaireur ; il paraît au campement choisi (au premier, sans `campId`). */
+  | { type: 'recruitScout'; campId?: number }
+  /** Les unités explorent seules : chacune va vers la lisière du connu la plus proche, encore et encore. */
+  | { type: 'explore'; unitIds: number[] }
   /** Offre des vivres à un peuple voisin rencontré (désigné par son numéro de propriétaire). */
   | { type: 'gift'; people: number }
   /** Échange du silex contre des vivres avec un peuple voisin. */

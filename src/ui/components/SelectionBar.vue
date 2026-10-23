@@ -4,28 +4,113 @@ import { useGameStore } from '../stores/game'
 
 const game = useGameStore()
 
-/** L'éclaireur choisi, s'il y en a un : c'est lui qui fonde les campements. */
-const scout = computed(
-  () => game.view?.units.find((u) => game.selected.has(u.id) && u.foundCamp) ?? null,
-)
+/** Unités choisies, dans l'ordre de la vue. */
+const units = computed(() => game.view?.units.filter((u) => game.selected.has(u.id)) ?? [])
+/** Le premier éclaireur choisi : c'est lui qui fonde les campements. */
+const scout = computed(() => units.value.find((u) => u.foundCamp) ?? null)
 const blocked = computed(() => scout.value?.foundCamp?.blocked ?? null)
+const exploring = computed(() => units.value.length > 0 && units.value.every((u) => u.exploring))
+
+/** « Éclaireur », « 2 chasseurs », « Éclaireur et chasseur »… */
+const who = computed(() => {
+  const counts = new Map<string, number>()
+  for (const u of units.value) counts.set(u.name, (counts.get(u.name) ?? 0) + 1)
+  const parts = [...counts].map(([name, n]) =>
+    n > 1 ? `${n} ${name.toLowerCase()}s` : name.toLowerCase(),
+  )
+  const text = parts.join(' et ')
+  return text.charAt(0).toUpperCase() + text.slice(1)
+})
+
+const camp = computed(
+  () => game.view?.camps.find((c) => c.mine && c.id === game.selectedCamp) ?? null,
+)
+const campName = computed(() =>
+  camp.value?.city ? 'Cité' : camp.value?.village ? 'Village' : 'Campement',
+)
+const upgradeLabel = computed(() =>
+  camp.value?.upgrade?.to === 'city' ? 'Faire une cité' : 'Faire un village',
+)
+
+function upgrade() {
+  const c = camp.value
+  if (!c?.upgrade) return
+  if (c.upgrade.to === 'village') void game.buildVillage(c.id)
+  else void game.buildCity(c.id)
+}
 </script>
 
 <template>
-  <div v-if="game.view && scout" class="selection parchment" data-testid="selection">
-    <span class="who">{{ scout.name }}</span>
+  <div v-if="game.view && camp" class="selection parchment" data-testid="camp-selection">
+    <span class="who">{{ campName }}</span>
+    <button
+      v-if="camp.upgrade"
+      class="ink-button"
+      data-testid="camp-upgrade"
+      :disabled="camp.upgrade.blocked !== null"
+      :title="camp.upgrade.blocked ?? `${upgradeLabel} (${camp.upgrade.cost})`"
+      @click="upgrade()"
+    >
+      {{ upgradeLabel }}
+    </button>
     <button
       class="ink-button"
-      data-testid="found-camp"
-      :disabled="blocked !== null"
-      :title="blocked ?? 'Fonder un campement ici (F)'"
-      @click="game.foundCamp()"
+      data-testid="camp-hunter"
+      :disabled="game.view.tribe.recruitBlocked !== null"
+      :title="
+        game.view.tribe.recruitBlocked ??
+        `Former un chasseur ici (${game.view.tribe.recruitCost} rations)`
+      "
+      @click="game.recruitHunter(camp.id)"
     >
-      Fonder un campement
+      Chasseur
     </button>
-    <span class="why">{{
-      blocked ?? `Campements ${game.view.tribe.camps} / ${game.view.tribe.maxCamps}`
+    <button
+      class="ink-button"
+      data-testid="camp-scout"
+      :disabled="game.view.tribe.scoutBlocked !== null"
+      :title="
+        game.view.tribe.scoutBlocked ??
+        `Former un éclaireur ici (${game.view.tribe.scoutCost} rations)`
+      "
+      @click="game.recruitScout(camp.id)"
+    >
+      Éclaireur
+    </button>
+    <span v-if="camp.upgrade?.blocked" class="why" data-testid="camp-why">{{
+      camp.upgrade.blocked
     }}</span>
+  </div>
+  <div
+    v-else-if="game.view && units.length > 0"
+    class="selection parchment"
+    data-testid="selection"
+  >
+    <span class="who">{{ who }}</span>
+    <button
+      class="ink-button"
+      data-testid="explore"
+      :class="{ on: exploring }"
+      :aria-pressed="exploring"
+      title="Explorer seul : aller vers l’inconnu le plus proche, encore et encore (E)"
+      @click="game.exploreSelected()"
+    >
+      Explorer
+    </button>
+    <template v-if="scout">
+      <button
+        class="ink-button"
+        data-testid="found-camp"
+        :disabled="blocked !== null"
+        :title="blocked ?? 'Fonder un campement ici (F)'"
+        @click="game.foundCamp()"
+      >
+        Fonder un campement
+      </button>
+      <span class="why">{{
+        blocked ?? `Campements ${game.view.tribe.camps} / ${game.view.tribe.maxCamps}`
+      }}</span>
+    </template>
   </div>
 </template>
 

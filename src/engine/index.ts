@@ -29,6 +29,7 @@ export type { Herd } from './fauna/fauna'
 export { RANKS, RANK_RULES } from './content/rarity'
 export type { Rank } from './content/rarity'
 export { RESOURCE_KINDS, RESOURCE_RULES } from './content/resources'
+export { SCOUT_RULES, EXPLORE_RULES } from './content/units'
 export type { ResourceKind } from './content/resources'
 export { depositYield } from './resources/deposits'
 export { rollRank, statAt, rollStat } from './rarity/rarity'
@@ -53,6 +54,8 @@ export {
   cannotFoundCamp,
   maxCamps,
   maxHunters,
+  maxScouts,
+  cannotRecruitScout,
   huntersResting,
   climateOf,
   cannotGift,

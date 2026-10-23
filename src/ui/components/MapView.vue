@@ -14,6 +14,7 @@ import {
 import { depositAt, describeDeposit, describeWonder } from '../deposits'
 import { intentOf } from '../keyboard'
 import { useGameStore } from '../stores/game'
+import { BIOME_IDS, type GameView } from '@/views/types'
 
 const props = defineProps<{ benchmark?: boolean }>()
 const game = useGameStore()
@@ -69,6 +70,7 @@ function loop(now: number) {
       units: game.view.units,
       camps: game.view.camps,
       selected: game.selected,
+      selectedCamp: game.selectedCamp,
     })
     benchSample(performance.now() - t0, now)
     dirty = false
@@ -104,10 +106,11 @@ function onKey(event: KeyboardEvent, down: boolean) {
   if (intent.kind === 'togglePause') void game.togglePause()
   if (intent.kind === 'speed') void game.setSpeed(intent.speed)
   if (intent.kind === 'foundCamp') void game.foundCamp()
+  if (intent.kind === 'explore') void game.exploreSelected()
 }
 
 // Souris : glisser pour déplacer la carte, molette pour zoomer,
-// clic gauche pour choisir une unité, clic droit pour l'envoyer.
+// clic gauche pour choisir une unité ou un campement, clic droit pour envoyer les unités.
 let drag: { x: number; y: number; moved: boolean } | null = null
 
 function local(event: MouseEvent) {
@@ -134,12 +137,14 @@ function updateHover(p: { x: number; y: number }) {
 
 function onPointerMove(event: PointerEvent) {
   const p = local(event)
+  updateCursor(p)
   if (!drag) return updateHover(p)
   hover.value = null
   const dx = p.x - drag.x
   const dy = p.y - drag.y
   if (!drag.moved && Math.hypot(dx, dy) < 4) return
   drag.moved = true
+  cursor.value = 'grabbing'
   camera = pan(camera, worldSize(), dx, dy)
   drag.x = p.x
   drag.y = p.y
@@ -152,14 +157,92 @@ function onPointerUp(event: PointerEvent) {
   drag = null
   if (wasDrag || !game.view) return
   const p = local(event)
-  const hit = game.view.units.find((u) => {
+  const hit = unitAt(p)
+  // Maj + clic ajoute ou retire l'unité de la sélection.
+  if (event.shiftKey && hit) game.toggleSelected(hit.id)
+  else pickNext(p)
+  updateCursor(p)
+  dirty = true
+}
+
+/**
+ * Choisit ce qui est sous le pointeur. Unités et campement se superposent souvent (les recrues
+ * paraissent au camp) : un nouveau clic au même endroit passe au suivant.
+ */
+function pickNext(p: { x: number; y: number }) {
+  const units = (game.view?.units ?? []).filter((u) => {
     const s = worldToScreen(camera, u.x, u.y)
     return Math.hypot(s.x - p.x, s.y - p.y) < 12
   })
-  // Maj + clic ajoute ou retire l'unité de la sélection.
-  if (event.shiftKey && hit) game.toggleSelected(hit.id)
-  else game.select(hit ? [hit.id] : [])
-  dirty = true
+  const camp = campAt(p)
+  const choices = [
+    ...units.map((u) => () => game.select([u.id])),
+    ...(camp ? [() => game.selectCamp(camp.id)] : []),
+  ]
+  if (choices.length === 0) return game.select([])
+  const current =
+    camp && game.selectedCamp === camp.id
+      ? units.length
+      : units.findIndex((u) => game.selected.size === 1 && game.selected.has(u.id))
+  choices[(current + 1) % choices.length]!()
+}
+
+/** Unité du joueur sous le pointeur, s'il y en a une. */
+function unitAt(p: { x: number; y: number }) {
+  return game.view?.units.find((u) => {
+    const s = worldToScreen(camera, u.x, u.y)
+    return Math.hypot(s.x - p.x, s.y - p.y) < 12
+  })
+}
+
+/** Campement du joueur sous le pointeur (les unités, posées dessus, passent d'abord). */
+function campAt(p: { x: number; y: number }) {
+  return game.view?.camps.find((c) => {
+    if (!c.mine) return false
+    const s = worldToScreen(camera, c.x, c.y)
+    return Math.hypot(s.x - p.x, s.y - p.y) < (c.city ? 16 : 12)
+  })
+}
+
+/**
+ * Curseur selon ce qu'un clic ferait : flèche au repos, main sur ce qu'on peut choisir,
+ * viseur quand des unités attendent une destination, interdit sur l'eau connue.
+ */
+const cursor = ref<'default' | 'pointer' | 'crosshair' | 'not-allowed' | 'grabbing'>('default')
+
+function updateCursor(p: { x: number; y: number }) {
+  if (drag?.moved) cursor.value = 'grabbing'
+  else if (unitAt(p) || campAt(p)) cursor.value = 'pointer'
+  else if (game.selected.size > 0) cursor.value = onWater(p) ? 'not-allowed' : 'crosshair'
+  else cursor.value = 'default'
+}
+
+/** Le pointeur est-il sur de l'eau déjà découverte (où l'on ne peut envoyer personne) ? */
+function onWater(p: { x: number; y: number }): boolean {
+  const world = game.world
+  if (!world) return false
+  const w = screenToWorld(camera, p.x, p.y)
+  const x = Math.floor(w.x)
+  const y = Math.floor(w.y)
+  if (x < 0 || y < 0 || x >= world.width || y >= world.height) return true
+  const i = y * world.width + x
+  const water = world.biome[i] === BIOME_IDS.Ocean || world.biome[i] === BIOME_IDS.DeepOcean
+  return water && fogCells !== null && fogCells[i] !== 0
+}
+
+/** Ce que le joueur connaît de la carte (0 : inconnu), tenu à jour depuis les vues. */
+let fogCells: Uint8Array | null = null
+
+function applyFog(patch: GameView['fog']) {
+  const world = game.world
+  if (!world || !patch) return
+  if (!fogCells || fogCells.length !== world.width * world.height)
+    fogCells = new Uint8Array(world.width * world.height)
+  for (let row = 0; row < patch.h; row++)
+    fogCells.set(
+      patch.data.subarray(row * patch.w, (row + 1) * patch.w),
+      (patch.y + row) * world.width + patch.x,
+    )
 }
 
 function onContextMenu(event: MouseEvent) {
@@ -195,6 +278,7 @@ onMounted(() => {
   }
   if (game.world) renderer.setWorld(game.world)
   if (game.view) renderer.applyView(game.view)
+  applyFog(game.view?.fog ?? null)
   resize()
   const camp = game.view?.camps.find((c) => c.mine)
   camera = props.benchmark
@@ -208,6 +292,7 @@ onMounted(() => {
   cleanups.push(
     game.onView((view) => {
       renderer?.applyView(view)
+      applyFog(view.fog)
       dirty = true
     }),
   )
@@ -239,6 +324,7 @@ onBeforeUnmount(() => {
     ref="host"
     class="map"
     data-testid="map"
+    :style="{ cursor }"
     @pointerdown="onPointerDown"
     @pointermove="onPointerMove"
     @pointerup="onPointerUp"
@@ -271,10 +357,6 @@ onBeforeUnmount(() => {
   inset: 0;
   overflow: hidden;
   touch-action: none;
-  cursor: grab;
-}
-.map:active {
-  cursor: grabbing;
 }
 .layer {
   position: absolute;

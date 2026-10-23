@@ -17,6 +17,8 @@ export interface OverlayState {
   units: readonly UnitView[]
   camps: readonly CampView[]
   selected: ReadonlySet<number>
+  /** Campement choisi d'un clic, entouré sur la carte (null : aucun). */
+  selectedCamp?: number | null
 }
 
 /**
