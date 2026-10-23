@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 919" width="960" height="919" font-family="Georgia, 'Iowan Old Style', serif" role="img" aria-label="Roadmap de nkg-ages">
 <rect width="960" height="919" rx="10" fill="#eee2c4" stroke="#c9b283"/>
 <text x="24" y="50" font-size="28" fill="#3a2c1e">nkg-ages · roadmap</text>
-<text x="936" y="48" font-size="15" text-anchor="end" fill="#6b5843">32 / 43 fonctionnalités livrées · en cours : J5</text>
+<text x="936" y="48" font-size="15" text-anchor="end" fill="#6b5843">33 / 43 fonctionnalités livrées · en cours : J5</text>
 <g><rect x="24" y="72" width="293.3333333333333" height="268" rx="6" fill="#e6d6b0" stroke="#3a2c1e" stroke-width="1.2"/>
 <text x="40" y="102" font-size="19" fill="#3a2c1e"><tspan fill="#6b5843">J0</tspan> · Fondations</text>
 <circle cx="46" cy="122" r="5" fill="#3a2c1e"/>
@@ -88,8 +88,8 @@
 <text x="60" y="589" font-size="14" fill="#3a2c1e">Éclaireurs, ordre Explorer, choix du campement</text>
 <circle cx="46" cy="606" r="5" fill="#3a2c1e"/>
 <text x="60" y="610" font-size="14" fill="#3a2c1e">Sonde d'équilibrage</text>
-<circle cx="46" cy="627" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="60" y="631" font-size="14" fill="#6b5843">Ressources de leur époque</text>
+<circle cx="46" cy="627" r="5" fill="#3a2c1e"/>
+<text x="60" y="631" font-size="14" fill="#3a2c1e">Ressources de leur époque</text>
 <circle cx="46" cy="648" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
 <text x="60" y="652" font-size="14" fill="#6b5843">Bandes nomades et scission</text>
 <circle cx="46" cy="669" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
@@ -113,11 +113,11 @@
 <text x="369.3333333333333" y="631" font-size="14" fill="#6b5843">Futur imaginé</text>
 </g>
 <text x="24" y="776" font-size="13" letter-spacing="1.5" fill="#6b5843">JOURNAL</text>
-<text x="24" y="800" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Outils : sonde d'équilibrage (pnpm sonde), un robot joue 40 parties et date chaque étape ; l'arbre des inventions est fini en 33 ans, la population explose après 30 ans</text>
-<text x="24" y="821" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Jouabilité : éclaireurs à former, ordre « Explorer » (touche E), clic sur un campement pour le faire grandir ou y former des recrues, curseur selon l'action</text>
-<text x="24" y="842" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Jouabilité : un pictogramme par ressource sur la carte, couleurs de rareté franches (gris, vert, bleu, violet, orange, or) et leur légende</text>
-<text x="24" y="863" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Jouabilité : le mois se joue en quatre semaines (vitesse 1 = une saison en 12 s, unités toujours fluides) ; panneau d'alertes rétractable qui centre la carte</text>
-<text x="24" y="884" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Performance : le brouillard compte ses cellules découvertes au fil de l'eau ; le conseil d'exploration ne parcourt plus la carte à chaque vue</text>
+<text x="24" y="800" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Contenu : cuivre et étain invisibles et inexploités avant la nouvelle invention « Métallurgie du cuivre » (après l'agriculture, avant le bronze)</text>
+<text x="24" y="821" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Outils : sonde d'équilibrage (pnpm sonde), un robot joue 40 parties et date chaque étape ; l'arbre des inventions est fini en 33 ans, la population explose après 30 ans</text>
+<text x="24" y="842" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Jouabilité : éclaireurs à former, ordre « Explorer » (touche E), clic sur un campement pour le faire grandir ou y former des recrues, curseur selon l'action</text>
+<text x="24" y="863" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Jouabilité : un pictogramme par ressource sur la carte, couleurs de rareté franches (gris, vert, bleu, violet, orange, or) et leur légende</text>
+<text x="24" y="884" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Jouabilité : le mois se joue en quatre semaines (vitesse 1 = une saison en 12 s, unités toujours fluides) ; panneau d'alertes rétractable qui centre la carte</text>
 <circle cx="700" cy="893" r="5" fill="#3a2c1e"/>
 <text x="710" y="897" font-size="12" fill="#6b5843">fait</text>
 <circle cx="760" cy="893" r="5" fill="none" stroke="#8c2f1c" stroke-width="1.5"/><path d="M760 888a5 5 0 0 1 0 10z" fill="#8c2f1c"/>

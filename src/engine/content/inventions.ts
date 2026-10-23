@@ -18,6 +18,7 @@ export type InventionKind =
   | 'harpon'
   | 'portage'
   | 'agriculture'
+  | 'metallurgie'
   | 'bronze'
   | 'ecriture'
   | 'routes'
@@ -36,6 +37,11 @@ export interface InventionRules {
   cost: Partial<Record<ResourceKind, number>>
   /** Inventions à faire d'abord. */
   requires?: readonly InventionKind[]
+  /**
+   * Ressources que la tribu ne reconnaît (et n'exploite) qu'après cette invention : leurs
+   * gisements existent dès le départ, mais restent invisibles sur la carte jusque-là.
+   */
+  reveals?: readonly ResourceKind[]
 }
 
 export const INVENTION_RULES: Readonly<Record<InventionKind, InventionRules>> = {
@@ -147,6 +153,19 @@ export const INVENTION_RULES: Readonly<Record<InventionKind, InventionRules>> = 
     cost: { silex: 10 },
     requires: ['panier', 'taille'],
   },
+  metallurgie: {
+    name: 'Métallurgie du cuivre',
+    description:
+      'On reconnaît le minerai et on le fond : les gisements de cuivre et d’étain apparaissent sur la carte et rendent davantage.',
+    stat: 'Métal',
+    unit: '%',
+    range: { e: { mean: 0, spread: 0 }, s: { mean: 60, spread: 0 } },
+    work: 240,
+    cost: { silex: 10 },
+    requires: ['agriculture'],
+    // Le cuivre n'est travaillé que vers -7000, bien après le silex et les débuts des champs.
+    reveals: ['cuivre', 'etain'],
+  },
   bronze: {
     name: 'Bronze',
     description:
@@ -156,7 +175,7 @@ export const INVENTION_RULES: Readonly<Record<InventionKind, InventionRules>> = 
     range: { e: { mean: 15, spread: 0 }, s: { mean: 50, spread: 0 } },
     work: 360,
     cost: { cuivre: 12, etain: 6 },
-    requires: ['agriculture'],
+    requires: ['metallurgie'],
   },
   ecriture: {
     name: 'Écriture',
@@ -182,6 +201,11 @@ export const INVENTION_RULES: Readonly<Record<InventionKind, InventionRules>> = 
 }
 
 export const INVENTION_KINDS = Object.keys(INVENTION_RULES) as InventionKind[]
+
+/** L'invention qui révèle une ressource, ou undefined si on la connaît dès le départ. */
+export function revealerOf(kind: ResourceKind): InventionKind | undefined {
+  return INVENTION_KINDS.find((k) => INVENTION_RULES[k].reveals?.includes(kind))
+}
 
 export const INVENTION_WORK = {
   /** Points de travail par mois : une base, plus un par tant de personnes. */
