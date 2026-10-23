@@ -84,7 +84,10 @@ describe('conseils', () => {
     scout.target = { x: scout.x + 5, y: scout.y }
     expect(hintOf(g)).toMatch(/invention/)
     g.inventions.ranks.panier = 'E'
-    expect(hintOf(g)).toMatch(/Fonder un campement/)
+    expect(hintOf(g)).toMatch(/scindez-la/)
+    // Terres épuisées : le conseil dit de déplacer la bande.
+    g.abundance.fill(0.3)
+    expect(hintOf(g)).toMatch(/déplacer/)
     g.camps.push({ ...g.camps[0]!, id: 999 })
     expect(hintOf(g)).toMatch(/agriculture/)
     g.camps[0]!.village = true

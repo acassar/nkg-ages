@@ -26,7 +26,7 @@ export const TRIBE_RULES = {
   comfortMonths: 2,
   /** Part de la population perdue chaque mois de famine (au moins une personne). */
   famineLoss: 0.06,
-  /** Rayon du territoire tenu dès la fondation, en cellules. */
+  /** Rayon des terres d'un peuple voisin dès sa fondation, en cellules. */
   startTerritoryRadius: 5,
 } as const
 

@@ -16,6 +16,8 @@ function busyGame(): GameState {
   const scout = g.units.find((u) => u.kind === 'eclaireur')!
   applyCommand(g, { type: 'moveUnits', unitIds: [scout.id], x: scout.x + 30, y: scout.y + 10 })
   applyCommand(g, { type: 'invent', invention: 'lance' })
+  // La bande migre seule : ses terres s'épuisent et sa zone se déplace.
+  applyCommand(g, { type: 'setRoaming', campId: g.camps[0]!.id, roaming: true })
   return g
 }
 
@@ -78,6 +80,42 @@ describe('sauvegarde', () => {
     const g = loadGame(old)
     expect(g.tribe.lastSpoiled).toBe(0)
     expect(g.tribe.population).toBe(data.tribe.population)
+  })
+
+  it('rend l’abondance des terres et les zones des bandes telles quelles', () => {
+    const g = busyGame()
+    run(g, 120)
+    const copy = loadGame(JSON.parse(JSON.stringify(saveGame(g))))
+    expect(copy.abundance).toEqual(g.abundance)
+    expect(copy.bandCells).toEqual(g.bandCells)
+    expect(copy.camps).toEqual(g.camps)
+  })
+
+  it('une sauvegarde d’avant les bandes : terres intactes, gens répartis, zone rendue en partant', () => {
+    const g = busyGame()
+    run(g, 30)
+    const data = JSON.parse(JSON.stringify(saveGame(g)))
+    delete data.abundance
+    delete data.bandCells
+    for (const c of data.camps)
+      for (const k of ['members', 'target', 'path', 'plannedFog', 'patience', 'roaming'])
+        delete c[k]
+    const old = loadGame(data)
+    expect([...old.abundance].every((a) => a === 1)).toBe(true)
+    expect(old.camps[0]!.members).toBe(old.tribe.population)
+    expect(old.bandCells.length).toBe(old.territory.ownerCells[1])
+    // La bande peut marcher tout de suite.
+    expect(old.camps[0]!.path).toEqual([])
+  })
+
+  it('une sauvegarde d’avant la métallurgie qui a le bronze reçoit la métallurgie', () => {
+    const data = JSON.parse(JSON.stringify(saveGame(busyGame())))
+    data.inventions.ranks.bronze = 'B'
+    delete data.inventions.ranks.metallurgie
+    expect(loadGame(data).inventions.ranks.metallurgie).toBe('E')
+    // Sans bronze, rien n'est donné.
+    delete data.inventions.ranks.bronze
+    expect(loadGame(data).inventions.ranks.metallurgie).toBeUndefined()
   })
 
   it('refuse une sauvegarde d’une autre version', () => {

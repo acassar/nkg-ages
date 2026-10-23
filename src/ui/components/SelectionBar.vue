@@ -6,9 +6,6 @@ const game = useGameStore()
 
 /** Unités choisies, dans l'ordre de la vue. */
 const units = computed(() => game.view?.units.filter((u) => game.selected.has(u.id)) ?? [])
-/** Le premier éclaireur choisi : c'est lui qui fonde les campements. */
-const scout = computed(() => units.value.find((u) => u.foundCamp) ?? null)
-const blocked = computed(() => scout.value?.foundCamp?.blocked ?? null)
 const exploring = computed(() => units.value.length > 0 && units.value.every((u) => u.exploring))
 
 /** « Éclaireur », « 2 chasseurs », « Éclaireur et chasseur »… */
@@ -25,9 +22,20 @@ const who = computed(() => {
 const camp = computed(
   () => game.view?.camps.find((c) => c.mine && c.id === game.selectedCamp) ?? null,
 )
-const campName = computed(() =>
-  camp.value?.city ? 'Cité' : camp.value?.village ? 'Village' : 'Campement',
-)
+const campName = computed(() => {
+  const c = camp.value
+  const name = c?.city ? 'Cité' : c?.village ? 'Village' : 'Bande'
+  return c?.members !== null && c?.members !== undefined ? `${name} de ${c.members}` : name
+})
+/** « efficacité 85 % · terres en baisse » : ce qui pèse sur la cueillette de la bande. */
+const bandState = computed(() => {
+  const band = camp.value?.band
+  if (!band) return null
+  const parts = [`terres ${band.land}`]
+  if (band.efficiency < 1) parts.unshift(`efficacité ${Math.round(band.efficiency * 100)} %`)
+  if (band.target) parts.push('en marche')
+  return parts.join(' · ')
+})
 const upgradeLabel = computed(() =>
   camp.value?.upgrade?.to === 'city' ? 'Faire une cité' : 'Faire un village',
 )
@@ -43,6 +51,35 @@ function upgrade() {
 <template>
   <div v-if="game.view && camp" class="selection parchment" data-testid="camp-selection">
     <span class="who">{{ campName }}</span>
+    <span
+      v-if="bandState"
+      class="why"
+      data-testid="band-state"
+      :class="{ alarm: camp.band!.efficiency < 1 || camp.band!.land === 'épuisées' }"
+      :title="`Au-delà de ${camp.band!.comfortSize} personnes, une bande cueille moins bien`"
+      >{{ bandState }}</span
+    >
+    <template v-if="camp.band">
+      <button
+        class="ink-button"
+        data-testid="band-split"
+        :disabled="camp.band.splitBlocked !== null"
+        :title="camp.band.splitBlocked ?? 'La moitié des gens part former une autre bande'"
+        @click="game.splitBand(camp.id)"
+      >
+        Scinder
+      </button>
+      <button
+        class="ink-button"
+        data-testid="band-roaming"
+        :class="{ on: camp.band.roaming }"
+        :aria-pressed="camp.band.roaming"
+        title="Migrer seule vers des terres plus riches quand les siennes s'épuisent (clic droit : l'envoyer vous-même)"
+        @click="game.setRoaming(camp.id, !camp.band.roaming)"
+      >
+        Migrer seule
+      </button>
+    </template>
     <button
       v-if="camp.upgrade"
       class="ink-button"
@@ -97,20 +134,6 @@ function upgrade() {
     >
       Explorer
     </button>
-    <template v-if="scout">
-      <button
-        class="ink-button"
-        data-testid="found-camp"
-        :disabled="blocked !== null"
-        :title="blocked ?? 'Fonder un campement ici (F)'"
-        @click="game.foundCamp()"
-      >
-        Fonder un campement
-      </button>
-      <span class="why">{{
-        blocked ?? `Campements ${game.view.tribe.camps} / ${game.view.tribe.maxCamps}`
-      }}</span>
-    </template>
   </div>
 </template>
 
@@ -134,9 +157,16 @@ function upgrade() {
 .why {
   color: var(--ink-soft);
 }
+.why.alarm {
+  color: var(--ink-red);
+}
 .ink-button {
   font-size: 13px;
   padding: 1px 8px;
+}
+.ink-button.on {
+  background: var(--ink);
+  color: var(--paper);
 }
 .ink-button:disabled {
   opacity: 0.45;

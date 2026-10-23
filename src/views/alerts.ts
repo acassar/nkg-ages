@@ -1,5 +1,8 @@
 import {
-  cannotFoundCamp,
+  BAND_RULES,
+  bandAbundance,
+  bandsOf,
+  campEfficiency,
   cannotRecruit,
   cannotStart,
   huntersResting,
@@ -102,15 +105,35 @@ export function alertsOf(state: GameState): AlertView[] {
       target: null,
     })
 
+  // Les bandes : trop grandes, elles cueillent mal ; sur des terres épuisées, elles doivent partir.
+  const bands = bandsOf(state)
+  for (const band of bands) {
+    const name = bands.length > 1 ? `Bande de ${band.members ?? 0}` : 'La bande'
+    const efficiency = campEfficiency(band)
+    if (efficiency < 1)
+      alerts.push({
+        id: `bande-grande-${band.id}`,
+        level: 'warning',
+        text: `${name} trop grande : efficacité −${Math.round((1 - efficiency) * 100)} %, scindez-la`,
+        target: at(band),
+      })
+    if (!band.target && bandAbundance(state, band) < BAND_RULES.exhausted)
+      alerts.push({
+        id: `bande-epuisee-${band.id}`,
+        level: 'warning',
+        text: band.roaming
+          ? `${name} : terres épuisées, aucun meilleur site connu alentour`
+          : `${name} : terres épuisées ici, déplacez-la`,
+        target: at(band),
+      })
+  }
+
   for (const unit of state.units) {
     if (unit.kind !== 'eclaireur' || unit.target) continue
-    const canCamp = cannotFoundCamp(state, unit) === null
     alerts.push({
       id: `eclaireur-${unit.id}`,
       level: 'info',
-      text: canCamp
-        ? 'L’éclaireur peut fonder un campement ici (F)'
-        : 'L’éclaireur attend vos ordres',
+      text: 'L’éclaireur attend vos ordres',
       target: at(unit),
     })
   }

@@ -12,8 +12,12 @@ export type Command =
   | { type: 'moveUnits'; unitIds: number[]; x: number; y: number }
   /** Lance une invention (ou la réinvente pour tenter un meilleur rang). */
   | { type: 'invent'; invention: InventionKind }
-  /** L'éclaireur fonde un campement là où il se trouve. */
-  | { type: 'foundCamp'; unitId: number }
+  /** Une bande du joueur part vers ce point, avec ses gens. */
+  | { type: 'moveCamp'; campId: number; x: number; y: number }
+  /** Une bande trop grande se scinde : la moitié des gens part fonder une autre bande. */
+  | { type: 'splitBand'; campId: number }
+  /** Une bande migre seule quand ses terres s'épuisent (ou reste où on la met). */
+  | { type: 'setRoaming'; campId: number; roaming: boolean }
   /** Forme un chasseur parmi la tribu ; il paraît au campement choisi (au premier, sans `campId`). */
   | { type: 'recruitHunter'; campId?: number }
   /** Forme un éclaireur ; il paraît au campement choisi (au premier, sans `campId`). */

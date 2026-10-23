@@ -21,6 +21,16 @@ import { findPath, knownPassable, pathBlocked } from './units/path'
 import { frontierTarget } from './units/explore'
 import { SCOUT_RULES } from './content/units'
 import { CAMP_RULES } from './content/camps'
+import { BAND_RULES } from './content/bands'
+import {
+  bandEfficiency,
+  createAbundance,
+  exploit,
+  forageAround,
+  forageOf,
+  playerCells,
+  refreshZones,
+} from './bands/bands'
 import { PEOPLE_NAMES, PEOPLE_RULES } from './content/peoples'
 import { MOODS, RELATION_RULES } from './content/relations'
 import { CITY_RULES } from './content/cities'
@@ -66,7 +76,16 @@ import {
   tickTribe,
   type TribeState,
 } from './tribe/tribe'
-import { isPassable, moveUnit, stopUnit, UNIT_RULES, type Unit } from './units/units'
+import {
+  isPassable,
+  moveAlong,
+  moveUnit,
+  stopMover,
+  stopUnit,
+  UNIT_RULES,
+  type Mover,
+  type Unit,
+} from './units/units'
 import { generateWorld } from './world/generate'
 import { EVENT_RULES, EVENT_RULES_GLOBAL, type EventKind } from './content/events'
 import { pickEvent } from './events/events'
@@ -100,7 +119,11 @@ export interface People {
   lastDeal?: number
 }
 
-export interface Camp {
+/**
+ * Un campement. Celui du joueur est une bande nomade tant qu'il n'est pas devenu village :
+ * il marche (mêmes champs de trajet qu'une unité) et cueille autour de lui.
+ */
+export interface Camp extends Partial<Mover> {
   id: number
   owner: number
   x: number
@@ -109,6 +132,10 @@ export interface Camp {
   village?: boolean
   /** Devenu cité (c'était un village) : portée, réserves et savoir en plus. */
   city?: boolean
+  /** Gens du joueur qui y vivent : la population de la tribu se partage entre ses campements. */
+  members?: number
+  /** Bande qui migre seule vers des terres plus riches quand les siennes s'épuisent. */
+  roaming?: boolean
 }
 
 /** Ce qui est arrivé pendant les ticks, pour prévenir le joueur ; vidé à chaque envoi. */
@@ -143,6 +170,8 @@ export type GameEvent =
   | { type: 'achievement'; id: string; name: string }
   /** Une unité en exploration ne trouve plus d'inconnu à sa portée : elle s'arrête. */
   | { type: 'explored'; unitId: number }
+  /** Une bande ne trouve plus de chemin connu vers sa destination : elle s'arrête. */
+  | { type: 'bandGaveUp'; campId: number }
 
 export interface Outcome {
   type: 'victory' | 'defeat'
@@ -177,6 +206,12 @@ export interface GameState {
   achievements: Record<string, number>
   /** Troupeaux de la faune, qui errent et que l'on chasse. */
   herds: Herd[]
+  /** Abondance de chaque cellule (1 : intacte) : les bandes épuisent ce qu'elles cueillent. */
+  abundance: Float32Array
+  /** Cellules dont l'abondance n'est pas pleine (elles repoussent) : déduit de `abundance`. */
+  depleted: number[]
+  /** Cellules que tiennent les zones des bandes (rendues quand la bande s'en va). */
+  bandCells: number[]
   inventions: InventionsState
   /** Fin de partie : victoire (on peut continuer) ou défaite (tout s'arrête). */
   outcome: Outcome | null
@@ -216,6 +251,9 @@ export function createGame(options: NewGameOptions): GameState {
     wonders: placeWonders(world, site, createRng(`merveilles:${world.seed}`)),
     achievements: {},
     herds: placeHerds(world, createRng(`faune:${world.seed}`)),
+    abundance: createAbundance(world.width * world.height),
+    depleted: [],
+    bandCells: [],
     inventions: createInventions(),
     outcome: null,
     nextId: 1,
@@ -223,8 +261,8 @@ export function createGame(options: NewGameOptions): GameState {
   }
   const cx = site.x + 0.5
   const cy = site.y + 0.5
-  state.camps.push({ id: state.nextId++, owner: PLAYER, x: cx, y: cy })
-  claimAround(state.territory, world, seatsOf(state)[0]!, TRIBE_RULES.startTerritoryRadius)
+  state.camps.push(newBand(state, cx, cy, state.tribe.population))
+  refreshBands(state)
   const owner = state.territory.owner
   ensureNearStart(state.deposits, world, owner, PLAYER, site, createRng(`depart:${world.seed}`))
   ensureWithinReach(state.deposits, world, site, createRng(`metaux:${world.seed}`))
@@ -324,31 +362,144 @@ export function cannotRecruit(state: GameState): string | null {
   return null
 }
 
-/** Campements que la tribu peut tenir : un de plus pour `peoplePerCamp` habitants. */
-export function maxCamps(state: GameState): number {
-  return 1 + Math.floor(state.tribe.population / CAMP_RULES.peoplePerCamp)
+/** Une bande du joueur, prête à marcher. */
+function newBand(state: GameState, x: number, y: number, members: number): Camp {
+  return {
+    id: state.nextId++,
+    owner: PLAYER,
+    x,
+    y,
+    members,
+    target: null,
+    path: [],
+    plannedFog: 0,
+    patience: 0,
+  }
 }
 
-/** Pourquoi cette unité ne peut pas fonder de campement là où elle est, ou null. */
-export function cannotFoundCamp(state: GameState, unit: Unit): string | null {
-  if (unit.kind !== 'eclaireur') return 'Seul un éclaireur fonde un campement'
-  const mine = state.camps.filter((c) => c.owner === PLAYER)
-  if (mine.length >= maxCamps(state))
-    return `Un campement de plus pour ${CAMP_RULES.peoplePerCamp} habitants`
-  const x = Math.floor(unit.x) + 0.5
-  const y = Math.floor(unit.y) + 0.5
-  // Un camp voisin caché sous le brouillard ne se trahit pas par un refus.
-  const near = state.camps.some(
-    (c) =>
-      (c.owner === PLAYER || knownCell(state, c.x, c.y)) &&
-      Math.hypot(c.x - x, c.y - y) < CAMP_RULES.minDistance,
-  )
-  if (near) return 'Trop près d’un autre campement'
-  if (!isPassable(state.world, x, y)) return 'Impossible de camper ici'
-  const held = state.territory.owner[Math.floor(y) * state.world.width + Math.floor(x)]!
-  if (held !== NO_OWNER && held !== PLAYER) return 'Ces terres appartiennent à un autre peuple'
-  if (state.tribe.food < CAMP_RULES.foodCost) return `Il faut ${CAMP_RULES.foodCost} rations`
+/** Bandes du joueur : ses campements qui ne sont pas (encore) des villages. */
+export function bandsOf(state: GameState): Camp[] {
+  return state.camps.filter((c) => c.owner === PLAYER && !c.village)
+}
+
+/** La bande du joueur portant cet identifiant, ou undefined. */
+function bandOf(state: GameState, campId: number): Camp | undefined {
+  return bandsOf(state).find((c) => c.id === campId)
+}
+
+/** Efficacité de cueillette d'un campement : les villages ne souffrent pas de leur taille. */
+export function campEfficiency(camp: Camp): number {
+  return camp.village ? 1 : bandEfficiency(camp.members ?? 0)
+}
+
+/** Efficacité moyenne de la tribu, pondérée par les gens de chaque campement. */
+export function tribeEfficiency(state: GameState): number {
+  let people = 0
+  let sum = 0
+  for (const c of state.camps) {
+    if (c.owner !== PLAYER) continue
+    const m = c.members ?? 0
+    people += m
+    sum += m * campEfficiency(c)
+  }
+  return people > 0 ? sum / people : 1
+}
+
+/**
+ * Accorde les gens des campements à la population de la tribu (naissances, morts, chasse,
+ * événements la changent sans savoir où) : l'écart se répartit selon la taille de chacun.
+ * Un campement vidé disparaît, sauf le dernier.
+ */
+export function syncMembers(state: GameState): void {
+  const camps = state.camps.filter((c) => c.owner === PLAYER)
+  if (camps.length === 0) return
+  const total = Math.max(0, state.tribe.population)
+  const counted = camps.reduce((n, c) => n + (c.members ?? 0), 0)
+  if (counted !== total) {
+    const base = counted > 0 ? counted : camps.length
+    const shares = camps.map((c) => (total * (counted > 0 ? (c.members ?? 0) : 1)) / base)
+    const floors = shares.map(Math.floor)
+    let rest = total - floors.reduce((a, b) => a + b, 0)
+    // Le reste va aux plus grosses parts tronquées, dans l'ordre des campements à égalité.
+    const order = shares
+      .map((v, i) => ({ i, frac: v - floors[i]! }))
+      .sort((a, b) => b.frac - a.frac || a.i - b.i)
+    for (const { i } of order) {
+      if (rest <= 0) break
+      floors[i]!++
+      rest--
+    }
+    camps.forEach((c, i) => (c.members = floors[i]!))
+  }
+  const empty = camps.filter((c) => (c.members ?? 0) <= 0)
+  if (empty.length > 0 && empty.length < camps.length)
+    state.camps = state.camps.filter((c) => !empty.includes(c))
+}
+
+/** Les zones des bandes suivent leurs bandes. */
+function refreshBands(state: GameState): void {
+  state.bandCells = refreshZones(state.territory, state.world, bandsOf(state), state.bandCells)
+}
+
+/** Pourquoi cette bande ne peut pas se scinder maintenant, ou null. */
+export function cannotSplit(state: GameState, camp: Camp | undefined): string | null {
+  if (!camp || camp.owner !== PLAYER) return 'Aucune bande choisie'
+  if (camp.village) return 'Un village ne se scinde pas'
+  if ((camp.members ?? 0) < BAND_RULES.minSplit * 2)
+    return `Il faut ${BAND_RULES.minSplit * 2} personnes dans la bande`
   return null
+}
+
+/**
+ * Meilleur site connu où migrer depuis un point : parmi des points à quelques rayons de là,
+ * celui dont les terres offrent le plus, loin des autres bandes. null si aucun n'est atteignable.
+ */
+function migrationSite(state: GameState, from: Camp): { x: number; y: number } | null {
+  const weights = state.territory.weights
+  if (!weights) return null
+  const others = bandsOf(state).filter((c) => c !== from)
+  const r = BAND_RULES.radius
+  const distance = r * BAND_RULES.migrateDistance
+  let best: { x: number; y: number } | null = null
+  let bestOffer = forageAround(state.world, weights, state.abundance, from.x, from.y, r).offered
+  for (let k = 0; k < BAND_RULES.migrateDirections; k++) {
+    const angle = (k / BAND_RULES.migrateDirections) * Math.PI * 2
+    const x = Math.floor(from.x + Math.cos(angle) * distance) + 0.5
+    const y = Math.floor(from.y + Math.sin(angle) * distance) + 0.5
+    if (!inBounds(state.world, x, y) || !knownCell(state, x, y)) continue
+    if (!knownPassable(state.world, state.fog, x, y)) continue
+    // Deux bandes sur les mêmes terres s'affament l'une l'autre.
+    const crowded = others.some(
+      (o) => Math.hypot((o.target?.x ?? o.x) - x, (o.target?.y ?? o.y) - y) < 2 * r,
+    )
+    if (crowded) continue
+    const held = state.territory.owner[cellOf(state, x, y)]
+    if (held !== NO_OWNER && held !== PLAYER) continue
+    const { offered } = forageAround(state.world, weights, state.abundance, x, y, r)
+    if (offered > bestOffer) {
+      best = { x, y }
+      bestOffer = offered
+    }
+  }
+  return best
+}
+
+/** Envoie une bande vers un point par un chemin connu ; rend false s'il n'y en a pas. */
+function orderBand(state: GameState, band: Camp, x: number, y: number): boolean {
+  const route = findPath(state.world, state.fog, band, { x, y })
+  if (!route) return false
+  band.target = { x, y }
+  band.path = route.points
+  band.plannedFog = state.fog.version
+  band.patience = route.cost * BAND_RULES.detour + BAND_RULES.detourSlack
+  return true
+}
+
+/** Abondance moyenne des terres autour d'une bande (1 : intactes). */
+export function bandAbundance(state: GameState, camp: Camp): number {
+  const weights = state.territory.weights
+  if (!weights) return 1
+  return forageAround(state.world, weights, state.abundance, camp.x, camp.y, BAND_RULES.radius).mean
 }
 
 /** Villages que la population permet de tenir. */
@@ -481,21 +632,41 @@ export function applyCommand(state: GameState, command: Command): CommandResult 
       startInvention(state.inventions, command.invention, state.tribe.materials)
       return { ok: true }
     }
-    case 'foundCamp': {
-      const unit = state.units.find((u) => u.id === command.unitId)
-      if (!unit) return { ok: false, reason: 'Aucune unité choisie' }
-      const reason = cannotFoundCamp(state, unit)
-      if (reason) return { ok: false, reason }
-      state.tribe.food -= CAMP_RULES.foodCost
-      const camp: Camp = {
-        id: state.nextId++,
-        owner: PLAYER,
-        x: Math.floor(unit.x) + 0.5,
-        y: Math.floor(unit.y) + 0.5,
+    case 'moveCamp': {
+      const band = bandOf(state, command.campId)
+      if (!band) return { ok: false, reason: 'Aucune bande choisie' }
+      const { x, y } = command
+      if (!Number.isFinite(x) || !Number.isFinite(y) || !inBounds(state.world, x, y))
+        return { ok: false, reason: 'Destination hors du monde' }
+      if (!knownPassable(state.world, state.fog, x, y))
+        return { ok: false, reason: 'Destination infranchissable' }
+      if (!orderBand(state, band, x, y)) {
+        stopMover(band as Mover)
+        return { ok: false, reason: 'Aucun chemin connu vers cette destination' }
       }
-      state.camps.push(camp)
-      claimAround(state.territory, state.world, seatOf(camp), CAMP_RULES.claimRadius)
-      updateFog(state.fog, viewersOf(state))
+      return { ok: true }
+    }
+    case 'splitBand': {
+      const band = bandOf(state, command.campId)
+      syncMembers(state)
+      const reason = cannotSplit(state, band)
+      if (reason || !band) return { ok: false, reason: reason ?? 'Aucune bande choisie' }
+      const leaving = Math.floor(band.members! / 2)
+      band.members! -= leaving
+      const side = isPassable(state.world, band.x + 1, band.y) ? 1 : 0
+      const young = newBand(state, band.x + side, band.y, leaving)
+      young.roaming = band.roaming
+      state.camps.push(young)
+      // La nouvelle bande part d'elle-même vers d'autres terres, si elle en connaît.
+      const site = migrationSite(state, young)
+      if (site) orderBand(state, young, site.x, site.y)
+      refreshBands(state)
+      return { ok: true }
+    }
+    case 'setRoaming': {
+      const band = bandOf(state, command.campId)
+      if (!band) return { ok: false, reason: 'Aucune bande choisie' }
+      band.roaming = command.roaming
       return { ok: true }
     }
     case 'gift': {
@@ -523,7 +694,17 @@ export function applyCommand(state: GameState, command: Command): CommandResult 
       const reason = cannotBuildVillage(state, command.campId)
       if (reason) return { ok: false, reason }
       state.tribe.food -= VILLAGE_RULES.foodCost
-      villageSite(state, command.campId)!.village = true
+      const site = villageSite(state, command.campId)!
+      // La bande s'installe : elle ne marche plus, et sa zone devient la terre du village.
+      site.village = true
+      site.roaming = false
+      stopMover(site as Mover)
+      const { width } = state.world
+      const r = BAND_RULES.radius + 1
+      state.bandCells = state.bandCells.filter(
+        (i) => Math.hypot((i % width) + 0.5 - site.x, Math.floor(i / width) + 0.5 - site.y) > r,
+      )
+      refreshBands(state)
       return { ok: true }
     }
     case 'buildCity': {
@@ -603,6 +784,7 @@ export function advance(state: GameState): void {
     const home = state.territory.owner[cellOf(state, unit.x, unit.y)] === PLAYER
     if (!moveUnit(unit, state.world, home ? pace * roads : pace)) replan(state, unit)
   }
+  if (marchBands(state, pace)) refreshBands(state)
   for (const unit of state.units) if (unit.explore && !unit.target) exploreFrom(state, unit)
   for (const herd of state.herds) wander(herd, state.world, state.faunaRng)
   state.clock.step++
@@ -620,19 +802,58 @@ export function step(state: GameState): void {
   }
 }
 
+/** Les bandes en route avancent ; rend true si l'une a bougé (sa zone doit suivre). */
+function marchBands(state: GameState, pace: number): boolean {
+  let moved = false
+  for (const band of bandsOf(state)) {
+    if (!band.target) continue
+    const mover = band as Mover
+    if (!moveAlong(mover, state.world, BAND_RULES.speed * pace)) replanBand(state, band)
+    moved = true
+  }
+  return moved
+}
+
+/** Comme `replan`, pour une bande : elle s'arrête si plus aucun chemin connu n'y mène. */
+function replanBand(state: GameState, band: Camp): void {
+  const route =
+    band.target &&
+    findPath(state.world, state.fog, band, band.target, Math.max(0, band.patience ?? 0))
+  if (!route) {
+    state.events.push({ type: 'bandGaveUp', campId: band.id })
+    stopMover(band as Mover)
+    return
+  }
+  band.path = route.points
+  band.plannedFog = state.fog.version
+}
+
+/** Les bandes qui migrent seules partent quand leurs terres s'épuisent. */
+function roam(state: GameState): void {
+  for (const band of bandsOf(state)) {
+    if (!band.roaming || band.target) continue
+    if (bandAbundance(state, band) >= BAND_RULES.exhausted) continue
+    const site = migrationSite(state, band)
+    if (site) orderBand(state, band, site.x, site.y)
+  }
+}
+
 function month(state: GameState): void {
   state.clock.tick++
   hunt(state)
   // Le joueur et les peuples poussent chacun avec leur aléa : tant qu'ils ne se touchent pas,
-  // la présence des voisins ne change rien au territoire du joueur.
+  // la présence des voisins ne change rien au territoire du joueur. Seuls les villages du
+  // joueur étendent ses terres : une bande n'a que sa zone, qui la suit.
   const seats = seatsOf(state)
-  const mine = seats.filter((s) => s.owner === PLAYER)
+  const mine = seats.filter((s, i) => s.owner === PLAYER && state.camps[i]!.village)
   const theirs = seats.filter((s) => s.owner !== PLAYER)
   growTerritory(state.territory, state.world, mine, state.rng, CAMP_RULES.growthPerTick)
   growTerritory(state.territory, state.world, theirs, state.peopleRng, CAMP_RULES.growthPerTick)
   harvest(state)
   for (const people of state.peoples) livePeople(state, people)
   fortune(state)
+  syncMembers(state)
+  roam(state)
   const invented = tickInventions(
     state.inventions,
     state.tribe.population,
@@ -654,6 +875,11 @@ function see(state: GameState): void {
     if (!unit.target || unit.plannedFog === state.fog.version) continue
     unit.plannedFog = state.fog.version
     if (pathBlocked(state.world, state.fog, unit, unit.path)) replan(state, unit)
+  }
+  for (const band of bandsOf(state)) {
+    if (!band.target || band.plannedFog === state.fog.version) continue
+    band.plannedFog = state.fog.version
+    if (pathBlocked(state.world, state.fog, band, band.path ?? [])) replanBand(state, band)
   }
 }
 
@@ -753,7 +979,11 @@ function harvest(state: GameState): void {
   const season = seasonalYield(month, amplitude)
   if (seasonStarting(month) === 'hiver')
     state.events.push({ type: 'winter', yieldFactor: seasonalYield(month, amplitude) })
-  const available = territoryFood(state.territory.playerWeight, depositFood) * season
+  // Les terres cueillies sont celles du joueur, épuisées ou non : une bande qui reste
+  // sur place voit sa cueillette fondre, et doit migrer.
+  const cells = playerCells(state.territory)
+  const forage = forageOf(cells, state.territory.weights, state.abundance) * BAND_RULES.yieldPerCell
+  const available = (forage + depositFood) * season
   const basket = inventionStat(state.inventions, 'panier')
   const inv = state.inventions
   const bonus = {
@@ -764,6 +994,7 @@ function harvest(state: GameState): void {
     storageMonths: storageBonus(state),
     growth: inventionMean(inv, 'feu') / 100 + wonderEffect(state, 'growth'),
     famineShield: -inventionMean(inv, 'peaux') / 100,
+    efficiency: tribeEfficiency(state),
   }
   const hunters = state.units.filter((u) => u.kind === 'chasseur').length
   // Les moissons rentrent avant le repas du mois ; la réserve les borne comme le reste.
@@ -772,6 +1003,10 @@ function harvest(state: GameState): void {
   tribe.lastCrops = crops
   if (tickTribe(tribe, available, bonus, hunters) === 'famineStarts')
     state.events.push({ type: 'famine' })
+  // Part de ce qu'offraient les terres qui a été cueillie : c'est elle qui les épuise.
+  const gathered = tribe.lastProduction / (1 + bonus.gather)
+  const share = available > 0 ? gathered / available : 0
+  exploit(cells, state.abundance, state.depleted, share, season)
   // La réserve se gâte, surtout l'été ; la conservation (fumage) en sauve une part.
   const spoiled = tribe.food * spoilage(month, TRIBE_RULES.storageMonths, bonus.storageMonths)
   tribe.food -= spoiled

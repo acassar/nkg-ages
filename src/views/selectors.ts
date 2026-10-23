@@ -30,8 +30,12 @@ import {
   currentScore,
   goalSteps,
   tallyOf,
-  cannotFoundCamp,
-  maxCamps,
+  BAND_RULES,
+  bandAbundance,
+  bandsOf,
+  campEfficiency,
+  cannotSplit,
+  tribeEfficiency,
   maxHunters,
   maxScouts,
   cannotRecruitScout,
@@ -65,6 +69,7 @@ import {
 import { alertsOf } from './alerts'
 import {
   BIOME_IDS,
+  type BandView,
   type CampView,
   type DepositView,
   type InventionView,
@@ -100,6 +105,30 @@ export function formatDate(year: number, month: number): string {
   const label = MONTHS[month] ?? ''
   const fmt = (n: number) => n.toLocaleString('fr-FR').replace(/\s/g, ' ')
   return year < 0 ? `${label} ${fmt(-year)} av. J.-C.` : `${label} ${fmt(year)}`
+}
+
+/** L'état des terres d'une bande, en mots. */
+export function landOf(abundance: number): BandView['land'] {
+  if (abundance < BAND_RULES.exhausted) return 'épuisées'
+  if (abundance < 0.8) return 'en baisse'
+  return 'abondantes'
+}
+
+/** Vue d'une bande nomade du joueur, ou null pour un village ou un camp voisin. */
+function bandView(state: GameState, camp: Camp): BandView | null {
+  if (camp.owner !== PLAYER || camp.village) return null
+  const abundance = bandAbundance(state, camp)
+  return {
+    efficiency: campEfficiency(camp),
+    comfortSize: BAND_RULES.comfortSize,
+    abundance,
+    land: landOf(abundance),
+    target: camp.target ? { ...camp.target } : null,
+    path: (camp.path ?? []).map((p) => ({ x: p.x, y: p.y })),
+    roaming: camp.roaming === true,
+    splitBlocked: cannotSplit(state, camp),
+    radius: BAND_RULES.radius,
+  }
 }
 
 export function buildWorldSnapshot(state: GameState): WorldSnapshot {
@@ -142,7 +171,6 @@ export function buildGameView(state: GameState, full = false): GameView {
       y: u.y,
       target: u.target ? { ...u.target } : null,
       path: u.path.map((p) => ({ x: p.x, y: p.y })),
-      foundCamp: u.kind === 'eclaireur' ? { blocked: cannotFoundCamp(state, u) } : null,
       exploring: u.explore === true,
     })),
     camps: state.camps
@@ -156,6 +184,8 @@ export function buildGameView(state: GameState, full = false): GameView {
         city: c.city === true,
         people: state.peoples.find((p) => p.owner === c.owner)?.name ?? null,
         upgrade: upgradeOf(state, c),
+        members: c.owner === PLAYER ? (c.members ?? 0) : null,
+        band: bandView(state, c),
       })),
     fog: patchOf(state.fog.cells, state.world.width, full ? whole : state.fog.dirty),
     territory: territoryPatch(
@@ -251,6 +281,8 @@ function noticeOf(state: GameState, event: GameEvent): string {
       const name = unit ? UNIT_RULES[unit.kind].name : 'Une unité'
       return `${name} renonce : aucun chemin connu assez court ne mène à sa destination.`
     }
+    case 'bandGaveUp':
+      return 'La bande s’arrête : aucun chemin connu assez court ne mène à sa destination.'
     case 'explored': {
       const unit = state.units.find((u) => u.id === event.unitId)
       const name = unit ? UNIT_RULES[unit.kind].name : 'L’éclaireur'
@@ -346,7 +378,8 @@ function tribeView(state: GameState): TribeView {
     scoutBlocked: cannotRecruitScout(state),
     huntersResting: huntersResting(state),
     camps: state.camps.filter((c) => c.owner === PLAYER).length,
-    maxCamps: maxCamps(state),
+    bands: bandsOf(state).length,
+    efficiency: tribeEfficiency(state),
     villages: villageCount(state),
     maxVillages: maxVillages(state),
     villageCost: VILLAGE_RULES.foodCost,
@@ -500,8 +533,10 @@ export function hintOf(state: GameState): string | null {
   const { ranks, current } = state.inventions
   if (Object.keys(ranks).length === 0 && !current)
     return 'Lancez une invention dans le panneau des inventions : le panier nourrit mieux, la lance rend la chasse plus sûre.'
+  if (camps.length < 2 && bandAbundance(state, home!) < 0.8)
+    return 'La bande épuise ses terres : choisissez-la (clic sur le camp) puis clic droit plus loin pour la déplacer, ou laissez-la « migrer seule ».'
   if (camps.length < 2)
-    return 'Menez l’éclaireur sur une bonne terre, loin du camp, puis « Fonder un campement » (F) : le territoire s’étend.'
+    return `Une bande cueille au mieux jusqu’à ${BAND_RULES.comfortSize} personnes : au-delà, scindez-la (camp choisi, « Scinder ») pour exploiter deux terres.`
   if (villageCount(state) === 0)
     return 'Inventez l’agriculture (après le panier et la taille du silex), puis faites d’un campement un village (« + » des villages).'
   return null

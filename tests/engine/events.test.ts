@@ -107,7 +107,7 @@ describe('événements rares : effets', () => {
     g.clock.tick = 5 * 12 + 9
     // Rien à récolter ni à chasser : la réserve reste vide après le repas du mois.
     g.tribe.food = 0
-    g.territory.playerWeight = 0
+    g.abundance.fill(0)
     g.deposits = []
     g.units = []
     forced(g, 'tempete')
