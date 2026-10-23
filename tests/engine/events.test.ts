@@ -102,6 +102,19 @@ describe('événements rares : effets', () => {
     expect(g.tribe.food).toBeGreaterThan(before - g.tribe.population)
   })
 
+  it('une tempête sur une réserve vide passe inaperçue', () => {
+    const g = createGame(options)
+    g.clock.tick = 5 * 12 + 9
+    // Rien à récolter ni à chasser : la réserve reste vide après le repas du mois.
+    g.tribe.food = 0
+    g.territory.playerWeight = 0
+    g.deposits = []
+    g.units = []
+    forced(g, 'tempete')
+    step(g)
+    expect(g.events.some((e) => e.type === 'rare')).toBe(false)
+  })
+
   it('maladie : la tribu perd des siens, jamais tous', () => {
     const g = createGame(options)
     g.clock.tick = 5 * 12

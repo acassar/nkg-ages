@@ -14,6 +14,8 @@ export interface TribeState {
   lastConsumption: number
   /** Rations gâtées dans la réserve au dernier mois. */
   lastSpoiled: number
+  /** Rations moissonnées dans les champs des villages au dernier mois. */
+  lastCrops: number
   /** Matériaux entassés (silex…), sans limite pour l'instant. */
   materials: Partial<Record<ResourceKind, number>>
 }
@@ -27,6 +29,7 @@ export function createTribe(rules: TribeRules = TRIBE_RULES): TribeState {
     lastProduction: 0,
     lastConsumption: 0,
     lastSpoiled: 0,
+    lastCrops: 0,
     materials: {},
   }
 }

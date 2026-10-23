@@ -45,6 +45,10 @@ export {
   maxHunters,
   huntersResting,
   climateOf,
+  cannotBuildVillage,
+  maxVillages,
+  villageCount,
+  cropsOf,
   START_CHOICES,
 } from './game'
 export type { GameState, GameEvent, NewGameOptions, Camp, Outcome } from './game'
@@ -56,5 +60,6 @@ export type { SeasonKind } from './content/seasons'
 export { seasonOf, seasonalYield, climateAmplitude, spoilage } from './climate/seasons'
 export { saveGame, loadGame, SAVE_VERSION } from './save/save'
 export type { SaveData } from './save/save'
+export { VILLAGE_RULES, FERTILITY } from './content/villages'
 export { EVENT_KINDS, EVENT_RULES, EVENT_RULES_GLOBAL } from './content/events'
 export type { EventKind } from './content/events'

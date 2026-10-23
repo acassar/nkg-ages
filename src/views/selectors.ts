@@ -1,6 +1,10 @@
 import {
   Biome,
   climateOf,
+  cannotBuildVillage,
+  maxVillages,
+  villageCount,
+  VILLAGE_RULES,
   dateOfTick,
   seasonOf,
   seasonalYield,
@@ -119,7 +123,13 @@ export function buildGameView(state: GameState, full = false): GameView {
       path: u.path.map((p) => ({ x: p.x, y: p.y })),
       foundCamp: u.kind === 'eclaireur' ? { blocked: cannotFoundCamp(state, u) } : null,
     })),
-    camps: state.camps.map((c) => ({ id: c.id, x: c.x, y: c.y, mine: c.owner === PLAYER })),
+    camps: state.camps.map((c) => ({
+      id: c.id,
+      x: c.x,
+      y: c.y,
+      mine: c.owner === PLAYER,
+      village: c.village === true,
+    })),
     fog: patchOf(state.fog.cells, state.world.width, full ? whole : state.fog.dirty),
     territory: patchOf(
       state.territory.owner,
@@ -239,7 +249,9 @@ function tribeView(state: GameState): TribeView {
     food: Math.floor(tribe.food),
     foodCapacity: Math.floor(foodCapacity(state)),
     foodBalance:
-      Math.round((tribe.lastProduction - tribe.lastConsumption - tribe.lastSpoiled) * 10) / 10,
+      Math.round(
+        (tribe.lastProduction + tribe.lastCrops - tribe.lastConsumption - tribe.lastSpoiled) * 10,
+      ) / 10,
     spoiled: Math.round(tribe.lastSpoiled * 10) / 10,
     starving: tribe.starvingMonths > 0,
     materials: RESOURCE_KINDS.filter((k) => tribe.materials[k] !== undefined).map((k) => ({
@@ -254,6 +266,11 @@ function tribeView(state: GameState): TribeView {
     huntersResting: huntersResting(state),
     camps: state.camps.filter((c) => c.owner === PLAYER).length,
     maxCamps: maxCamps(state),
+    villages: villageCount(state),
+    maxVillages: maxVillages(state),
+    villageCost: VILLAGE_RULES.foodCost,
+    villageBlocked: cannotBuildVillage(state),
+    crops: Math.round(tribe.lastCrops),
   }
 }
 

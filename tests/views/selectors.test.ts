@@ -141,6 +141,22 @@ describe('vues de partie', () => {
     expect(view.tribe).toMatchObject({ foodBalance: 6.5, spoiled: 1.5 })
   })
 
+  it('montre les villages, ce qui empêche d’en bâtir et la moisson dans le bilan', () => {
+    const g = game()
+    let view = buildGameView(g)
+    expect(view.tribe).toMatchObject({ villages: 0, maxVillages: 0, crops: 0 })
+    expect(view.tribe.villageBlocked).toMatch(/Agriculture/)
+    expect(view.camps[0]!.village).toBe(false)
+    g.camps[0]!.village = true
+    g.tribe.lastProduction = 10
+    g.tribe.lastCrops = 30
+    g.tribe.lastConsumption = 12
+    g.tribe.lastSpoiled = 0
+    view = buildGameView(g)
+    expect(view.camps[0]!.village).toBe(true)
+    expect(view.tribe).toMatchObject({ villages: 1, crops: 30, foodBalance: 28 })
+  })
+
   it('montre les chasseurs et ce qui empêche d’en former, et prévient de la viande perdue', () => {
     const g = game()
     g.events.push({ type: 'meatLost', amount: 7 })
