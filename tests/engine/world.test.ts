@@ -3,7 +3,7 @@ import fc from 'fast-check'
 import { Biome, BIOME_COUNT, isWater } from '@/engine/content/biomes'
 import { createRng } from '@/engine/core/random'
 import { classify, generateWorld } from '@/engine/world/generate'
-import { findStarts, rateStart, START_RADIUS } from '@/engine/world/starts'
+import { findStarts, MIN_ROOM, rateStart, roomAround, START_RADIUS } from '@/engine/world/starts'
 
 const small = (seed: string) => generateWorld({ seed, width: 160, height: 80 })
 
@@ -89,6 +89,8 @@ describe('sites de départ', () => {
         expect(starts.length).toBeGreaterThan(0)
         for (const s of starts) {
           expect(rateStart(w, s.x, s.y)).not.toBeNull()
+          // Assez de terres reliées pour qu'une bande nomade puisse migrer.
+          expect(roomAround(w, s.x, s.y)).toBeGreaterThanOrEqual(MIN_ROOM)
           let water = false
           for (let dy = -START_RADIUS; dy <= START_RADIUS; dy++)
             for (let dx = -START_RADIUS; dx <= START_RADIUS; dx++)
@@ -109,6 +111,21 @@ describe('sites de départ', () => {
     for (const a of starts)
       for (const b of starts)
         if (a !== b) expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThanOrEqual(40)
+  })
+
+  it('refuse une île trop petite pour qu’une bande y migre', () => {
+    const w = small('île')
+    const c = { x: Math.floor(w.width / 2), y: Math.floor(w.height / 2) }
+    w.biome.fill(Biome.Ocean)
+    // Une île de plaine de rayon 12 : un site près de la côte est viable de près, mais
+    // l'île est trop petite pour migrer.
+    for (let y = 0; y < w.height; y++)
+      for (let x = 0; x < w.width; x++)
+        if ((x - c.x) ** 2 + (y - c.y) ** 2 <= 144) w.biome[y * w.width + x] = Biome.Plain
+    const site = { x: c.x + 6, y: c.y }
+    expect(rateStart(w, site.x, site.y)).not.toBeNull()
+    expect(roomAround(w, site.x, site.y)).toBeLessThan(MIN_ROOM)
+    expect(findStarts(w, createRng('île'), 3)).toEqual([])
   })
 
   it('refuse un site en pleine mer', () => {

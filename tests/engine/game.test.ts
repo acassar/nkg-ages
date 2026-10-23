@@ -681,7 +681,7 @@ describe('scénarios', () => {
     for (let i = 0; i < 500; i++) step(g)
     const perTick = (performance.now() - t0) / 500
     expect(perTick).toBeLessThan(10)
-  })
+  }, 30_000) // Création du monde complet et 500 pas : sous couverture en CI, plus que les 5 s par défaut.
 })
 
 /** Première cellule de terre qui satisfait `ok`, en partant du camp. */
