@@ -57,6 +57,7 @@ import {
   type Rect,
   unionRect,
 } from '@/engine'
+import { alertsOf } from './alerts'
 import {
   BIOME_IDS,
   type DepositView,
@@ -185,6 +186,7 @@ export function buildGameView(state: GameState, full = false): GameView {
       done: state.achievements[a.id] !== undefined,
     })),
     hint: hintOf(state),
+    alerts: alertsOf(state),
     goal: goalSteps(FIRST_ERA.goal, tallyOf(state)).map((s) => ({
       label: GOAL_LABELS[s.kind],
       have: s.have,

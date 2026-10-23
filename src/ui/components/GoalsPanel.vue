@@ -33,9 +33,6 @@ const list = computed(() =>
 
 <style scoped>
 .goals {
-  position: absolute;
-  top: 84px;
-  right: 12px;
   width: 200px;
   padding: 6px 10px 8px;
   border-radius: 4px;

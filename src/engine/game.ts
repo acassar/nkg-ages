@@ -1,7 +1,7 @@
 import type { Command, CommandResult } from './commands'
 import { FIRST_ERA } from './content/eras'
 import { goalReached, scoreOf, type Tally } from './score/score'
-import { createClock, isSpeed, type ClockState } from './core/clock'
+import { createClock, isSpeed, STEPS_PER_MONTH, type ClockState } from './core/clock'
 import { createRng, type Rng } from './core/random'
 import { createFog, updateFog, Visibility, type FogState } from './fog/fog'
 import { BIOMES, type BiomeId } from './content/biomes'
@@ -535,9 +535,12 @@ function orderUnit(state: GameState, u: Unit, x: number, y: number, auto: boolea
 }
 
 /** Joue un tick (un mois de jeu). */
-export function step(state: GameState): void {
+/**
+ * Joue un pas (une semaine) : les unités et les bêtes bougent, le brouillard suit.
+ * Au dernier pas du mois, l'économie tourne : chasse, territoire, récolte, voisins, inventions.
+ */
+export function advance(state: GameState): void {
   if (state.outcome?.type === 'defeat') return
-  state.clock.tick++
   const pace = 1 + inventionMean(state.inventions, 'portage') / 100
   const roads = 1 + inventionMean(state.inventions, 'routes') / 100
   for (const unit of state.units) {
@@ -545,6 +548,24 @@ export function step(state: GameState): void {
     const home = state.territory.owner[cellOf(state, unit.x, unit.y)] === PLAYER
     if (!moveUnit(unit, state.world, home ? pace * roads : pace)) replan(state, unit)
   }
+  for (const herd of state.herds) wander(herd, state.world, state.faunaRng)
+  state.clock.step++
+  if (state.clock.step >= STEPS_PER_MONTH) {
+    state.clock.step = 0
+    month(state)
+  } else see(state)
+}
+
+/** Joue un mois entier (jusqu'au prochain changement de mois). */
+export function step(state: GameState): void {
+  for (let i = 0; i < STEPS_PER_MONTH; i++) {
+    advance(state)
+    if (state.clock.step === 0) return
+  }
+}
+
+function month(state: GameState): void {
+  state.clock.tick++
   hunt(state)
   // Le joueur et les peuples poussent chacun avec leur aléa : tant qu'ils ne se touchent pas,
   // la présence des voisins ne change rien au territoire du joueur.
@@ -564,16 +585,20 @@ export function step(state: GameState): void {
   )
   if (invented)
     state.events.push({ type: 'invented', invention: invented.kind, rank: invented.rank })
-  updateFog(state.fog, viewersOf(state))
+  see(state)
   meetPeoples(state)
-  // Le terrain découvert peut couper le chemin prévu : on le recalcule.
+  reward(state)
+  judge(state)
+}
+
+/** Met le brouillard à jour ; le terrain découvert peut couper un chemin prévu. */
+function see(state: GameState): void {
+  updateFog(state.fog, viewersOf(state))
   for (const unit of state.units) {
     if (!unit.target || unit.plannedFog === state.fog.version) continue
     unit.plannedFog = state.fog.version
     if (pathBlocked(state.world, state.fog, unit, unit.path)) replan(state, unit)
   }
-  reward(state)
-  judge(state)
 }
 
 /**
@@ -1043,7 +1068,6 @@ export function depositHeld(state: GameState, deposit: Deposit): boolean {
  */
 function hunt(state: GameState): void {
   const { world, rng, faunaRng, tribe } = state
-  for (const herd of state.herds) wander(herd, world, faunaRng)
   for (const unit of [...state.units]) {
     if (unit.kind !== 'chasseur') continue
     if (huntersResting(state)) continue

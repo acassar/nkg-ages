@@ -152,7 +152,8 @@ export function loadGame(data: SaveData): GameState {
   const size = state.world.width * state.world.height
   if (data.world !== undefined && data.world !== worldPrint(state))
     throw new Error('Sauvegarde d’un monde que cette version du jeu ne génère plus')
-  state.clock = copy(data.clock)
+  // Une sauvegarde d'avant les pas reprend au début du mois.
+  state.clock = { ...copy(data.clock), step: (data.clock as Partial<ClockState>).step ?? 0 }
   // L'état d'un générateur est sa graine : le recréer depuis cet état reprend la même suite.
   state.rng = createRng(data.rng)
   state.faunaRng = createRng(data.faunaRng)

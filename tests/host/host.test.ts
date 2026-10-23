@@ -30,16 +30,31 @@ describe('hôte de partie', () => {
 
   it.each([
     [1, 1],
-    [3, 8],
-    [5, 72],
-  ] as const)('joue environ le bon nombre de ticks en 1 s à la vitesse %i', (speed, expected) => {
+    [3, 4],
+    [5, 36],
+  ] as const)('joue environ le bon nombre de mois en 4 s à la vitesse %i', (speed, expected) => {
     const { scheduler, host } = setup()
     host.send({ type: 'setSpeed', speed })
     host.send({ type: 'setPaused', paused: false })
-    scheduler.advance(1000)
-    const ticks = host.game!.clock.tick
-    expect(ticks).toBeGreaterThanOrEqual(expected - 1)
-    expect(ticks).toBeLessThanOrEqual(expected)
+    scheduler.advance(4000)
+    const months = host.game!.clock.tick
+    expect(months).toBeGreaterThanOrEqual(expected - 1)
+    expect(months).toBeLessThanOrEqual(expected)
+  })
+
+  it('fait bouger les unités entre deux mois', () => {
+    const { scheduler, host, views } = setup()
+    const scout = host.game!.units.find((u) => u.kind === 'eclaireur')!
+    const from = { x: scout.x, y: scout.y }
+    host.send({ type: 'moveUnits', unitIds: [scout.id], x: from.x + 6, y: from.y })
+    host.send({ type: 'setPaused', paused: false })
+    const count = views.length
+    // Un peu plus d'une seconde à la vitesse 1 : pas encore un mois, mais l'éclaireur avance.
+    scheduler.advance(1100)
+    expect(host.game!.clock.tick).toBe(0)
+    expect(views.length).toBeGreaterThan(count)
+    const moved = host.game!.units.find((u) => u.id === scout.id)!
+    expect(Math.hypot(moved.x - from.x, moved.y - from.y)).toBeGreaterThan(0)
   })
 
   it('publie une vue après chaque commande acceptée et chaque avance', () => {
@@ -48,7 +63,7 @@ describe('hôte de partie', () => {
     expect(views.at(-1)?.speed).toBe(2)
     host.send({ type: 'togglePause' })
     const count = views.length
-    scheduler.advance(1000)
+    scheduler.advance(4000)
     expect(views.length).toBeGreaterThan(count)
     expect(views.at(-1)?.tick).toBeGreaterThan(0)
   })

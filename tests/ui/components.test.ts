@@ -6,6 +6,7 @@ import { createInMemoryClient } from '@/client/inMemoryClient'
 import { createSaveSlot, memoryStorage, type SaveSlot } from '@/client/saveSlot'
 import { ManualScheduler } from '@/host/scheduler'
 import StartScreen from '@/ui/components/StartScreen.vue'
+import AlertsPanel from '@/ui/components/AlertsPanel.vue'
 import GameScreen from '@/ui/components/GameScreen.vue'
 import GoalsPanel from '@/ui/components/GoalsPanel.vue'
 import HintBox from '@/ui/components/HintBox.vue'
@@ -66,6 +67,27 @@ describe('conseils et succès', () => {
     expect(hint.find('[data-testid=hint]').exists()).toBe(false)
     const goals = mount(GoalsPanel)
     expect(goals.find('[data-testid=achievements]').text()).toBe('0')
+  })
+})
+
+describe('alertes', () => {
+  it('liste les alertes, se replie, et une alerte située centre la carte', async () => {
+    const game = useGameStore()
+    await game.newGame({ seed: 'alertes', randomStart: false, width: 128, height: 64 })
+    const wrapper = mount(AlertsPanel)
+    const count = game.view!.alerts.length
+    expect(count).toBeGreaterThan(0)
+    expect(wrapper.find('[data-testid=alerts-count]').text()).toBe(String(count))
+    expect(wrapper.find('[data-testid=alert-recherche]').text()).toBe('Aucune invention en cours')
+
+    const situated = game.view!.alerts.find((a) => a.target)!
+    await wrapper.find(`[data-testid=alert-${situated.id}]`).trigger('click')
+    expect(game.focus).toMatchObject(situated.target!)
+
+    await wrapper.find('[data-testid=alerts-toggle]').trigger('click')
+    expect(wrapper.find('[data-testid=alert-recherche]').exists()).toBe(false)
+    // Replié, le compte reste visible.
+    expect(wrapper.find('[data-testid=alerts-count]').text()).toBe(String(count))
   })
 })
 
@@ -327,7 +349,7 @@ describe('sauvegarde automatique', () => {
     const game = useGameStore()
     await game.newGame({ seed: 'reprise', randomStart: false, width: 128, height: 64 })
     await game.setPaused(false)
-    scheduler.advance(3000)
+    scheduler.advance(8000)
     const tick = game.view!.tick
     const dateLabel = game.view!.dateLabel
     expect(tick).toBeGreaterThan(0)

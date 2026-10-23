@@ -43,6 +43,8 @@ export const useGameStore = defineStore('game', () => {
   const error = ref<string | null>(null)
   const loading = ref(false)
   const selected = ref<Set<number>>(new Set())
+  /** Lieu que la carte doit montrer (clic sur une alerte) ; `n` change à chaque demande. */
+  const focus = shallowRef<{ x: number; y: number; n: number } | null>(null)
   const viewListeners = new Set<ViewListener>()
   const slot = slotFactory()
   /** Partie à reprendre, montrée sur l'écran d'accueil. */
@@ -206,6 +208,11 @@ export const useGameStore = defineStore('game', () => {
     return send({ type: 'moveUnits', unitIds, x, y })
   }
 
+  /** Demande à la carte de se centrer sur ce lieu (affichage seulement). */
+  function focusOn(x: number, y: number) {
+    focus.value = { x, y, n: (focus.value?.n ?? 0) + 1 }
+  }
+
   /** Quitte vers l'accueil ; la partie est rangée d'abord pour pouvoir la reprendre. */
   function quit() {
     disconnect(true)
@@ -223,6 +230,7 @@ export const useGameStore = defineStore('game', () => {
     error,
     loading,
     selected,
+    focus,
     savedGame,
     newGame,
     resume,
@@ -242,6 +250,7 @@ export const useGameStore = defineStore('game', () => {
     trade,
     foundCamp,
     moveSelectedTo,
+    focusOn,
     quit,
     dismissError,
   }

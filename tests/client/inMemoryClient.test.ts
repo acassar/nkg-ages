@@ -19,8 +19,8 @@ describe('client de jeu en mémoire', () => {
     expect(view.units).toHaveLength(3)
     expect(await client.send({ type: 'setSpeed', speed: 5 })).toEqual({ ok: true })
     await client.send({ type: 'togglePause' })
-    scheduler.advance(500)
-    expect(views.at(-1)?.tick).toBeGreaterThan(20)
+    scheduler.advance(4000)
+    expect(views.at(-1)?.tick).toBeGreaterThan(30)
     stop()
     const count = views.length
     scheduler.advance(500)

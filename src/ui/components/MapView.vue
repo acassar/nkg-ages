@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   centerOn,
   minZoom,
@@ -175,6 +175,16 @@ function onWheel(event: WheelEvent) {
   camera = zoomAt(camera, worldSize(), p.x, p.y, Math.exp(-event.deltaY * 0.0015))
   dirty = true
 }
+
+// Une alerte cliquée centre la carte sur son lieu, sans changer le zoom.
+watch(
+  () => game.focus,
+  (target) => {
+    if (!target) return
+    camera = centerOn(camera, worldSize(), target.x, target.y)
+    dirty = true
+  },
+)
 
 onMounted(() => {
   try {

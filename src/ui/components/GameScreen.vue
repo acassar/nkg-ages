@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted } from 'vue'
 import { useGameStore } from '../stores/game'
+import AlertsPanel from './AlertsPanel.vue'
 import GoalsPanel from './GoalsPanel.vue'
 import HintBox from './HintBox.vue'
 import InventionsPanel from './InventionsPanel.vue'
@@ -28,8 +29,11 @@ defineProps<{ benchmark?: boolean }>()
     <TopBar />
     <InventionsPanel />
     <SelectionBar />
-    <GoalsPanel />
-    <PeoplesPanel />
+    <div class="side">
+      <GoalsPanel />
+      <AlertsPanel />
+      <PeoplesPanel />
+    </div>
     <HintBox />
     <p v-if="game.error" class="notice parchment" role="alert" data-testid="notice">
       {{ game.error }}
@@ -49,6 +53,22 @@ defineProps<{ benchmark?: boolean }>()
   position: relative;
   height: 100%;
   overflow: hidden;
+}
+/* Colonne de droite : objectif, alertes, peuples, empilés sans se chevaucher. */
+.side {
+  position: absolute;
+  top: 84px;
+  right: 12px;
+  bottom: 110px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  pointer-events: none;
+}
+.side > * {
+  pointer-events: auto;
+  flex-shrink: 0;
 }
 .notice {
   position: absolute;

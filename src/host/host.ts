@@ -4,8 +4,8 @@ import {
   createGame,
   loadGame,
   saveGame,
-  step,
-  ticksDue,
+  advance,
+  stepsDue,
   type Command,
   type CommandResult,
   type GameState,
@@ -88,11 +88,11 @@ export class GameHost {
     const state = this.state
     if (!state) return
     const now = this.scheduler.now()
-    const due = ticksDue(state.clock, now - this.last, this.carry)
+    const due = stepsDue(state.clock, now - this.last, this.carry)
     this.last = now
     this.carry = due.carry
-    for (let i = 0; i < due.ticks; i++) step(state)
-    if (due.ticks > 0) this.publish()
+    for (let i = 0; i < due.steps; i++) advance(state)
+    if (due.steps > 0) this.publish()
   }
 
   private publish(): void {
