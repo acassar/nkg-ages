@@ -87,7 +87,7 @@
       "features": [
         {
           "title": "Agriculture et villages",
-          "status": "todo"
+          "status": "done"
         },
         {
           "title": "Saisons, climat, stockage",
@@ -181,6 +181,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-23",
+      "text": "J2 : agriculture (invention de rang E à S), villages bâtis sur les campements : portée, greniers et champs moissonnés d'août à octobre selon la fertilité"
+    },
     {
       "date": "2026-10-23",
       "text": "J2 : événements rares de rang E à S (abondance, tempête, maladie, nouveaux venus, migration, filon, étoile filante) ; la sauvegarde vérifie l'empreinte du monde"

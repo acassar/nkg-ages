@@ -17,9 +17,15 @@ import {
 } from './territory/territory'
 import { findPath, knownPassable, pathBlocked } from './units/path'
 import { CAMP_RULES } from './content/camps'
+import { FERTILITY, VILLAGE_RULES } from './content/villages'
 import { RIVER_RULES } from './content/rivers'
 import { ANIMAL_RULES, HUNT_RULES, type AnimalKind } from './content/fauna'
-import { INVENTION_KINDS, INVENTION_WORK, type InventionKind } from './content/inventions'
+import {
+  INVENTION_KINDS,
+  INVENTION_RULES,
+  INVENTION_WORK,
+  type InventionKind,
+} from './content/inventions'
 import type { Rank } from './content/rarity'
 import { RESOURCE_RULES, type ResourceKind } from './content/resources'
 import {
@@ -71,6 +77,8 @@ export interface Camp {
   owner: number
   x: number
   y: number
+  /** Devenu village : il porte plus loin, stocke plus et cultive ses champs. */
+  village?: boolean
 }
 
 /** Ce qui est arrivé pendant les ticks, pour prévenir le joueur ; vidé à chaque envoi. */
@@ -235,6 +243,38 @@ export function cannotFoundCamp(state: GameState, unit: Unit): string | null {
   return null
 }
 
+/** Villages que la population permet de tenir. */
+export function maxVillages(state: GameState): number {
+  return Math.floor(state.tribe.population / VILLAGE_RULES.peoplePerVillage)
+}
+
+/** Villages du joueur. */
+export function villageCount(state: GameState): number {
+  return state.camps.filter((c) => c.owner === PLAYER && c.village).length
+}
+
+/** Pourquoi la tribu ne peut pas bâtir de village (sur ce campement), ou null. */
+export function cannotBuildVillage(state: GameState, campId?: number): string | null {
+  if (!state.inventions.ranks.agriculture)
+    return `Il faut d'abord : ${INVENTION_RULES.agriculture.name}`
+  const camp = villageSite(state, campId)
+  if (!camp)
+    return campId === undefined
+      ? 'Tous les campements sont déjà des villages'
+      : 'Aucun campement choisi'
+  if (villageCount(state) >= maxVillages(state))
+    return `Un village pour ${VILLAGE_RULES.peoplePerVillage} habitants`
+  if (state.tribe.food < VILLAGE_RULES.foodCost) return `Il faut ${VILLAGE_RULES.foodCost} rations`
+  return null
+}
+
+/** Le campement à changer en village : celui demandé, ou le plus ancien qui ne l'est pas. */
+function villageSite(state: GameState, campId?: number): Camp | undefined {
+  return state.camps.find(
+    (c) => c.owner === PLAYER && !c.village && (campId === undefined || c.id === campId),
+  )
+}
+
 /**
  * Génère le monde ; si une graine ne donne aucun départ viable (très rare),
  * on la dérive jusqu'à en trouver un. La graine retenue est celle du monde.
@@ -309,6 +349,13 @@ export function applyCommand(state: GameState, command: Command): CommandResult 
       state.camps.push(camp)
       claimAround(state.territory, state.world, seatOf(camp), CAMP_RULES.claimRadius)
       updateFog(state.fog, viewersOf(state))
+      return { ok: true }
+    }
+    case 'buildVillage': {
+      const reason = cannotBuildVillage(state, command.campId)
+      if (reason) return { ok: false, reason }
+      state.tribe.food -= VILLAGE_RULES.foodCost
+      villageSite(state, command.campId)!.village = true
       return { ok: true }
     }
     case 'recruitHunter': {
@@ -417,7 +464,8 @@ function seatsOf(state: GameState): Seat[] {
 }
 
 function seatOf(camp: Camp): Seat {
-  return { owner: camp.owner, x: camp.x, y: camp.y, reach: CAMP_RULES.reach }
+  const reach = CAMP_RULES.reach + (camp.village ? VILLAGE_RULES.reachBonus : 0)
+  return { owner: camp.owner, x: camp.x, y: camp.y, reach }
 }
 
 /** Richesse en nourriture de chaque cellule, d'après son biome. */
@@ -451,11 +499,15 @@ function harvest(state: GameState): void {
   const inv = state.inventions
   const bonus = {
     gather: basket ? Math.max(0, rollStat(basket, state.rng)) / 100 : 0,
-    storageMonths: inventionMean(inv, 'fumage'),
+    storageMonths: storageBonus(state),
     growth: inventionMean(inv, 'feu') / 100,
     famineShield: -inventionMean(inv, 'peaux') / 100,
   }
   const hunters = state.units.filter((u) => u.kind === 'chasseur').length
+  // Les moissons rentrent avant le repas du mois ; la réserve les borne comme le reste.
+  const crops = tribe.population > 0 ? cropsOf(state, month) : 0
+  tribe.food += crops
+  tribe.lastCrops = crops
   if (tickTribe(tribe, available, bonus, hunters) === 'famineStarts')
     state.events.push({ type: 'famine' })
   // La réserve se gâte, surtout l'été ; la conservation (fumage) en sauve une part.
@@ -498,6 +550,8 @@ function fortune(state: GameState): void {
     const gain = rules.food > 0 ? rules.food * foodCapacity(state) : rules.food * tribe.food
     tribe.food = Math.min(foodCapacity(state), Math.max(0, tribe.food + gain))
     amount = Math.round(tribe.food - before)
+    // Réserve déjà pleine (abondance) ou vide (tempête) : rien à annoncer.
+    if (amount === 0) return
   } else if (rules.population !== undefined) {
     const sign = Math.sign(rules.population)
     amount = sign * Math.max(1, Math.round(Math.abs(rules.population) * tribe.population))
@@ -565,9 +619,45 @@ function depositBonus(state: GameState, kind: ResourceKind): number {
   return 0
 }
 
+/** Mois de réserve en plus : conservation (fumage) et greniers des villages. */
+function storageBonus(state: GameState): number {
+  return (
+    inventionMean(state.inventions, 'fumage') + villageCount(state) * VILLAGE_RULES.storageMonths
+  )
+}
+
+/**
+ * Récolte des champs du mois : chaque terre tenue près d'un village donne selon sa
+ * fertilité, aux seuls mois de moisson. Une terre entre deux villages ne compte qu'une fois.
+ */
+export function cropsOf(state: GameState, month: number): number {
+  if (!VILLAGE_RULES.harvestMonths.includes(month)) return 0
+  const villages = state.camps.filter((c) => c.owner === PLAYER && c.village)
+  if (villages.length === 0) return 0
+  const { world } = state
+  const { owner } = state.territory
+  const r = VILLAGE_RULES.fieldRadius
+  const counted = new Set<number>()
+  let fertility = 0
+  for (const v of villages) {
+    for (let y = Math.max(0, Math.floor(v.y - r)); y <= Math.min(world.height - 1, v.y + r); y++) {
+      for (let x = Math.max(0, Math.floor(v.x - r)); x <= Math.min(world.width - 1, v.x + r); x++) {
+        const i = y * world.width + x
+        if (owner[i] !== PLAYER || counted.has(i)) continue
+        if (Math.hypot(x + 0.5 - v.x, y + 0.5 - v.y) > r) continue
+        counted.add(i)
+        const base = FERTILITY[world.biome[i] as BiomeId]
+        if (base > 0) fertility += base + (world.river[i] ? VILLAGE_RULES.riverFertility : 0)
+      }
+    }
+  }
+  const skill = inventionMean(state.inventions, 'agriculture') / 100
+  return fertility * VILLAGE_RULES.cropPerCell * (1 + skill)
+}
+
 /** Réserve maximale de la tribu, conservation comprise. */
 export function foodCapacity(state: GameState): number {
-  const extra = inventionMean(state.inventions, 'fumage')
+  const extra = storageBonus(state)
   return storageCapacity(state.tribe.population, extra)
 }
 

@@ -17,6 +17,7 @@ export type InventionKind =
   | 'taille'
   | 'harpon'
   | 'portage'
+  | 'agriculture'
 
 export interface InventionRules {
   name: string
@@ -131,6 +132,17 @@ export const INVENTION_RULES: Readonly<Record<InventionKind, InventionRules>> = 
     work: 120,
     cost: {},
     requires: ['panier'],
+  },
+  agriculture: {
+    name: 'Agriculture',
+    description:
+      'Les campements peuvent devenir des villages, dont les champs donnent une récolte à la fin de l’été.',
+    stat: 'Récolte',
+    unit: '%',
+    range: { e: { mean: 0, spread: 0 }, s: { mean: 60, spread: 0 } },
+    work: 300,
+    cost: { silex: 10 },
+    requires: ['panier', 'taille'],
   },
 }
 

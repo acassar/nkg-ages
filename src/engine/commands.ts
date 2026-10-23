@@ -16,5 +16,7 @@ export type Command =
   | { type: 'foundCamp'; unitId: number }
   /** Forme un chasseur parmi la tribu ; il paraît au camp. */
   | { type: 'recruitHunter' }
+  /** Fait d'un campement un village (le plus ancien qui ne l'est pas, sans `campId`). */
+  | { type: 'buildVillage'; campId?: number }
 
 export type CommandResult = { ok: true } | { ok: false; reason: string }

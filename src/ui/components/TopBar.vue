@@ -68,6 +68,30 @@ const signed = new Intl.NumberFormat('fr-FR', {
           +
         </button>
       </span>
+      <span
+        v-if="game.view.tribe.villages > 0 || game.view.tribe.maxVillages > 0"
+        :title="
+          game.view.tribe.crops > 0
+            ? `Villages : moisson de ${game.view.tribe.crops} rations ce mois-ci`
+            : 'Villages tenus / que la tribu peut tenir (champs moissonnés d’août à octobre)'
+        "
+      >
+        <span class="label">Villages</span>
+        <b data-testid="villages">{{ game.view.tribe.villages }}</b>
+        <span class="soft">/ {{ game.view.tribe.maxVillages }}</span>
+        <button
+          class="ink-button recruit"
+          data-testid="build-village"
+          :disabled="game.view.tribe.villageBlocked !== null"
+          :title="
+            game.view.tribe.villageBlocked ??
+            `Faire d’un campement un village (${game.view.tribe.villageCost} rations)`
+          "
+          @click="game.buildVillage()"
+        >
+          +
+        </button>
+      </span>
       <span v-for="m in game.view.tribe.materials" :key="m.kind" :title="`${m.name} en réserve`">
         <span class="label">{{ m.name }}</span>
         <b :data-testid="`material-${m.kind}`">{{ m.amount }}</b>

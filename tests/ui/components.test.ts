@@ -242,6 +242,24 @@ describe('fin de partie', () => {
   })
 })
 
+describe('villages', () => {
+  it('le bouton n’apparaît qu’une fois un village possible, et passe par le client', async () => {
+    const game = useGameStore()
+    await game.newGame({ seed: 'hameau', randomStart: false, width: 128, height: 64 })
+    const wrapper = mount(TopBar)
+    expect(wrapper.find('[data-testid=build-village]').exists()).toBe(false)
+    const tribe = { ...game.view!.tribe, maxVillages: 1, villageBlocked: null }
+    game.view = { ...game.view!, tribe }
+    await flushPromises()
+    const button = wrapper.find('[data-testid=build-village]')
+    expect(button.attributes('disabled')).toBeUndefined()
+    await button.trigger('click')
+    await flushPromises()
+    // Le moteur refuse (pas d'agriculture) : le refus s'affiche, rien n'a été bâti en douce.
+    expect(game.error).toMatch(/Agriculture/)
+  })
+})
+
 describe('sauvegarde automatique', () => {
   afterEach(() => vi.useRealTimers())
 

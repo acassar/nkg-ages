@@ -46,6 +46,8 @@ export interface CampView {
   x: number
   y: number
   mine: boolean
+  /** Village (champs, greniers) plutôt que simple campement. */
+  village: boolean
 }
 
 export interface GameView {
@@ -164,6 +166,13 @@ export interface TribeView {
   /** Campements tenus, et combien la population permet d'en tenir. */
   camps: number
   maxCamps: number
+  /** Villages tenus, combien la population en permet, leur coût et ce qui bloque (ou null). */
+  villages: number
+  maxVillages: number
+  villageCost: number
+  villageBlocked: string | null
+  /** Moisson du dernier mois (0 hors saison ou sans village). */
+  crops: number
 }
 
 /** Biomes, dans l'ordre de leurs identifiants (même table que le moteur). */

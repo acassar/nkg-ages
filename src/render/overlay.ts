@@ -36,11 +36,23 @@ export class OverlayPainter {
 
     for (const camp of state.camps) {
       const p = worldToScreen(camera, camp.x, camp.y)
-      const s = 9
       ctx.beginPath()
-      ctx.moveTo(p.x, p.y - s)
-      ctx.lineTo(p.x + s, p.y + s * 0.7)
-      ctx.lineTo(p.x - s, p.y + s * 0.7)
+      if (camp.village) {
+        // Village : une maison (toit sur un carré), plus grande qu'une tente.
+        const s = 10
+        ctx.moveTo(p.x, p.y - s * 1.1)
+        ctx.lineTo(p.x + s, p.y - s * 0.2)
+        ctx.lineTo(p.x + s * 0.75, p.y - s * 0.2)
+        ctx.lineTo(p.x + s * 0.75, p.y + s * 0.8)
+        ctx.lineTo(p.x - s * 0.75, p.y + s * 0.8)
+        ctx.lineTo(p.x - s * 0.75, p.y - s * 0.2)
+        ctx.lineTo(p.x - s, p.y - s * 0.2)
+      } else {
+        const s = 9
+        ctx.moveTo(p.x, p.y - s)
+        ctx.lineTo(p.x + s, p.y + s * 0.7)
+        ctx.lineTo(p.x - s, p.y + s * 0.7)
+      }
       ctx.closePath()
       ctx.fillStyle = paper
       ctx.fill()
