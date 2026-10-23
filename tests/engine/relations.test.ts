@@ -19,7 +19,7 @@ function neighbours(): GameState {
   const g = createGame(options)
   g.peoples[0]!.met = true
   g.peoples[0]!.tribe.food = 200
-  g.tribe.food = 100
+  g.tribe.food = 40
   g.tribe.materials.silex = 50
   return g
 }
@@ -29,7 +29,7 @@ describe('relations', () => {
     const g = neighbours()
     const p = g.peoples[0]!
     expect(applyCommand(g, { type: 'gift', people: p.owner })).toEqual({ ok: true })
-    expect(g.tribe.food).toBe(100 - RELATION_RULES.giftFood)
+    expect(g.tribe.food).toBe(40 - RELATION_RULES.giftFood)
     expect(p.relation).toBe(RELATION_RULES.giftRelation)
   })
 
@@ -68,6 +68,33 @@ describe('relations', () => {
     expect(g.tribe.food).toBeLessThanOrEqual(foodCapacity(g))
   })
 
+  it('réserve pleine : l’échange est refusé, sans payer de silex pour rien', () => {
+    const g = neighbours()
+    const p = g.peoples[0]!
+    p.relation = 50
+    g.tribe.food = foodCapacity(g) - RELATION_RULES.tradeFood + 1
+    const before = { silex: g.tribe.materials.silex, theirs: p.tribe.food, relation: p.relation }
+    expect(applyCommand(g, { type: 'trade', people: p.owner })).toEqual({
+      ok: false,
+      reason: 'Vos réserves sont pleines',
+    })
+    expect(g.tribe.materials.silex).toBe(before.silex)
+    expect(p.tribe.food).toBe(before.theirs)
+    expect(p.relation).toBe(before.relation)
+  })
+
+  it('un seul présent ou échange par mois et par peuple', () => {
+    const g = neighbours()
+    const p = g.peoples[0]!
+    p.relation = 50
+    expect(applyCommand(g, { type: 'gift', people: p.owner })).toEqual({ ok: true })
+    const soon = { ok: false, reason: 'Un seul présent ou échange par mois' }
+    expect(applyCommand(g, { type: 'gift', people: p.owner })).toEqual(soon)
+    expect(applyCommand(g, { type: 'trade', people: p.owner })).toEqual(soon)
+    step(g)
+    expect(applyCommand(g, { type: 'trade', people: p.owner })).toEqual({ ok: true })
+  })
+
   it('négligée, la relation revient vers la neutralité sans la dépasser', () => {
     fc.assert(
       fc.property(fc.integer({ min: -100, max: 100 }), fc.integer({ min: 1, max: 400 }), (r, t) => {
@@ -86,7 +113,10 @@ describe('relations', () => {
     const g = neighbours()
     g.tribe.food = 100000
     const p = g.peoples[0]!
-    for (let i = 0; i < 20; i++) applyCommand(g, { type: 'gift', people: p.owner })
+    for (let i = 0; i < 20; i++) {
+      delete p.lastDeal
+      applyCommand(g, { type: 'gift', people: p.owner })
+    }
     expect(p.relation).toBe(RELATION_RULES.max)
   })
 

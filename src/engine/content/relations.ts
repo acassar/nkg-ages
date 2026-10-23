@@ -17,6 +17,8 @@ export const RELATION_RULES = {
   tradeRelation: 3,
   /** Un peuple n'échange que s'il garde au moins tant de mois de vivres après l'échange. */
   tradeReserveMonths: 1,
+  /** Mois à attendre entre deux présents ou échanges avec un même peuple. */
+  dealMonths: 1,
 } as const
 
 /** Humeurs, de la pire à la meilleure : la première dont le seuil est atteint s'applique. */
