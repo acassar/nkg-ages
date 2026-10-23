@@ -27,6 +27,7 @@ import {
   depositYield,
   RESOURCE_KINDS,
   RESOURCE_RULES,
+  EVENT_RULES,
   startYear,
   Visibility,
   UNIT_RULES,
@@ -178,11 +179,38 @@ function noticeOf(state: GameState, event: GameEvent): string {
       const kept = best && best !== event.rank ? ` (le rang ${best} obtenu avant est gardé)` : ''
       return `Invention : ${rules.name} de rang ${event.rank}, ${rules.stat.toLowerCase()} ${formatStat(stat, rules.unit)}${kept}.`
     }
+    case 'rare':
+      return rareNotice(event)
     case 'meatLost':
       return `Chasse : la réserve est pleine, ${event.amount} rations de viande sont perdues.`
     case 'hunterKilled':
       return `Chasse : un chasseur est mort face aux ${ANIMAL_RULES[event.animal].name.toLowerCase()}.`
   }
+}
+
+/** Rédige un événement rare : son nom, son rang de rareté, puis ce qu'il change. */
+function rareNotice(event: Extract<GameEvent, { type: 'rare' }>): string {
+  const rules = EVENT_RULES[event.event]
+  const n = Math.abs(event.amount)
+  const what = ((): string => {
+    switch (event.event) {
+      case 'abondance':
+        return `les baies et le gibier abondent, ${n} rations de plus en réserve`
+      case 'tempete':
+        return `une tempête gâte une part de la réserve, ${n} rations perdues`
+      case 'maladie':
+        return `une maladie emporte ${n} ${n > 1 ? 'personnes' : 'personne'}`
+      case 'nouveauxVenus':
+        return `${n} ${n > 1 ? 'errants rejoignent' : 'errant rejoint'} la tribu`
+      case 'migration':
+        return `un grand troupeau de ${n} bêtes passe près du camp`
+      case 'filon':
+        return `un filon de ${RESOURCE_RULES[rules.deposit!.kind].name.toLowerCase()} de rang ${event.rank} affleure sur le territoire`
+      case 'etoile':
+        return `une étoile filante inspire la tribu, la recherche en cours avance d'un coup`
+    }
+  })()
+  return `${rules.name} (${rules.rank}) : ${what}.`
 }
 
 /** La tribu, arrondie pour l'affichage. */

@@ -413,7 +413,10 @@ describe('scénarios', () => {
     expect(u.path).toEqual([])
     expect(ticks).toBeLessThan(1500)
     // Le joueur en est prévenu, une seule fois, puis l'envoi suivant repart à vide.
-    expect(g.events).toEqual([{ type: 'unitGaveUp', unitId: u.id }])
+    // (les autres avis, comme les événements rares, ne comptent pas ici)
+    expect(g.events.filter((e) => e.type === 'unitGaveUp')).toEqual([
+      { type: 'unitGaveUp', unitId: u.id },
+    ])
     clearDirty(g)
     expect(g.events).toEqual([])
   })
@@ -459,7 +462,8 @@ describe('scénarios', () => {
   })
 
   it('sans rien à récolter, la famine prévient une fois puis décime la tribu', () => {
-    const g = createGame(options)
+    // Sans événements rares : une abondance ou des nouveaux venus brouilleraient le compte.
+    const g = createGame({ ...options, rareEvents: false })
     g.territory.playerWeight = 0
     g.territory.weights = new Float32Array(g.territory.owner.length)
     g.deposits = []

@@ -48,6 +48,9 @@ import {
 } from './tribe/tribe'
 import { isPassable, moveUnit, stopUnit, UNIT_RULES, type Unit } from './units/units'
 import { generateWorld } from './world/generate'
+import { EVENT_RULES, EVENT_RULES_GLOBAL, type EventKind } from './content/events'
+import { pickEvent } from './events/events'
+import { bestRank, rollRank } from './rarity/rarity'
 import { findStarts, type StartSite } from './world/starts'
 import { inBounds, type World } from './world/world'
 
@@ -58,6 +61,8 @@ export interface NewGameOptions {
   startIndex?: number
   width?: number
   height?: number
+  /** Faux : pas d'événements rares (scénarios d'essai, partie sans surprise). */
+  rareEvents?: boolean
 }
 
 export interface Camp {
@@ -80,6 +85,11 @@ export type GameEvent =
   | { type: 'victory' }
   /** La tribu a disparu : la partie est finie. */
   | { type: 'defeat' }
+  /**
+   * Un événement rare est survenu. `amount` : rations ou personnes gagnées (négatif : perdues),
+   * bêtes du troupeau, ou part du travail d'invention accomplie ; `rank` : rang d'un filon.
+   */
+  | { type: 'rare'; event: EventKind; amount: number; rank?: Rank }
   /** La réserve était pleine : une part de la viande rapportée est perdue. */
   | { type: 'meatLost'; amount: number }
 
@@ -98,6 +108,8 @@ export interface GameState {
   rng: Rng
   /** Aléa propre à l'errance de la faune, pour qu'elle ne dérange pas les autres tirages. */
   faunaRng: Rng
+  /** Aléa des événements rares, à part lui aussi. */
+  eventRng: Rng
   units: Unit[]
   camps: Camp[]
   fog: FogState
@@ -134,6 +146,7 @@ export function createGame(options: NewGameOptions): GameState {
     clock: createClock(),
     rng,
     faunaRng: createRng(`errance:${world.seed}`),
+    eventRng: createRng(`evenements:${world.seed}`),
     units: [],
     camps: [],
     fog: createFog(world.width, world.height),
@@ -341,6 +354,7 @@ export function step(state: GameState): void {
     CAMP_RULES.growthPerTick * state.camps.length,
   )
   harvest(state)
+  fortune(state)
   const invented = tickInventions(state.inventions, state.tribe.population, state.rng)
   if (invented)
     state.events.push({ type: 'invented', invention: invented.kind, rank: invented.rank })
@@ -436,6 +450,85 @@ function harvest(state: GameState): void {
   const hunters = state.units.filter((u) => u.kind === 'chasseur').length
   if (tickTribe(tribe, available, bonus, hunters) === 'famineStarts')
     state.events.push({ type: 'famine' })
+}
+
+/** Le sort du mois : au plus un événement rare, appliqué tout de suite. */
+function fortune(state: GameState): void {
+  const { tribe } = state
+  if (tribe.population <= 0 || state.options.rareEvents === false) return
+  const tick = state.clock.tick
+  const kind = pickEvent(
+    { month: tick % 12, years: tick / 12, researching: state.inventions.current !== null },
+    state.eventRng,
+  )
+  if (!kind) return
+  const rules = EVENT_RULES[kind]
+  const camp = state.camps.find((c) => c.owner === PLAYER)
+  let amount = 0
+  let rank: Rank | undefined
+  if (rules.food !== undefined) {
+    const before = tribe.food
+    const gain = rules.food > 0 ? rules.food * foodCapacity(state) : rules.food * tribe.food
+    tribe.food = Math.min(foodCapacity(state), Math.max(0, tribe.food + gain))
+    amount = Math.round(tribe.food - before)
+  } else if (rules.population !== undefined) {
+    const sign = Math.sign(rules.population)
+    amount = sign * Math.max(1, Math.round(Math.abs(rules.population) * tribe.population))
+    // Une maladie n'emporte jamais toute la tribu : la famine s'en charge déjà bien assez.
+    amount = Math.max(amount, 1 - tribe.population)
+    if (amount === 0) return
+    tribe.population += amount
+  } else if (rules.herd && camp) {
+    const herd = arrivingHerd(state, camp, rules.herd.kind, rules.herd.sizeFactor)
+    if (!herd) return
+    state.herds.push(herd)
+    amount = herd.size
+  } else if (rules.deposit) {
+    const spot = heldSpot(state)
+    if (!spot) return
+    rank = bestRank(rollRank(state.eventRng), rules.deposit.minRank)
+    const id = state.deposits.reduce((m, d) => Math.max(m, d.id), 0) + 1
+    state.deposits.push({ id, kind: rules.deposit.kind, ...spot, rank })
+  } else if (rules.invention !== undefined && state.inventions.current) {
+    const current = state.inventions.current
+    current.progress = Math.min(current.work, current.progress + rules.invention * current.work)
+    amount = rules.invention
+  } else return
+  state.events.push({ type: 'rare', event: kind, amount, ...(rank ? { rank } : {}) })
+}
+
+/** Un troupeau arrive sur la terre ferme, à quelques jours de marche du camp. */
+function arrivingHerd(
+  state: GameState,
+  camp: Camp,
+  kind: AnimalKind,
+  sizeFactor: number,
+): Herd | null {
+  const { min, max } = EVENT_RULES_GLOBAL.herdDistance
+  for (let attempt = 0; attempt < 24; attempt++) {
+    const angle = state.eventRng.range(0, Math.PI * 2)
+    const dist = state.eventRng.range(min, max)
+    const x = Math.floor(camp.x + Math.cos(angle) * dist) + 0.5
+    const y = Math.floor(camp.y + Math.sin(angle) * dist) + 0.5
+    if (!inBounds(state.world, Math.floor(x), Math.floor(y))) continue
+    if (!isPassable(state.world, Math.floor(x), Math.floor(y))) continue
+    const size = Math.round(ANIMAL_RULES[kind].herdSize * sizeFactor)
+    // Les troupeaux ont leur propre suite d'identifiants (voir placeHerds).
+    const id = state.herds.reduce((m, h) => Math.max(m, h.id), 0) + 1
+    return { id, kind, x, y, size, goal: { x, y } }
+  }
+  return null
+}
+
+/** Une cellule du territoire du joueur sans gisement, tirée au sort. */
+function heldSpot(state: GameState): { x: number; y: number } | null {
+  const { owner, width } = state.territory
+  const taken = new Set(state.deposits.map((d) => d.y * width + d.x))
+  const spots: number[] = []
+  for (let i = 0; i < owner.length; i++) if (owner[i] === PLAYER && !taken.has(i)) spots.push(i)
+  if (spots.length === 0) return null
+  const i = state.eventRng.pick(spots)
+  return { x: i % width, y: Math.floor(i / width) }
 }
 
 /** Rendement en plus d'un gisement, selon les inventions (0,2 = +20 %). */

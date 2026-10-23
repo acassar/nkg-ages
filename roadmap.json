@@ -95,7 +95,7 @@
         },
         {
           "title": "Événements rares",
-          "status": "todo"
+          "status": "done"
         }
       ]
     },
@@ -181,6 +181,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-23",
+      "text": "J2 : événements rares de rang E à S (abondance, tempête, maladie, nouveaux venus, migration, filon, étoile filante) ; la sauvegarde vérifie l'empreinte du monde"
+    },
     {
       "date": "2026-10-22",
       "text": "J1 : sauvegarde automatique (toutes les 20 s, en quittant, onglet caché) et reprise depuis l'accueil, à l'identique"
