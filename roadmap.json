@@ -225,6 +225,10 @@
   "log": [
     {
       "date": "2026-10-23",
+      "text": "Performance : la recherche de chemin n'alloue plus rien en boucle (tas réutilisé, coûts en ligne) ; pire semaine du banc ramenée de 35-60 ms à 10-12 ms, pire ordre de 20-25 ms à 8 ms"
+    },
+    {
+      "date": "2026-10-23",
       "text": "Contenu : cuivre et étain invisibles et inexploités avant la nouvelle invention « Métallurgie du cuivre » (après l'agriculture, avant le bronze)"
     },
     {

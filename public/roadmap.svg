@@ -113,11 +113,11 @@
 <text x="369.3333333333333" y="631" font-size="14" fill="#6b5843">Futur imaginé</text>
 </g>
 <text x="24" y="776" font-size="13" letter-spacing="1.5" fill="#6b5843">JOURNAL</text>
-<text x="24" y="800" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Contenu : cuivre et étain invisibles et inexploités avant la nouvelle invention « Métallurgie du cuivre » (après l'agriculture, avant le bronze)</text>
-<text x="24" y="821" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Outils : sonde d'équilibrage (pnpm sonde), un robot joue 40 parties et date chaque étape ; l'arbre des inventions est fini en 33 ans, la population explose après 30 ans</text>
-<text x="24" y="842" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Jouabilité : éclaireurs à former, ordre « Explorer » (touche E), clic sur un campement pour le faire grandir ou y former des recrues, curseur selon l'action</text>
-<text x="24" y="863" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Jouabilité : un pictogramme par ressource sur la carte, couleurs de rareté franches (gris, vert, bleu, violet, orange, or) et leur légende</text>
-<text x="24" y="884" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Jouabilité : le mois se joue en quatre semaines (vitesse 1 = une saison en 12 s, unités toujours fluides) ; panneau d'alertes rétractable qui centre la carte</text>
+<text x="24" y="800" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Performance : la recherche de chemin n'alloue plus rien en boucle (tas réutilisé, coûts en ligne) ; pire semaine du banc ramenée de 35-60 ms à 10-12 ms, pire ordre de 20-25 ms à 8 ms</text>
+<text x="24" y="821" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Contenu : cuivre et étain invisibles et inexploités avant la nouvelle invention « Métallurgie du cuivre » (après l'agriculture, avant le bronze)</text>
+<text x="24" y="842" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Outils : sonde d'équilibrage (pnpm sonde), un robot joue 40 parties et date chaque étape ; l'arbre des inventions est fini en 33 ans, la population explose après 30 ans</text>
+<text x="24" y="863" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Jouabilité : éclaireurs à former, ordre « Explorer » (touche E), clic sur un campement pour le faire grandir ou y former des recrues, curseur selon l'action</text>
+<text x="24" y="884" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Jouabilité : un pictogramme par ressource sur la carte, couleurs de rareté franches (gris, vert, bleu, violet, orange, or) et leur légende</text>
 <circle cx="700" cy="893" r="5" fill="#3a2c1e"/>
 <text x="710" y="897" font-size="12" fill="#6b5843">fait</text>
 <circle cx="760" cy="893" r="5" fill="none" stroke="#8c2f1c" stroke-width="1.5"/><path d="M760 888a5 5 0 0 1 0 10z" fill="#8c2f1c"/>
