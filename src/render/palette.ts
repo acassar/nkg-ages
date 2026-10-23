@@ -24,6 +24,8 @@ export const BIOME_COLORS: Readonly<Record<number, Rgb>> = {
 export const PAPER = hex('#eee2c4')
 export const INK = hex('#3a2c1e')
 export const PLAYER_INK = hex('#8c2f1c')
+/** Encre des peuples voisins : un bleu d'ardoise, bien distinct du rouge du joueur. */
+export const RIVAL_INK = hex('#2f4a6b')
 
 /** Encres des rangs de rareté, du terne (E) à l'or (S). */
 export const RANK_COLORS: Readonly<Record<RankLetter, Rgb>> = {

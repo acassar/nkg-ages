@@ -19,10 +19,12 @@ uniform sampler2D uBiome;
 uniform sampler2D uRiver;
 uniform sampler2D uFog;
 uniform sampler2D uTerritory;
+uniform sampler2D uRivals;
 uniform vec3 uPalette[10];
 uniform vec3 uPaper;
 uniform vec3 uInk;
 uniform vec3 uPlayerInk;
+uniform vec3 uRivalInk;
 uniform float uRevealAll; // 1 : ignore le brouillard (mesures, débogage)
 
 out vec4 outColor;
@@ -139,6 +141,13 @@ void main() {
   float border = (1.0 - smoothstep(0.0, max(fwidth(t), 1e-4) * 1.6, abs(t - 0.5))) * onLand;
   c = mix(c, mix(c, uPlayerInk, 0.14), inside * seen);
   c = mix(c, uPlayerInk, border * seen * 0.9);
+
+  // Peuples voisins : même trait, à l'encre d'ardoise, plus discret.
+  float rv = texture(uRivals, wp / uWorld).r;
+  float rInside = smoothstep(0.45, 0.55, rv) * onLand;
+  float rBorder = (1.0 - smoothstep(0.0, max(fwidth(rv), 1e-4) * 1.6, abs(rv - 0.5))) * onLand;
+  c = mix(c, mix(c, uRivalInk, 0.12), rInside * seen);
+  c = mix(c, uRivalInk, rBorder * seen * 0.75);
 
   outColor = vec4(c, 1.0);
 }

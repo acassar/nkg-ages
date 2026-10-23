@@ -1,15 +1,15 @@
 import type { GameView, WorldSnapshot } from '@/views/types'
 import type { Camera } from '../camera'
-import { fogToTexels, ownerMask, riverTexels } from '../grids'
+import { fogToTexels, ownerMask, rivalMask, riverTexels } from '../grids'
 import type { MapRenderer, OverlayState } from '../MapRenderer'
 import { OverlayPainter } from '../overlay'
-import { INK, PAPER, paletteArray, PLAYER_INK } from '../palette'
+import { INK, PAPER, paletteArray, PLAYER_INK, RIVAL_INK } from '../palette'
 import { FRAGMENT_SHADER, VERTEX_SHADER } from './shaders'
 
 /** Le joueur dans la grille de propriétaires (voir le moteur). */
 const PLAYER_OWNER = 1
 
-type TextureName = 'uElevation' | 'uBiome' | 'uRiver' | 'uFog' | 'uTerritory'
+type TextureName = 'uElevation' | 'uBiome' | 'uRiver' | 'uFog' | 'uTerritory' | 'uRivals'
 
 /**
  * Rendu WebGL2 sans bibliothèque : un seul triangle plein écran, le shader fait tout.
@@ -52,12 +52,15 @@ export class WebGlMapRenderer implements MapRenderer {
     this.upload('uRiver', world.width, world.height, riverTexels(world.river), true)
     this.upload('uFog', world.width, world.height, empty, true)
     this.upload('uTerritory', world.width, world.height, empty, true)
+    this.upload('uRivals', world.width, world.height, empty, true)
   }
 
   applyView(view: GameView): void {
     if (view.fog) this.patch('uFog', view.fog, fogToTexels(view.fog))
-    if (view.territory)
+    if (view.territory) {
       this.patch('uTerritory', view.territory, ownerMask(view.territory, PLAYER_OWNER))
+      this.patch('uRivals', view.territory, rivalMask(view.territory, PLAYER_OWNER))
+    }
   }
 
   resize(cssWidth: number, cssHeight: number, pixelRatio: number): void {
@@ -80,8 +83,9 @@ export class WebGlMapRenderer implements MapRenderer {
     gl.uniform3fv(this.uniform('uPaper'), PAPER)
     gl.uniform3fv(this.uniform('uInk'), INK)
     gl.uniform3fv(this.uniform('uPlayerInk'), PLAYER_INK)
+    gl.uniform3fv(this.uniform('uRivalInk'), RIVAL_INK)
     gl.uniform1f(this.uniform('uRevealAll'), this.options.revealAll ? 1 : 0)
-    const names: TextureName[] = ['uElevation', 'uBiome', 'uRiver', 'uFog', 'uTerritory']
+    const names: TextureName[] = ['uElevation', 'uBiome', 'uRiver', 'uFog', 'uTerritory', 'uRivals']
     names.forEach((name, unit) => {
       gl.activeTexture(gl.TEXTURE0 + unit)
       gl.bindTexture(gl.TEXTURE_2D, this.textures.get(name) ?? null)

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fogToTexels, ownerMask, riverTexels } from '@/render/grids'
+import { fogToTexels, ownerMask, rivalMask, riverTexels } from '@/render/grids'
 import { paletteArray } from '@/render/palette'
 
 const patch = (data: number[]) => ({
@@ -16,6 +16,8 @@ describe('textures de la carte', () => {
   })
   it('isole le territoire d’un propriétaire', () => {
     expect([...ownerMask(patch([0, 1, 2, 1]), 1)]).toEqual([0, 255, 0, 255])
+    // Tous les peuples voisins dans un seul masque, le joueur et les terres libres à part.
+    expect([...rivalMask(patch([0, 1, 2, 3]), 1)]).toEqual([0, 0, 255, 255])
   })
   it('trace les fleuves d’autant plus larges que le débit est fort', () => {
     expect([...riverTexels(Uint8Array.from([0, 1, 128, 255]))]).toEqual([0, 150, 203, 255])

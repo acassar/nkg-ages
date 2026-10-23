@@ -1,6 +1,6 @@
 import { worldToScreen, type Camera } from './camera'
 import type { OverlayState } from './MapRenderer'
-import { cssColor, INK, PAPER, PLAYER_INK, RANK_COLORS } from './palette'
+import { cssColor, INK, PAPER, PLAYER_INK, RANK_COLORS, RIVAL_INK } from './palette'
 
 /** En deçà de ce zoom (pixels par cellule), les gisements encombreraient la carte. */
 const DEPOSIT_MIN_ZOOM = 2.5
@@ -29,6 +29,7 @@ export class OverlayPainter {
     const ink = cssColor(INK)
     const red = cssColor(PLAYER_INK)
     const paper = cssColor(PAPER)
+    const rival = cssColor(RIVAL_INK)
 
     if (camera.zoom >= DEPOSIT_MIN_ZOOM) this.paintDeposits(camera, state, red)
 
@@ -57,7 +58,7 @@ export class OverlayPainter {
       ctx.fillStyle = paper
       ctx.fill()
       ctx.lineWidth = 1.6
-      ctx.strokeStyle = camp.mine ? red : ink
+      ctx.strokeStyle = camp.mine ? red : rival
       ctx.stroke()
     }
 

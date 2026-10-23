@@ -48,6 +48,8 @@ export interface CampView {
   mine: boolean
   /** Village (champs, greniers) plutôt que simple campement. */
   village: boolean
+  /** Nom du peuple voisin qui le tient, ou null pour le joueur. */
+  people: string | null
 }
 
 export interface GameView {
@@ -61,7 +63,10 @@ export interface GameView {
   camps: CampView[]
   /** Brouillard : 0 inconnu, 1 déjà vu, 2 visible. Seulement la zone modifiée. */
   fog: GridPatch | null
-  /** Propriétaire par cellule (0 personne, 1 le joueur). Seulement la zone modifiée. */
+  /**
+   * Propriétaire par cellule (0 personne, 1 le joueur, 2 et plus un peuple voisin, montré
+   * seulement hors du brouillard inconnu). Seulement la zone modifiée.
+   */
   territory: GridPatch | null
   /** Messages pour le joueur, nés depuis la vue précédente (déjà rédigés). */
   notices: string[]

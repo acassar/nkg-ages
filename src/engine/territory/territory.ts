@@ -23,6 +23,9 @@ export interface TerritoryState {
   /** Poids de chaque cellule (ex. nourriture) et somme sur les cellules du joueur. */
   weights: Float32Array | null
   playerWeight: number
+  /** Par propriétaire (indice = numéro) : cellules tenues et somme de leurs poids. */
+  ownerCells: number[]
+  ownerWeight: number[]
 }
 
 export interface Seat {
@@ -48,6 +51,8 @@ export function createTerritory(
     frontier: [],
     weights,
     playerWeight: 0,
+    ownerCells: [],
+    ownerWeight: [],
   }
 }
 
@@ -67,6 +72,14 @@ export function claim(territory: TerritoryState, x: number, y: number, owner: nu
   const weight = territory.weights?.[i] ?? 0
   if (previous === PLAYER) territory.playerWeight -= weight
   if (owner === PLAYER) territory.playerWeight += weight
+  if (previous !== NO_OWNER) {
+    bump(territory.ownerCells, previous!, -1)
+    bump(territory.ownerWeight, previous!, -weight)
+  }
+  if (owner !== NO_OWNER) {
+    bump(territory.ownerCells, owner, 1)
+    bump(territory.ownerWeight, owner, weight)
+  }
   if (owner === NO_OWNER) {
     territory.ownedCount--
     // Les voisines possédées d'une cellule libérée redeviennent des bords d'expansion.
@@ -81,6 +94,12 @@ export function claim(territory: TerritoryState, x: number, y: number, owner: nu
   territory.version++
   territory.dirty = unionRect(territory.dirty, { x, y, w: 1, h: 1 })
   return true
+}
+
+/** Ajoute à la case d'un tableau par propriétaire, sans y laisser de trou (sauvegarde JSON). */
+function bump(values: number[], owner: number, delta: number): void {
+  while (values.length <= owner) values.push(0)
+  values[owner]! += delta
 }
 
 /** Voisins libres, de terre et dans la portée d'un des sièges, d'une cellule tenue. */
