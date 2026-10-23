@@ -3,6 +3,7 @@ import fc from 'fast-check'
 import { ACHIEVEMENTS } from '@/engine/content/achievements'
 import { unlockAchievements, type AchievementFacts } from '@/engine/achievements/achievements'
 import { createGame, step, type GameState } from '@/engine/game'
+import { Visibility } from '@/engine/fog/fog'
 import { loadGame, saveGame } from '@/engine/save/save'
 import { buildGameView, hintOf } from '@/views/selectors'
 
@@ -88,5 +89,18 @@ describe('conseils', () => {
     expect(hintOf(g)).toMatch(/agriculture/)
     g.camps[0]!.village = true
     expect(hintOf(g)).toBeNull()
+  })
+
+  it('l’exploration reste acquise quand l’éclaireur rentre au camp', () => {
+    const g = createGame(options)
+    const scout = g.units.find((u) => u.kind === 'eclaireur')!
+    scout.target = { x: scout.x + 5, y: scout.y }
+    expect(hintOf(g)).not.toMatch(/éclaireur/)
+    // Rentré au camp sans avoir découvert grand-chose : le conseil revient.
+    scout.target = null
+    expect(hintOf(g)).toMatch(/éclaireur/)
+    // Après une vraie exploration, il ne revient plus.
+    for (let i = 0; i < 400; i++) g.fog.cells[i] = Visibility.Seen
+    expect(hintOf(g)).toMatch(/invention/)
   })
 })

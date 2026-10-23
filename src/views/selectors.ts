@@ -441,6 +441,18 @@ function inventionViews(state: GameState): InventionView[] {
 }
 
 /**
+ * Cellules découvertes au-delà desquelles on a exploré : au départ, la tribu en voit environ
+ * 250, et ses chasseurs, laissés à eux-mêmes, n'en ajoutent guère.
+ */
+const HINT_EXPLORED_CELLS = 400
+
+function knownCells(state: GameState): number {
+  let n = 0
+  for (const c of state.fog.cells) if (c !== Visibility.Unknown) n++
+  return n
+}
+
+/**
  * Conseil du moment pour qui découvre le jeu : la première étape pas encore franchie, ou
  * null une fois les bases acquises.
  */
@@ -448,11 +460,12 @@ export function hintOf(state: GameState): string | null {
   const camps = state.camps.filter((c) => c.owner === PLAYER)
   const home = camps[0]
   const scout = state.units.find((u) => u.kind === 'eclaireur')
+  // Durable : une fois assez de terres découvertes, le conseil ne revient pas quand
+  // l'éclaireur rentre au camp. Un ordre en cours suffit pour réagir tout de suite.
   const explored =
     camps.length > 1 ||
-    (home !== undefined &&
-      scout !== undefined &&
-      (Math.hypot(scout.x - home.x, scout.y - home.y) > 8 || scout.target !== null))
+    scout?.target != null ||
+    (home !== undefined && knownCells(state) >= HINT_EXPLORED_CELLS)
   if (!explored)
     return 'Choisissez l’éclaireur (clic) puis cliquez sur la carte : il explore et dissipe le brouillard.'
   const { ranks, current } = state.inventions

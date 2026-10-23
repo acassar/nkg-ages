@@ -1138,7 +1138,6 @@ function wonderScore(state: GameState): number {
   return state.wonders.filter((w) => wonderHeld(state, w)).length * WONDER_PLACEMENT.score
 }
 
-/** Défaite si la tribu a disparu, victoire la première fois que l'objectif de l'ère est atteint. */
 /** Ce que mesurent les succès, relevé sur la partie. */
 export function achievementFacts(state: GameState): AchievementFacts {
   const met = state.peoples.filter((p) => p.met)
@@ -1170,6 +1169,7 @@ function reward(state: GameState): void {
     })
 }
 
+/** Défaite si la tribu a disparu, victoire la première fois que l'objectif de l'ère est atteint. */
 function judge(state: GameState): void {
   if (state.outcome?.type === 'defeat') return
   if (state.tribe.population <= 0) {

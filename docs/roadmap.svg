@@ -92,11 +92,11 @@
 <text x="60" y="631" font-size="14" fill="#6b5843">Futur imaginé</text>
 </g>
 <text x="24" y="692" font-size="13" letter-spacing="1.5" fill="#6b5843">JOURNAL</text>
-<text x="24" y="716" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  J5 : conseils pour débuter (explorer, inventer, fonder, cultiver), neuf succès annoncés et gardés par la sauvegarde ; le score existait déjà</text>
-<text x="24" y="737" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  J5 : options de partie à l'écran de départ : taille du monde (petit, normal, grand), nombre de peuples voisins (0 à 5), événements rares</text>
-<text x="24" y="758" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  J4 : merveilles très rares (cercle de pierres, source sacrée, grotte ornée) : présentes ou non selon la carte, loin du départ ; les tenir donne leur effet et des points</text>
-<text x="24" y="779" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  J4 : écriture (inventions plus rapides), routes (on marche plus vite sur ses terres) et cités : un village grandi qui porte plus loin, stocke plus et fait avancer le savoir</text>
-<text x="24" y="800" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  J4 : bronze : gisements de cuivre et d'étain (rares, au moins un de chaque à portée d'exploration) et invention Bronze, qui fait rendre davantage la cueillette et les champs</text>
+<text x="24" y="716" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  J5 : le conseil d'exploration ne revient plus quand l'éclaireur rentre au camp après avoir exploré</text>
+<text x="24" y="737" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  J5 : conseils pour débuter (explorer, inventer, fonder, cultiver), neuf succès annoncés et gardés par la sauvegarde ; le score existait déjà</text>
+<text x="24" y="758" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  J5 : options de partie à l'écran de départ : taille du monde (petit, normal, grand), nombre de peuples voisins (0 à 5), événements rares</text>
+<text x="24" y="779" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  J4 : merveilles très rares (cercle de pierres, source sacrée, grotte ornée) : présentes ou non selon la carte, loin du départ ; les tenir donne leur effet et des points</text>
+<text x="24" y="800" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  J4 : écriture (inventions plus rapides), routes (on marche plus vite sur ses terres) et cités : un village grandi qui porte plus loin, stocke plus et fait avancer le savoir</text>
 <circle cx="700" cy="809" r="5" fill="#3a2c1e"/>
 <text x="710" y="813" font-size="12" fill="#6b5843">fait</text>
 <circle cx="760" cy="809" r="5" fill="none" stroke="#8c2f1c" stroke-width="1.5"/><path d="M760 804a5 5 0 0 1 0 10z" fill="#8c2f1c"/>
