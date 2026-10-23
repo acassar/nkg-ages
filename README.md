@@ -53,6 +53,7 @@ couche ne connaît que celle du dessous, et la CI refuse tout import qui franchi
 | `pnpm bench`        | coût du moteur (génération du monde, ms par tick), avec budget        |
 | `pnpm e2e`          | test de fumée dans Chromium, bureau et téléphone (après `pnpm build`) |
 | `pnpm bench:map`    | mesure de la carte dans Chromium (après `pnpm build`)                 |
+| `pnpm sonde`        | équilibrage : un robot joue 40 parties, années de chaque étape        |
 | `pnpm roadmap`      | régénère la roadmap graphique depuis `roadmap.json`                   |
 
 ## Roadmap
