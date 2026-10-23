@@ -12,6 +12,8 @@ export interface TribeState {
   /** Dernier bilan mensuel, pour l'affichage. */
   lastProduction: number
   lastConsumption: number
+  /** Rations gâtées dans la réserve au dernier mois. */
+  lastSpoiled: number
   /** Matériaux entassés (silex…), sans limite pour l'instant. */
   materials: Partial<Record<ResourceKind, number>>
 }
@@ -24,6 +26,7 @@ export function createTribe(rules: TribeRules = TRIBE_RULES): TribeState {
     starvingMonths: 0,
     lastProduction: 0,
     lastConsumption: 0,
+    lastSpoiled: 0,
     materials: {},
   }
 }

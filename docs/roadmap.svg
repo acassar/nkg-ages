@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 835" width="960" height="835" font-family="Georgia, 'Iowan Old Style', serif" role="img" aria-label="Roadmap de nkg-ages">
 <rect width="960" height="835" rx="10" fill="#eee2c4" stroke="#c9b283"/>
 <text x="24" y="50" font-size="28" fill="#3a2c1e">nkg-ages · roadmap</text>
-<text x="936" y="48" font-size="15" text-anchor="end" fill="#6b5843">16 / 34 fonctionnalités livrées · en cours : J1</text>
+<text x="936" y="48" font-size="15" text-anchor="end" fill="#6b5843">17 / 34 fonctionnalités livrées · en cours : J1</text>
 <g><rect x="24" y="72" width="293.3333333333333" height="268" rx="6" fill="#e6d6b0" stroke="#3a2c1e" stroke-width="1.2"/>
 <text x="40" y="102" font-size="19" fill="#3a2c1e"><tspan fill="#6b5843">J0</tspan> · Fondations</text>
 <circle cx="46" cy="122" r="5" fill="#3a2c1e"/>
@@ -46,8 +46,8 @@
 <text x="658.6666666666666" y="102" font-size="19" fill="#3a2c1e"><tspan fill="#6b5843">J2</tspan> · Néolithique</text>
 <circle cx="664.6666666666666" cy="122" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
 <text x="678.6666666666666" y="126" font-size="14" fill="#6b5843">Agriculture et villages</text>
-<circle cx="664.6666666666666" cy="143" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="678.6666666666666" y="147" font-size="14" fill="#6b5843">Saisons, climat, stockage</text>
+<circle cx="664.6666666666666" cy="143" r="5" fill="#3a2c1e"/>
+<text x="678.6666666666666" y="147" font-size="14" fill="#3a2c1e">Saisons, climat, stockage</text>
 <circle cx="664.6666666666666" cy="164" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
 <text x="678.6666666666666" y="168" font-size="14" fill="#6b5843">Événements rares</text>
 </g>
@@ -92,11 +92,11 @@
 <text x="60" y="631" font-size="14" fill="#6b5843">Futur imaginé</text>
 </g>
 <text x="24" y="692" font-size="13" letter-spacing="1.5" fill="#6b5843">JOURNAL</text>
-<text x="24" y="716" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : objectif de l'ère (250 habitants, 3 campements, 6 inventions), victoire, défaite et score</text>
-<text x="24" y="737" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : dix techniques avec prérequis (feu, peaux, pistage, propulseur, taille du silex, harpon, portage…), chacune à rang E à S</text>
-<text x="24" y="758" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : fleuves tracés de la source à la mer ; berges fertiles, poisson, gués qui ralentissent, eau douce pour les départs</text>
-<text x="24" y="779" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : un chasseur ne cueille plus (il coûte vraiment), la barre dit quand les chasseurs se reposent, et plus de départ sur un îlot</text>
-<text x="24" y="800" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : l'éclaireur fonde des campements (un de plus pour 20 habitants), qui étendent le territoire et la vue</text>
+<text x="24" y="716" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  J2 : saisons (cueillette maigre l'hiver, riche l'été), climat selon la latitude du campement, réserve qui se gâte et que le fumage protège</text>
+<text x="24" y="737" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : objectif de l'ère (250 habitants, 3 campements, 6 inventions), victoire, défaite et score</text>
+<text x="24" y="758" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : dix techniques avec prérequis (feu, peaux, pistage, propulseur, taille du silex, harpon, portage…), chacune à rang E à S</text>
+<text x="24" y="779" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : fleuves tracés de la source à la mer ; berges fertiles, poisson, gués qui ralentissent, eau douce pour les départs</text>
+<text x="24" y="800" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-22</tspan>  J1 : un chasseur ne cueille plus (il coûte vraiment), la barre dit quand les chasseurs se reposent, et plus de départ sur un îlot</text>
 <circle cx="700" cy="809" r="5" fill="#3a2c1e"/>
 <text x="710" y="813" font-size="12" fill="#6b5843">fait</text>
 <circle cx="760" cy="809" r="5" fill="none" stroke="#8c2f1c" stroke-width="1.5"/><path d="M760 804a5 5 0 0 1 0 10z" fill="#8c2f1c"/>

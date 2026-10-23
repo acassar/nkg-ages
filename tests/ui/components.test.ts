@@ -41,6 +41,7 @@ describe('barre du haut', () => {
     await game.newGame({ seed: 'barre', randomStart: false, width: 128, height: 64 })
     const wrapper = mount(TopBar)
     expect(wrapper.find('[data-testid=date]').text()).toContain('12 000 av. J.-C.')
+    expect(wrapper.find('[data-testid=season]').text()).toMatch(/^Hiver · \d+ %$/)
     expect(wrapper.find('[data-testid=population]').text()).toBe('12')
     expect(wrapper.find('[data-testid=food]').text()).toBe('36')
     expect(wrapper.find('[data-testid=hunters]').text()).toBe('2')

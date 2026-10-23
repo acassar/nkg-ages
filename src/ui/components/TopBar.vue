@@ -15,13 +15,26 @@ const signed = new Intl.NumberFormat('fr-FR', {
     <div class="date">
       <span class="era">{{ game.view.eraName }}</span>
       <span class="day" data-testid="date">{{ game.view.dateLabel }}</span>
+      <span
+        class="season"
+        :class="game.view.season.kind"
+        data-testid="season"
+        :title="`Cueillette ce mois-ci : ${game.view.season.gather} % de la moyenne de l'année`"
+        >{{ game.view.season.name }} · {{ game.view.season.gather }} %</span
+      >
     </div>
     <div class="tribe" :class="{ starving: game.view.tribe.starving }">
       <span title="Population de la tribu">
         <span class="label">Tribu</span>
         <b data-testid="population">{{ game.view.tribe.population }}</b>
       </span>
-      <span title="Réserve de nourriture (une ration nourrit une personne un mois)">
+      <span
+        :title="
+          game.view.tribe.spoiled > 0
+            ? `Réserve de nourriture : ${game.view.tribe.spoiled} rations gâtées le mois dernier`
+            : 'Réserve de nourriture (une ration nourrit une personne un mois)'
+        "
+      >
         <span class="label">Vivres</span>
         <b data-testid="food">{{ game.view.tribe.food }}</b>
         <span class="soft">/ {{ game.view.tribe.foodCapacity }}</span>
@@ -118,6 +131,14 @@ const signed = new Intl.NumberFormat('fr-FR', {
   font-family: var(--serif);
   font-size: 18px;
   font-variant-numeric: tabular-nums;
+}
+.season {
+  font-size: 12px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.season.hiver {
+  color: var(--ink-red);
 }
 .tribe {
   display: flex;

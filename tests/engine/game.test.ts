@@ -413,7 +413,10 @@ describe('scénarios', () => {
     expect(u.path).toEqual([])
     expect(ticks).toBeLessThan(1500)
     // Le joueur en est prévenu, une seule fois, puis l'envoi suivant repart à vide.
-    expect(g.events).toEqual([{ type: 'unitGaveUp', unitId: u.id }])
+    // (les autres avis, comme l'arrivée de l'hiver, ne comptent pas ici)
+    expect(g.events.filter((e) => e.type === 'unitGaveUp')).toEqual([
+      { type: 'unitGaveUp', unitId: u.id },
+    ])
     clearDirty(g)
     expect(g.events).toEqual([])
   })

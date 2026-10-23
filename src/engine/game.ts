@@ -5,6 +5,7 @@ import { createClock, isSpeed, type ClockState } from './core/clock'
 import { createRng, type Rng } from './core/random'
 import { createFog, updateFog, Visibility, type FogState } from './fog/fog'
 import { BIOMES, type BiomeId } from './content/biomes'
+import { climateAmplitude, seasonalYield, seasonStarting, spoilage } from './climate/seasons'
 import { TRIBE_RULES } from './content/tribe'
 import {
   claimAround,
@@ -80,6 +81,8 @@ export type GameEvent =
   | { type: 'victory' }
   /** La tribu a disparu : la partie est finie. */
   | { type: 'defeat' }
+  /** L'hiver commence : la cueillette baisse jusqu'au printemps. */
+  | { type: 'winter'; yieldFactor: number }
   /** La réserve était pleine : une part de la viande rapportée est perdue. */
   | { type: 'meatLost'; amount: number }
 
@@ -424,7 +427,12 @@ function harvest(state: GameState): void {
     if (RESOURCE_RULES[d.kind].category === 'food') depositFood += amount
     else if (tribe.population > 0) tribe.materials[d.kind] = (tribe.materials[d.kind] ?? 0) + amount
   }
-  const available = territoryFood(state.territory.playerWeight, depositFood)
+  const month = state.clock.tick % 12
+  const amplitude = climateOf(state)
+  const season = seasonalYield(month, amplitude)
+  if (seasonStarting(month) === 'hiver')
+    state.events.push({ type: 'winter', yieldFactor: seasonalYield(month, amplitude) })
+  const available = territoryFood(state.territory.playerWeight, depositFood) * season
   const basket = inventionStat(state.inventions, 'panier')
   const inv = state.inventions
   const bonus = {
@@ -436,6 +444,25 @@ function harvest(state: GameState): void {
   const hunters = state.units.filter((u) => u.kind === 'chasseur').length
   if (tickTribe(tribe, available, bonus, hunters) === 'famineStarts')
     state.events.push({ type: 'famine' })
+  // La réserve se gâte, surtout l'été ; la conservation (fumage) en sauve une part.
+  const spoiled = tribe.food * spoilage(month, TRIBE_RULES.storageMonths, bonus.storageMonths)
+  tribe.food -= spoiled
+  tribe.lastSpoiled = spoiled
+}
+
+/**
+ * Amplitude des saisons pour la tribu : climat moyen de ses campements.
+ * Une tribu des terres froides a des hivers plus durs qu'une tribu des tropiques.
+ */
+export function climateOf(state: GameState): number {
+  const camps = state.camps.filter((c) => c.owner === PLAYER)
+  if (camps.length === 0) return climateAmplitude(0.5)
+  let sum = 0
+  for (const c of camps) {
+    const i = Math.floor(c.y) * state.world.width + Math.floor(c.x)
+    sum += state.world.temperature[i]!
+  }
+  return climateAmplitude(sum / camps.length)
 }
 
 /** Rendement en plus d'un gisement, selon les inventions (0,2 = +20 %). */
