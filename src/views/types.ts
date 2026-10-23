@@ -106,6 +106,8 @@ export interface PeopleView {
   /** Ce qu'on donne et ce qu'on reçoit (« 10 silex → 25 rations »). */
   trade: string
   tradeBlocked: string | null
+  /** Ce qui aigrit la relation en ce moment, ou null (« Campements trop proches des leurs »). */
+  tension: string | null
 }
 
 export interface GoalView {

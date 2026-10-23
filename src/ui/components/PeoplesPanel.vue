@@ -42,6 +42,7 @@ const game = useGameStore()
             </button>
           </span>
         </div>
+        <p v-if="p.tension" class="tension" data-testid="tension">{{ p.tension }}</p>
       </li>
     </ul>
   </aside>
@@ -85,6 +86,12 @@ ul {
 .mood.good {
   color: var(--ink);
   font-weight: 600;
+}
+.tension {
+  margin: 2px 0 0;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--ink-red);
 }
 .actions {
   display: flex;

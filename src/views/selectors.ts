@@ -3,6 +3,7 @@ import {
   climateOf,
   cannotGift,
   cannotTrade,
+  closeCamps,
   moodOf,
   RELATION_RULES,
   cannotBuildVillage,
@@ -176,6 +177,8 @@ export function buildGameView(state: GameState, full = false): GameView {
         giftBlocked: cannotGift(state, p),
         trade: `${RELATION_RULES.tradeSilex} silex → ${RELATION_RULES.tradeFood} rations`,
         tradeBlocked: cannotTrade(state, p),
+        tension:
+          closeCamps(state, p.owner) > 0 ? 'Vos campements sont trop proches des leurs' : null,
       })),
     outcome: state.outcome
       ? {
@@ -231,6 +234,13 @@ function noticeOf(state: GameState, event: GameEvent): string {
       return `L'hiver arrive : la cueillette tombe à ${Math.round(event.yieldFactor * 100)} % jusqu'au printemps.`
     case 'peopleMet':
       return `Rencontre : vos éclaireurs aperçoivent les terres du ${event.name}.`
+    case 'raid': {
+      if (event.killed > 0)
+        return `Raid du ${event.name} : la réserve était vide, ${event.killed} des vôtres ${event.killed > 1 ? 'sont tués' : 'est tué'}.`
+      if (event.stolen === 0) return `Raid du ${event.name} : vos chasseurs les repoussent.`
+      const saved = event.saved > 0 ? ` (vos chasseurs en sauvent ${event.saved})` : ''
+      return `Raid du ${event.name} : ${event.stolen} rations volées${saved}.`
+    }
     case 'peopleGone':
       return `Le ${event.name} a disparu : ses terres sont désertes.`
     case 'meatLost':

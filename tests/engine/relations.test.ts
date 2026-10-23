@@ -4,6 +4,9 @@ import { RELATION_RULES } from '@/engine/content/relations'
 import {
   applyCommand,
   cannotTrade,
+  closeCamps,
+  raid,
+  type GameEvent,
   createGame,
   foodCapacity,
   moodOf,
@@ -11,6 +14,12 @@ import {
   type GameState,
 } from '@/engine/game'
 import { loadGame, saveGame } from '@/engine/save/save'
+import { createRng } from '@/engine/core/random'
+import { buildGameView } from '@/views/selectors'
+
+function run(g: GameState, ticks: number): void {
+  for (let i = 0; i < ticks; i++) step(g)
+}
 
 const options = { seed: 'voisins', randomStart: false, width: 320, height: 160, rareEvents: false }
 
@@ -137,4 +146,123 @@ describe('relations', () => {
     delete old.peoples[0].relation
     expect(loadGame(old).peoples[0]!.relation).toBe(0)
   })
+})
+
+describe('tensions et raids', () => {
+  /** Le premier peuple, rencontré et posé tout près du camp du joueur. */
+  function close(): GameState {
+    const g = neighbours()
+    const p = g.peoples[0]!
+    const home = g.camps.find((c) => c.owner === p.owner)!
+    const mine = g.camps[0]!
+    Object.assign(home, { x: mine.x + 10, y: mine.y })
+    return g
+  }
+
+  it('des campements trop proches aigrissent la relation, mois après mois', () => {
+    const g = close()
+    const p = g.peoples[0]!
+    expect(closeCamps(g, p.owner)).toBe(1)
+    run(g, 24)
+    expect(p.relation).toBeLessThan(-5)
+    expect(buildGameView(g).peoples[0]!.tension).toMatch(/trop proches/)
+  })
+
+  it('avant la rencontre, pas de rancune : la relation reste neutre', () => {
+    const g = close()
+    const p = g.peoples[0]!
+    p.met = false
+    run(g, 24)
+    expect(p.relation).toBe(0)
+  })
+
+  it('un peuple hostile pille la réserve ; les chasseurs en sauvent une part', () => {
+    const g = close()
+    const p = g.peoples[0]!
+    p.tribe.population = 100
+    p.relation = -100
+    const raids: Extract<GameEvent, { type: 'raid' }>[] = []
+    for (let i = 0; i < 120 && raids.length === 0; i++) {
+      g.tribe.food = 100
+      p.relation = -100
+      step(g)
+      for (const e of g.events) if (e.type === 'raid') raids.push(e)
+      g.events = []
+    }
+    expect(raids.length).toBe(1)
+    const r = raids[0]!
+    expect(r.name).toBe(p.name)
+    expect(r.stolen).toBeGreaterThan(0)
+    // Deux chasseurs au départ : 20 % du butin sauvé.
+    expect(r.saved).toBeGreaterThan(0)
+    expect(r.killed).toBe(0)
+  })
+
+  it('une réserve vide coûte une vie, jamais la dernière', () => {
+    const g = close()
+    const p = g.peoples[0]!
+    g.units = g.units.filter((u) => u.kind !== 'chasseur')
+    let killed = 0
+    for (let i = 0; i < 300; i++) {
+      g.tribe.food = 0
+      g.tribe.population = i % 2 ? 10 : 1
+      p.tribe.population = 50
+      raid(g, p)
+      for (const e of g.events) if (e.type === 'raid') killed += e.killed
+      g.events = []
+      expect(g.tribe.population).toBeGreaterThanOrEqual(1)
+    }
+    expect(killed).toBeGreaterThan(0)
+  })
+
+  it('plus de chasseurs ne fait jamais perdre plus, et une petite réserve défendue ne coûte pas de vie', () => {
+    const g = close()
+    const p = g.peoples[0]!
+    const hunter = g.units.find((u) => u.kind === 'chasseur')!
+    const others = g.units.filter((u) => u.kind !== 'chasseur')
+    const loss = (seed: number, food: number, hunters: number) => {
+      g.units = [...others, ...Array.from({ length: hunters }, () => ({ ...hunter }))]
+      g.peopleRng = createRng(`raid-${seed}`)
+      g.tribe.food = food
+      g.tribe.population = 10
+      p.tribe.population = 50
+      g.events = []
+      // Un raid à coup sûr : on rejoue jusqu'au tirage qui le déclenche, à graine égale.
+      for (let i = 0; i < 100 && g.events.length === 0; i++) raid(g, p)
+      const e = g.events.find((x) => x.type === 'raid')
+      return e && e.type === 'raid' ? { stolen: e.stolen, killed: e.killed } : null
+    }
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: 1000 }),
+        fc.integer({ min: 0, max: 60 }),
+        fc.integer({ min: 0, max: 8 }),
+        fc.integer({ min: 0, max: 8 }),
+        (seed, food, a, b) => {
+          const few = loss(seed, food, Math.min(a, b))!
+          const many = loss(seed, food, Math.max(a, b))!
+          expect(many.stolen).toBeLessThanOrEqual(few.stolen)
+          expect(many.killed).toBeLessThanOrEqual(few.killed)
+          if (food >= 1) expect(many.killed).toBe(0)
+        },
+      ),
+      { numRuns: 200 },
+    )
+  })
+
+  it('un peuple jamais rencontré ou content ne pille pas', () => {
+    for (const setup of [
+      (p: GameState['peoples'][number]) => ((p.met = false), (p.relation = -100)),
+      (p: GameState['peoples'][number]) => (p.relation = 0),
+    ]) {
+      const g = close()
+      const p = g.peoples[0]!
+      for (let i = 0; i < 200; i++) {
+        setup(p)
+        step(g)
+        expect(g.events.some((e) => e.type === 'raid')).toBe(false)
+        g.events = []
+      }
+    }
+  }, 30_000)
 })

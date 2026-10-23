@@ -122,6 +122,8 @@ export type GameEvent =
   | { type: 'winter'; yieldFactor: number }
   /** Le joueur aperçoit pour la première fois un peuple voisin. */
   | { type: 'peopleMet'; name: string }
+  /** Un peuple hostile a pillé la réserve (`stolen` rations ; `killed` : personnes perdues). */
+  | { type: 'raid'; name: string; stolen: number; saved: number; killed: number }
   /** Un peuple déjà rencontré a disparu. */
   | { type: 'peopleGone'; name: string }
   /** La réserve était pleine : une part de la viande rapportée est perdue. */
@@ -661,6 +663,46 @@ function shiftRelation(people: People, delta: number): void {
   )
 }
 
+/** Paires de campements (les leurs, les nôtres) assez proches pour créer des tensions. */
+export function closeCamps(state: GameState, owner: number): number {
+  const theirs = state.camps.filter((c) => c.owner === owner)
+  const mine = state.camps.filter((c) => c.owner === PLAYER)
+  let pairs = 0
+  for (const a of theirs)
+    for (const b of mine)
+      if (Math.hypot(a.x - b.x, a.y - b.y) < RELATION_RULES.tensionDistance) pairs++
+  return pairs
+}
+
+/**
+ * Raid d'un peuple hostile : il emporte des vivres, d'autant plus qu'il est nombreux ; les
+ * chasseurs en sauvent une part. Une réserve vide coûte une vie à la place.
+ */
+export function raid(state: GameState, people: People): void {
+  if (state.peopleRng.next() >= RELATION_RULES.raidChance) return
+  const { tribe } = state
+  const hunters = state.units.filter((u) => u.kind === 'chasseur').length
+  const defense = Math.min(RELATION_RULES.maxDefense, hunters * RELATION_RULES.defensePerHunter)
+  const wanted = Math.min(
+    people.tribe.population * RELATION_RULES.raidFoodPerPerson,
+    tribe.food * RELATION_RULES.raidMaxShare,
+  )
+  const stolen = Math.floor(wanted * (1 - defense))
+  const saved = Math.floor(wanted) - stolen
+  let killed = 0
+  if (stolen > 0) {
+    tribe.food -= stolen
+    people.tribe.food += stolen
+  } else if (tribe.food < 1 && tribe.population > 1 && state.peopleRng.next() >= defense) {
+    // Réserve vraiment vide : ils prennent une vie, à moins que les chasseurs ne les arrêtent.
+    // Une petite réserve que la défense protège entièrement ne coûte rien.
+    killed = 1
+    tribe.population -= 1
+  }
+  shiftRelation(people, RELATION_RULES.raidRelief)
+  state.events.push({ type: 'raid', name: people.name, stolen, saved, killed })
+}
+
 /** Humeur d'un peuple envers le joueur, d'après sa relation. */
 export function moodOf(relation: number): string {
   return MOODS.find((m) => relation >= m.from)!.name
@@ -679,6 +721,9 @@ function livePeople(state: GameState, people: People): void {
     people.relation > 0
       ? Math.max(0, people.relation - drift)
       : Math.min(0, people.relation + drift)
+  // Avant la rencontre, les campements voisins s'ignorent : pas de rancune accumulée.
+  if (people.met) shiftRelation(people, -RELATION_RULES.tensionPerMonth * closeCamps(state, owner))
+  if (people.met && people.relation <= RELATION_RULES.raidBelow) raid(state, people)
   const camps = state.camps.filter((c) => c.owner === owner)
   const month = state.clock.tick % 12
   const home = camps[0]
