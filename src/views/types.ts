@@ -39,6 +39,8 @@ export interface UnitView {
    * (seul l'éclaireur le peut), sinon ce qui l'en empêche maintenant (ou null).
    */
   foundCamp: { blocked: string | null } | null
+  /** Sous l'ordre « Explorer ». */
+  exploring: boolean
 }
 
 export interface CampView {
@@ -52,6 +54,8 @@ export interface CampView {
   city: boolean
   /** Nom du peuple voisin qui le tient, ou null pour le joueur. */
   people: string | null
+  /** Ce qu'il peut devenir (village, puis cité), son coût et ce qui l'en empêche ; null sinon. */
+  upgrade: { to: 'village' | 'city'; cost: string; blocked: string | null } | null
 }
 
 export interface GameView {
@@ -223,6 +227,11 @@ export interface TribeView {
   /** Coût en rations d'un nouveau chasseur, et ce qui empêche d'en former un (ou null). */
   recruitCost: number
   recruitBlocked: string | null
+  /** Éclaireurs en vie, combien la tribu peut en entretenir, leur coût et ce qui bloque. */
+  scouts: number
+  maxScouts: number
+  scoutCost: number
+  scoutBlocked: string | null
   /** Réserve pleine : les chasseurs ne chassent pas. */
   huntersResting: boolean
   /** Campements tenus, et combien la population permet d'en tenir. */

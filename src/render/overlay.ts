@@ -39,6 +39,16 @@ export class OverlayPainter {
 
     for (const camp of state.camps) {
       const p = worldToScreen(camera, camp.x, camp.y)
+      if (camp.id === state.selectedCamp) {
+        // Campement choisi : un cercle pointillé à l'encre rouge autour de lui.
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, camp.city ? 20 : camp.village ? 16 : 14, 0, Math.PI * 2)
+        ctx.setLineDash([4, 3])
+        ctx.lineWidth = 2
+        ctx.strokeStyle = red
+        ctx.stroke()
+        ctx.setLineDash([])
+      }
       ctx.beginPath()
       if (camp.village) {
         // Village : une maison (toit sur un carré), plus grande qu'une tente ; cité : plus encore.

@@ -45,6 +45,8 @@ export const useGameStore = defineStore('game', () => {
   const selected = ref<Set<number>>(new Set())
   /** Lieu que la carte doit montrer (clic sur une alerte) ; `n` change à chaque demande. */
   const focus = shallowRef<{ x: number; y: number; n: number } | null>(null)
+  /** Campement choisi d'un clic (pour le faire grandir ou y former des recrues), ou null. */
+  const selectedCamp = ref<number | null>(null)
   const viewListeners = new Set<ViewListener>()
   const slot = slotFactory()
   /** Partie à reprendre, montrée sur l'écran d'accueil. */
@@ -179,9 +181,10 @@ export const useGameStore = defineStore('game', () => {
   const setPaused = (paused: boolean) => send({ type: 'setPaused', paused })
   const invent = (invention: string) =>
     send({ type: 'invent', invention: invention as InventionKind })
-  const recruitHunter = () => send({ type: 'recruitHunter' })
-  const buildVillage = () => send({ type: 'buildVillage' })
-  const buildCity = () => send({ type: 'buildCity' })
+  const recruitHunter = (campId?: number) => send({ type: 'recruitHunter', campId })
+  const recruitScout = (campId?: number) => send({ type: 'recruitScout', campId })
+  const buildVillage = (campId?: number) => send({ type: 'buildVillage', campId })
+  const buildCity = (campId?: number) => send({ type: 'buildCity', campId })
   const gift = (people: number) => send({ type: 'gift', people })
   const trade = (people: number) => send({ type: 'trade', people })
 
@@ -194,12 +197,27 @@ export const useGameStore = defineStore('game', () => {
 
   function select(ids: number[]) {
     selected.value = new Set(ids)
+    selectedCamp.value = null
   }
 
   function toggleSelected(id: number) {
     const next = new Set(selected.value)
     if (!next.delete(id)) next.add(id)
     selected.value = next
+    selectedCamp.value = null
+  }
+
+  /** Choisit un campement : les unités choisies sont relâchées. */
+  function selectCamp(id: number | null) {
+    selected.value = new Set()
+    selectedCamp.value = id
+  }
+
+  /** Les unités choisies partent explorer seules. */
+  function exploreSelected() {
+    const unitIds = [...selected.value]
+    if (unitIds.length === 0) return report('Choisissez une unité à envoyer explorer', true)
+    return send({ type: 'explore', unitIds })
   }
 
   function moveSelectedTo(x: number, y: number) {
@@ -219,6 +237,7 @@ export const useGameStore = defineStore('game', () => {
     world.value = null
     view.value = null
     selected.value = new Set()
+    selectedCamp.value = null
     report(null)
   }
 
@@ -231,6 +250,7 @@ export const useGameStore = defineStore('game', () => {
     loading,
     selected,
     focus,
+    selectedCamp,
     savedGame,
     newGame,
     resume,
@@ -242,8 +262,11 @@ export const useGameStore = defineStore('game', () => {
     setPaused,
     select,
     toggleSelected,
+    selectCamp,
+    exploreSelected,
     invent,
     recruitHunter,
+    recruitScout,
     buildVillage,
     buildCity,
     gift,

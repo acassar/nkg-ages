@@ -63,7 +63,26 @@ const signed = new Intl.NumberFormat('fr-FR', {
             game.view.tribe.recruitBlocked ??
             `Former un chasseur (${game.view.tribe.recruitCost} rations)`
           "
-          @click="game.recruitHunter()"
+          @click="game.recruitHunter(game.selectedCamp ?? undefined)"
+        >
+          +
+        </button>
+      </span>
+      <span
+        title="Éclaireurs en vie / que la tribu peut entretenir (ils explorent et fondent les campements)"
+      >
+        <span class="label">Éclaireurs</span>
+        <b data-testid="scouts">{{ game.view.tribe.scouts }}</b>
+        <span class="soft">/ {{ game.view.tribe.maxScouts }}</span>
+        <button
+          class="ink-button recruit"
+          data-testid="recruit-scout"
+          :disabled="game.view.tribe.scoutBlocked !== null"
+          :title="
+            game.view.tribe.scoutBlocked ??
+            `Former un éclaireur (${game.view.tribe.scoutCost} rations)`
+          "
+          @click="game.recruitScout(game.selectedCamp ?? undefined)"
         >
           +
         </button>
