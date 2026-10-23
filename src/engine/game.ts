@@ -134,6 +134,11 @@ export interface Camp extends Partial<Mover> {
   city?: boolean
   /** Gens du joueur qui y vivent : la population de la tribu se partage entre ses campements. */
   members?: number
+  /**
+   * Part exacte (non arrondie) de la population qui y vit : les naissances s'y accumulent
+   * mois après mois, même quand `members` n'en montre pas encore une personne entière.
+   */
+  share?: number
   /** Bande qui migre seule vers des terres plus riches quand les siennes s'épuisent. */
   roaming?: boolean
 }
@@ -414,10 +419,16 @@ export function syncMembers(state: GameState): void {
   const camps = state.camps.filter((c) => c.owner === PLAYER)
   if (camps.length === 0) return
   const total = Math.max(0, state.tribe.population)
-  const counted = camps.reduce((n, c) => n + (c.members ?? 0), 0)
-  if (counted !== total) {
-    const base = counted > 0 ? counted : camps.length
-    const shares = camps.map((c) => (total * (counted > 0 ? (c.members ?? 0) : 1)) / base)
+  // Une part exacte qui ne colle plus aux gens (scission, ancienne partie) repart d'eux.
+  const exact = camps.map((c) => {
+    const m = c.members ?? 0
+    return c.share !== undefined && Math.abs(c.share - m) < 1 ? c.share : m
+  })
+  const sum = exact.reduce((a, b) => a + b, 0)
+  if (Math.abs(sum - total) > 1e-9) {
+    // L'écart se répartit selon la part exacte de chacun : un petit campement finit par
+    // gagner ses naissances, au lieu de les voir toujours arrondies au profit du plus gros.
+    const shares = exact.map((e) => (sum > 0 ? (e * total) / sum : total / camps.length))
     const floors = shares.map(Math.floor)
     let rest = total - floors.reduce((a, b) => a + b, 0)
     // Le reste va aux plus grosses parts tronquées, dans l'ordre des campements à égalité.
@@ -429,8 +440,11 @@ export function syncMembers(state: GameState): void {
       floors[i]!++
       rest--
     }
-    camps.forEach((c, i) => (c.members = floors[i]!))
-  }
+    camps.forEach((c, i) => {
+      c.members = floors[i]!
+      c.share = shares[i]!
+    })
+  } else camps.forEach((c, i) => (c.share = exact[i]!))
   const empty = camps.filter((c) => (c.members ?? 0) <= 0)
   if (empty.length > 0 && empty.length < camps.length)
     state.camps = state.camps.filter((c) => !empty.includes(c))

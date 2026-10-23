@@ -348,6 +348,56 @@ describe('bandes en jeu', () => {
     expect(applyCommand(g, { type: 'moveCamp', campId: band.id, ...far }).ok).toBe(false)
   })
 
+  it('chaque campement prend sa part des naissances, même le plus petit', () => {
+    // Scénario de la sonde : arrondi au plus gros, la naissance du mois allait toujours au
+    // plus grand village ; les petits restaient à 13 personnes pendant vingt ans.
+    const g = createGame(options)
+    const big = bandsOf(g)[0]!
+    const small = { ...big, id: 99, x: big.x + 20, members: 13, share: undefined }
+    big.members = 100
+    g.camps.push(small)
+    g.tribe.population = 113
+    for (let month = 0; month < 120; month++) {
+      g.tribe.population++
+      syncMembers(g)
+    }
+    // 233 personnes, réparties comme au départ : environ 206 et 27.
+    expect(small.members).toBeGreaterThanOrEqual(26)
+    expect(big.members! + small.members!).toBe(233)
+    // Et les départs se répartissent de même.
+    for (let month = 0; month < 120; month++) {
+      g.tribe.population--
+      syncMembers(g)
+    }
+    expect(small.members).toBe(13)
+    expect(big.members).toBe(100)
+  })
+
+  it('les naissances se partagent entre trois bandes, selon leur taille', () => {
+    // Bug relevé en jeu : chaque naissance seule allait au plus gros campement, les autres stagnaient.
+    const g = createGame(options)
+    const first = g.camps[0]!
+    g.camps = [
+      { ...first, members: 30 },
+      { ...first, id: 501, members: 20, x: first.x + 20 },
+      { ...first, id: 502, members: 20, x: first.x + 40 },
+    ]
+    g.tribe.population = 70
+    for (let k = 0; k < 70; k++) {
+      g.tribe.population++
+      syncMembers(g)
+    }
+    // La population a doublé : chacun a doublé, à une personne près.
+    expect(g.camps.map((c) => c.members)).toEqual([60, 40, 40])
+    for (let k = 0; k < 28; k++) {
+      g.tribe.population--
+      syncMembers(g)
+    }
+    const members = g.camps.map((c) => c.members!)
+    expect(members.reduce((a, b) => a + b, 0)).toBe(112)
+    ;[48, 32, 32].forEach((m, i) => expect(Math.abs(members[i]! - m)).toBeLessThanOrEqual(1))
+  })
+
   it('invariant : les gens des campements font toujours la population (fast-check)', () => {
     const g = createGame(options)
     const first = { ...g.camps[0]! }
