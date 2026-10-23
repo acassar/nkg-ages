@@ -22,5 +22,7 @@ export type Command =
   | { type: 'trade'; people: number }
   /** Fait d'un campement un village (le plus ancien qui ne l'est pas, sans `campId`). */
   | { type: 'buildVillage'; campId?: number }
+  /** Fait d'un village une cité (le plus ancien, si aucun n'est donné). */
+  | { type: 'buildCity'; campId?: number }
 
 export type CommandResult = { ok: true } | { ok: false; reason: string }

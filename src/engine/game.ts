@@ -21,6 +21,7 @@ import { findPath, knownPassable, pathBlocked } from './units/path'
 import { CAMP_RULES } from './content/camps'
 import { PEOPLE_NAMES, PEOPLE_RULES } from './content/peoples'
 import { MOODS, RELATION_RULES } from './content/relations'
+import { CITY_RULES } from './content/cities'
 import { FERTILITY, VILLAGE_RULES } from './content/villages'
 import { RIVER_RULES } from './content/rivers'
 import { ANIMAL_RULES, HUNT_RULES, type AnimalKind } from './content/fauna'
@@ -99,6 +100,8 @@ export interface Camp {
   y: number
   /** Devenu village : il porte plus loin, stocke plus et cultive ses champs. */
   village?: boolean
+  /** Devenu cité (c'était un village) : portée, réserves et savoir en plus. */
+  city?: boolean
 }
 
 /** Ce qui est arrivé pendant les ticks, pour prévenir le joueur ; vidé à chaque envoi. */
@@ -333,6 +336,37 @@ export function cannotBuildVillage(state: GameState, campId?: number): string | 
   return null
 }
 
+/** Cités que la population permet de tenir. */
+export function maxCities(state: GameState): number {
+  return Math.floor(state.tribe.population / CITY_RULES.peoplePerCity)
+}
+
+/** Cités du joueur. */
+export function cityCount(state: GameState): number {
+  return state.camps.filter((c) => c.owner === PLAYER && c.city).length
+}
+
+/** Pourquoi la tribu ne peut pas bâtir de cité (sur ce village), ou null. */
+export function cannotBuildCity(state: GameState, campId?: number): string | null {
+  if (!state.inventions.ranks.ecriture) return `Il faut d'abord : ${INVENTION_RULES.ecriture.name}`
+  const camp = citySite(state, campId)
+  if (!camp)
+    return campId === undefined ? 'Aucun village à changer en cité' : 'Aucun village choisi'
+  if (cityCount(state) >= maxCities(state))
+    return `Une cité pour ${CITY_RULES.peoplePerCity} habitants`
+  if (state.tribe.food < CITY_RULES.foodCost) return `Il faut ${CITY_RULES.foodCost} rations`
+  if ((state.tribe.materials.cuivre ?? 0) < CITY_RULES.copperCost)
+    return `Il faut ${CITY_RULES.copperCost} cuivre`
+  return null
+}
+
+/** Le village à changer en cité : celui demandé, ou le plus ancien qui ne l'est pas. */
+function citySite(state: GameState, campId?: number): Camp | undefined {
+  return state.camps.find(
+    (c) => c.owner === PLAYER && c.village && !c.city && (campId === undefined || c.id === campId),
+  )
+}
+
 /** Le campement à changer en village : celui demandé, ou le plus ancien qui ne l'est pas. */
 function villageSite(state: GameState, campId?: number): Camp | undefined {
   return state.camps.find(
@@ -449,6 +483,14 @@ export function applyCommand(state: GameState, command: Command): CommandResult 
       villageSite(state, command.campId)!.village = true
       return { ok: true }
     }
+    case 'buildCity': {
+      const reason = cannotBuildCity(state, command.campId)
+      if (reason) return { ok: false, reason }
+      state.tribe.food -= CITY_RULES.foodCost
+      state.tribe.materials.cuivre = (state.tribe.materials.cuivre ?? 0) - CITY_RULES.copperCost
+      citySite(state, command.campId)!.city = true
+      return { ok: true }
+    }
     case 'recruitHunter': {
       const reason = cannotRecruit(state)
       if (reason) return { ok: false, reason }
@@ -485,7 +527,12 @@ export function step(state: GameState): void {
   if (state.outcome?.type === 'defeat') return
   state.clock.tick++
   const pace = 1 + inventionMean(state.inventions, 'portage') / 100
-  for (const unit of state.units) if (!moveUnit(unit, state.world, pace)) replan(state, unit)
+  const roads = 1 + inventionMean(state.inventions, 'routes') / 100
+  for (const unit of state.units) {
+    // Sur ses propres terres, les routes (si on les a) font marcher plus vite.
+    const home = state.territory.owner[cellOf(state, unit.x, unit.y)] === PLAYER
+    if (!moveUnit(unit, state.world, home ? pace * roads : pace)) replan(state, unit)
+  }
   hunt(state)
   // Le joueur et les peuples poussent chacun avec leur aléa : tant qu'ils ne se touchent pas,
   // la présence des voisins ne change rien au territoire du joueur.
@@ -497,7 +544,12 @@ export function step(state: GameState): void {
   harvest(state)
   for (const people of state.peoples) livePeople(state, people)
   fortune(state)
-  const invented = tickInventions(state.inventions, state.tribe.population, state.rng)
+  const invented = tickInventions(
+    state.inventions,
+    state.tribe.population,
+    state.rng,
+    inventionBoost(state),
+  )
   if (invented)
     state.events.push({ type: 'invented', invention: invented.kind, rank: invented.rank })
   updateFog(state.fog, viewersOf(state))
@@ -559,7 +611,10 @@ function seatsOf(state: GameState): Seat[] {
 }
 
 function seatOf(camp: Camp): Seat {
-  const reach = CAMP_RULES.reach + (camp.village ? VILLAGE_RULES.reachBonus : 0)
+  const reach =
+    CAMP_RULES.reach +
+    (camp.village ? VILLAGE_RULES.reachBonus : 0) +
+    (camp.city ? CITY_RULES.reachBonus : 0)
   return { owner: camp.owner, x: camp.x, y: camp.y, reach }
 }
 
@@ -886,11 +941,26 @@ function depositBonus(state: GameState, kind: ResourceKind): number {
   return 0
 }
 
-/** Mois de réserve en plus : conservation (fumage) et greniers des villages. */
+/** Mois de réserve en plus : conservation (fumage), greniers des villages et des cités. */
 function storageBonus(state: GameState): number {
   return (
-    inventionMean(state.inventions, 'fumage') + villageCount(state) * VILLAGE_RULES.storageMonths
+    inventionMean(state.inventions, 'fumage') +
+    villageCount(state) * VILLAGE_RULES.storageMonths +
+    cityCount(state) * CITY_RULES.storageMonths
   )
+}
+
+/** Travail d'invention en plus (0,2 = +20 %) : écriture et scribes des cités. */
+export function inventionBoost(state: GameState): number {
+  return inventionMean(state.inventions, 'ecriture') / 100 + cityCount(state) * CITY_RULES.workBonus
+}
+
+/** Indice de la cellule sous un point du monde, borné à la carte. */
+function cellOf(state: GameState, x: number, y: number): number {
+  const { width, height } = state.world
+  const cx = Math.min(width - 1, Math.max(0, Math.floor(x)))
+  const cy = Math.min(height - 1, Math.max(0, Math.floor(y)))
+  return cy * width + cx
 }
 
 /**

@@ -1,6 +1,11 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
-import { INVENTION_KINDS, INVENTION_RULES, INVENTION_WORK } from '@/engine/content/inventions'
+import {
+  INVENTION_KINDS,
+  INVENTION_RULES,
+  INVENTION_WORK,
+  type InventionKind,
+} from '@/engine/content/inventions'
 import { RANKS } from '@/engine/content/rarity'
 import { createRng } from '@/engine/core/random'
 import {
@@ -112,16 +117,15 @@ describe('techniques', () => {
       expect(rules.work).toBeGreaterThan(0)
       // Le rang S fait toujours mieux que le rang E, dans le sens de la statistique.
       expect(Math.abs(rules.range.s.mean)).toBeGreaterThan(Math.abs(rules.range.e.mean))
-      // On remonte les prérequis sans jamais revenir sur ses pas.
-      const seen = new Set([kind])
-      const stack = [...(rules.requires ?? [])]
-      while (stack.length > 0) {
-        const k = stack.pop()!
+      // On remonte les prérequis sans jamais retomber sur un ancêtre du même chemin
+      // (deux chemins qui se rejoignent, en losange, sont permis : les routes demandent
+      // portage et agriculture, qui demandent tous deux le panier).
+      const climb = (k: InventionKind, path: Set<InventionKind>) => {
         expect(INVENTION_KINDS).toContain(k)
-        expect(seen.has(k)).toBe(false)
-        seen.add(k)
-        stack.push(...(INVENTION_RULES[k].requires ?? []))
+        expect(path.has(k)).toBe(false)
+        for (const r of INVENTION_RULES[k].requires ?? []) climb(r, new Set([...path, k]))
       }
+      climb(kind, new Set())
     }
   })
 

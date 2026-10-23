@@ -92,6 +92,26 @@ const signed = new Intl.NumberFormat('fr-FR', {
           +
         </button>
       </span>
+      <span
+        v-if="game.view.tribe.cities > 0 || game.view.tribe.maxCities > 0"
+        title="Cités tenues / que la tribu peut tenir (portée, réserves et savoir en plus)"
+      >
+        <span class="label">Cités</span>
+        <b data-testid="cities">{{ game.view.tribe.cities }}</b>
+        <span class="soft">/ {{ game.view.tribe.maxCities }}</span>
+        <button
+          class="ink-button recruit"
+          data-testid="build-city"
+          :disabled="game.view.tribe.cityBlocked !== null"
+          :title="
+            game.view.tribe.cityBlocked ??
+            `Faire d’un village une cité (${game.view.tribe.cityCost})`
+          "
+          @click="game.buildCity()"
+        >
+          +
+        </button>
+      </span>
       <span v-for="m in game.view.tribe.materials" :key="m.kind" :title="`${m.name} en réserve`">
         <span class="label">{{ m.name }}</span>
         <b :data-testid="`material-${m.kind}`">{{ m.amount }}</b>

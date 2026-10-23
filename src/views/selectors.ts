@@ -10,6 +10,11 @@ import {
   maxVillages,
   villageCount,
   VILLAGE_RULES,
+  cannotBuildCity,
+  maxCities,
+  cityCount,
+  inventionBoost,
+  CITY_RULES,
   dateOfTick,
   seasonOf,
   seasonalYield,
@@ -137,6 +142,7 @@ export function buildGameView(state: GameState, full = false): GameView {
         y: c.y,
         mine: c.owner === PLAYER,
         village: c.village === true,
+        city: c.city === true,
         people: state.peoples.find((p) => p.owner === c.owner)?.name ?? null,
       })),
     fog: patchOf(state.fog.cells, state.world.width, full ? whole : state.fog.dirty),
@@ -304,6 +310,10 @@ function tribeView(state: GameState): TribeView {
     maxVillages: maxVillages(state),
     villageCost: VILLAGE_RULES.foodCost,
     villageBlocked: cannotBuildVillage(state),
+    cities: cityCount(state),
+    maxCities: maxCities(state),
+    cityCost: `${CITY_RULES.foodCost} rations et ${CITY_RULES.copperCost} cuivre`,
+    cityBlocked: cannotBuildCity(state),
     crops: Math.round(tribe.lastCrops),
   }
 }
@@ -384,7 +394,7 @@ export function formatStat(stat: RankedStat, unit: string): string {
 /** Inventions : faites, en cours ou possibles, avec leur coût et ce qui les bloque. */
 function inventionViews(state: GameState): InventionView[] {
   const inv = state.inventions
-  const monthly = workPerMonth(state.tribe.population)
+  const monthly = workPerMonth(state.tribe.population) * (1 + inventionBoost(state))
   return INVENTION_KINDS.map((kind) => {
     const rules = INVENTION_RULES[kind]
     const stat = inventionStat(inv, kind)

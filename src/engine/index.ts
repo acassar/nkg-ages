@@ -53,6 +53,10 @@ export {
   cannotBuildVillage,
   maxVillages,
   villageCount,
+  cannotBuildCity,
+  maxCities,
+  cityCount,
+  inventionBoost,
   cropsOf,
   START_CHOICES,
 } from './game'
@@ -66,6 +70,7 @@ export { seasonOf, seasonalYield, climateAmplitude, spoilage } from './climate/s
 export { saveGame, loadGame, SAVE_VERSION } from './save/save'
 export type { SaveData } from './save/save'
 export { VILLAGE_RULES, FERTILITY } from './content/villages'
+export { CITY_RULES } from './content/cities'
 export { EVENT_KINDS, EVENT_RULES, EVENT_RULES_GLOBAL } from './content/events'
 export type { EventKind } from './content/events'
 export { PEOPLE_RULES, PEOPLE_NAMES } from './content/peoples'
