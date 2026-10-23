@@ -12,6 +12,7 @@ import {
   type GameState,
 } from '@/engine/game'
 import { PLAYER } from '@/engine/territory/territory'
+import { home } from '../home'
 
 const options = { seed: 'village', randomStart: false, width: 192, height: 96, rareEvents: false }
 
@@ -20,7 +21,7 @@ function farmers(): GameState {
   const g = createGame(options)
   g.inventions.ranks.agriculture = 'E'
   g.tribe.population = VILLAGE_RULES.peoplePerVillage
-  g.tribe.food = 200
+  home(g).food = 200
   return g
 }
 
@@ -31,9 +32,9 @@ describe('villages', () => {
     g.inventions.ranks.agriculture = 'E'
     expect(cannotBuildVillage(g)).toMatch(/habitants/)
     g.tribe.population = VILLAGE_RULES.peoplePerVillage
-    g.tribe.food = VILLAGE_RULES.foodCost - 1
+    home(g).food = VILLAGE_RULES.foodCost - 1
     expect(cannotBuildVillage(g)).toMatch(/rations/)
-    g.tribe.food = VILLAGE_RULES.foodCost
+    home(g).food = VILLAGE_RULES.foodCost
     expect(cannotBuildVillage(g)).toBeNull()
   })
 
@@ -41,7 +42,7 @@ describe('villages', () => {
     const g = farmers()
     expect(applyCommand(g, { type: 'buildVillage' })).toEqual({ ok: true })
     expect(g.camps[0]!.village).toBe(true)
-    expect(g.tribe.food).toBe(200 - VILLAGE_RULES.foodCost)
+    expect(home(g).food).toBe(200 - VILLAGE_RULES.foodCost)
     expect(applyCommand(g, { type: 'buildVillage' })).toMatchObject({ ok: false })
     expect(maxVillages(g)).toBe(1)
   })
@@ -93,11 +94,11 @@ describe('villages', () => {
     fc.assert(
       fc.property(fc.integer({ min: 0, max: 400 }), (food) => {
         g.clock.tick = VILLAGE_RULES.harvestMonths[0]! - 1
-        g.tribe.food = food
+        home(g).food = food
         step(g)
-        expect(g.tribe.lastCrops).toBeGreaterThan(0)
-        expect(g.tribe.food).toBeLessThanOrEqual(foodCapacity(g) + 1e-9)
-        expect(g.tribe.food).toBeGreaterThanOrEqual(0)
+        expect(home(g).lastCrops).toBeGreaterThan(0)
+        expect(home(g).food).toBeLessThanOrEqual(foodCapacity(g) + 1e-9)
+        expect(home(g).food).toBeGreaterThanOrEqual(0)
       }),
       { numRuns: 8 },
     )

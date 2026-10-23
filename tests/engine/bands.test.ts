@@ -22,6 +22,7 @@ import {
 } from '@/engine/game'
 import { createTerritory, NO_OWNER, PLAYER, claim } from '@/engine/territory/territory'
 import type { World } from '@/engine/world/world'
+import { home } from '../home'
 
 const options = { seed: 'bandes', randomStart: false, width: 256, height: 128, peoples: 0 }
 
@@ -137,6 +138,19 @@ describe('épuisement des terres', () => {
     const around = forageAround(world, weights, abundance, 4.5, 4.5, 3)
     expect(around.mean).toBeCloseTo(0.5)
   })
+
+  it('ne compte pas les terres d’un autre peuple : la bande ne peut pas y cueillir', () => {
+    // Une bande collée aux terres d'un voisin se croyait bien nourrie, et y mourait de faim.
+    const world = plainWorld(10, 10)
+    const weights = new Float32Array(100).fill(1)
+    const abundance = createAbundance(100)
+    const owner = new Uint8Array(100)
+    for (let i = 0; i < 100; i++) if (i % 10 >= 5) owner[i] = PLAYER + 1
+    const all = forageAround(world, weights, abundance, 4.5, 4.5, 3)
+    const free = forageAround(world, weights, abundance, 4.5, 4.5, 3, owner)
+    expect(free.offered).toBeLessThan(all.offered * 0.7)
+    expect(free.mean).toBe(1)
+  })
 })
 
 describe('zones des bandes', () => {
@@ -208,15 +222,15 @@ describe('bandes en jeu', () => {
     g.herds = []
     // Assez de bras pour cueillir tout ce que les terres offrent : c'est la terre qui borne.
     g.tribe.population = 60
-    g.tribe.food = 5000
+    home(g).food = 5000
     syncMembers(g)
     const band = bandsOf(g)[0]!
     for (let i = 0; i < 6; i++) step(g)
-    const early = g.tribe.lastProduction
+    const early = home(g).lastProduction
     for (let i = 0; i < 36; i++) step(g)
     // Même saison, trois ans plus tard : la cueillette a fondu.
     expect(bandAbundance(g, band)).toBeLessThan(0.8)
-    expect(g.tribe.lastProduction).toBeLessThan(early)
+    expect(home(g).lastProduction).toBeLessThan(early)
   })
 
   it('déplacée, elle marche avec ses gens ; sa zone la suit et rend les terres quittées', () => {
@@ -342,7 +356,7 @@ describe('bandes en jeu', () => {
     const band = bandsOf(g)[0]!
     g.inventions.ranks.agriculture = 'E'
     g.tribe.population = 100
-    g.tribe.food = 1000
+    home(g).food = 1000
     syncMembers(g)
     const far = landAway(g, band, BAND_RULES.radius * 3)
     applyCommand(g, { type: 'moveCamp', campId: band.id, ...far })

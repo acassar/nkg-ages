@@ -22,6 +22,11 @@ export const BAND_RULES = {
   comfortSize: 25,
   lossPerPerson: 0.01,
   minEfficiency: 0.5,
+  /**
+   * Deux campements du joueur plus proches que ceci se retrouvent : ils mettent leurs vivres
+   * en commun (chacun selon ses gens). Plus loin, chacun vit de sa propre réserve.
+   */
+  shareDistance: 14,
   /** Personnes au moins dans chacune des deux bandes après une scission. */
   minSplit: 8,
   /** Rations par mois qu'offre une cellule exploitée, multipliées par sa richesse et son abondance. */

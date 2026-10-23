@@ -7,6 +7,8 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import {
   createGame,
   foodCapacity,
+  foodOf,
+  tribeLarder,
   INVENTION_KINDS,
   PLAYER,
   step,
@@ -64,8 +66,8 @@ function play(seed: string): GameReport {
     const year = state.clock.tick / 12
     for (const [name, reached] of Object.entries(MILESTONES))
       if (milestones[name] === null && reached(state)) milestones[name] = round(year)
-    if (state.tribe.starvingMonths > 0) famineMonths++
-    if (state.tribe.food >= foodCapacity(state)) full++
+    if (tribeLarder(state).starvingMonths > 0) famineMonths++
+    if (foodOf(state) >= foodCapacity(state)) full++
     if (state.clock.tick % 12 === 0 && CHECKPOINTS.includes(year))
       population[year] = state.tribe.population
     state.events.length = 0

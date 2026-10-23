@@ -23,6 +23,8 @@ import { TRIBE_RULES } from '@/engine/content/tribe'
 import { PLAYER } from '@/engine/territory/territory'
 import fc from 'fast-check'
 import { createRng } from '@/engine/core/random'
+import { home } from '../home'
+import { createLarder } from '@/engine/tribe/tribe'
 
 // Sans peuples voisins : ces scénarios suivent la tribu du joueur seule (voir peoples.test.ts).
 const options = { seed: 'scénario', randomStart: false, width: 256, height: 128, peoples: 0 }
@@ -237,7 +239,7 @@ describe('commandes', () => {
       let prises = 0
       for (let i = 0; i < 200; i++) {
         h.herds = [{ id: 1, kind: 'cerf', x: band.x + 3, y: band.y, size: 8, goal: band }]
-        h.tribe.food = 0
+        home(h).food = 0
         step(h)
         prises += 8 - (h.herds[0]?.size ?? 0)
       }
@@ -272,11 +274,11 @@ describe('commandes', () => {
       if (invention) h.inventions.ranks[invention] = 'S'
       const c = h.camps[0]!
       h.deposits = [{ id: 1, kind, x: Math.floor(c.x), y: Math.floor(c.y), rank: 'E' }]
-      h.tribe.food = 0
+      home(h).food = 0
       // Terres épuisées : seuls les gisements nourrissent.
       h.abundance.fill(0)
       step(h)
-      return kind === 'silex' ? h.tribe.materials.silex! : h.tribe.lastProduction
+      return kind === 'silex' ? h.tribe.materials.silex! : home(h).lastProduction
     }
     expect(yieldOf('silex', 'taille')).toBeCloseTo(yieldOf('silex', null) * 2)
     expect(yieldOf('poisson', 'harpon')).toBeGreaterThan(yieldOf('poisson', null))
@@ -298,7 +300,7 @@ describe('commandes', () => {
         g.camps = [band]
         for (let i = 0; i < 40; i++) {
           g.herds = [{ id: 1, kind: 'sanglier', x: band.x + 2, y: band.y, size: 5, goal: band }]
-          g.tribe.food = 0
+          home(g).food = 0
           g.tribe.population = 24
           band.members = 24
           clearDirty(g)
@@ -331,9 +333,18 @@ describe('commandes', () => {
     const g = createGame(options)
     const goal = FIRST_ERA.goal
     g.tribe.population = goal.population
-    g.tribe.food = 10_000
+    // Les petits campements ajoutés ont une personne chacun ; la bande de départ, le reste.
+    g.camps[0]!.members = goal.population - (goal.camps - 1)
+    home(g).food = 10_000
     for (let i = 1; i < goal.camps; i++)
-      g.camps.push({ id: 100 + i, owner: PLAYER, x: 1.5 + i, y: 1.5, members: 1 })
+      g.camps.push({
+        id: 100 + i,
+        owner: PLAYER,
+        x: 1.5 + i,
+        y: 1.5,
+        members: 1,
+        larder: createLarder(10),
+      })
     const kinds = INVENTION_KINDS.slice(0, goal.inventions)
     for (const k of kinds) g.inventions.ranks[k] = 'E'
     step(g)
@@ -442,7 +453,7 @@ describe('scénarios', () => {
     const g = createGame(options)
     for (let i = 0; i < 240; i++) step(g)
     expect(g.tribe.population).toBeGreaterThan(TRIBE_RULES.startPopulation)
-    expect(g.tribe.starvingMonths).toBe(0)
+    expect(home(g).starvingMonths).toBe(0)
   })
 
   it('sans rien à récolter, la famine prévient une fois puis décime la tribu', () => {
@@ -474,7 +485,7 @@ describe('scénarios', () => {
       { id: 2, kind: 'silex', ...at, rank: 'E' },
     ]
     for (let i = 0; i < 24; i++) step(g)
-    expect(g.tribe.starvingMonths).toBe(0)
+    expect(home(g).starvingMonths).toBe(0)
     expect(g.tribe.materials.silex).toBeCloseTo(24 * 0.5)
   })
 
@@ -482,7 +493,7 @@ describe('scénarios', () => {
     const g = createGame(options)
     const band = g.camps[0]!
     expect(huntersOf(g)).toBeGreaterThan(0)
-    g.tribe.food = 0
+    home(g).food = 0
     g.abundance.fill(0)
     g.territory.weights = new Float32Array(g.territory.owner.length)
     g.deposits = []
@@ -491,9 +502,9 @@ describe('scénarios', () => {
     let meat = 0
     let smallest = 8
     for (let i = 0; i < 60 && g.herds.length > 0; i++) {
-      const before = g.tribe.food
+      const before = home(g).food
       step(g)
-      if (g.tribe.food > before) meat++
+      if (home(g).food > before) meat++
       smallest = Math.min(smallest, g.herds[0]?.size ?? 0)
       // Le troupeau fuit : on le ramène en vue pour ce test.
       for (const h of g.herds) Object.assign(h, { ...spot, goal: { ...spot } })
@@ -511,9 +522,9 @@ describe('scénarios', () => {
     let population = 0
     for (let i = 0; i < 2000 && killed === 0; i++) {
       g.herds = [{ id: 1, kind: 'sanglier', ...spot, size: 5, goal: { ...spot } }]
-      g.tribe.food = 0
+      home(g).food = 0
       g.tribe.population = 24
-      g.tribe.growth = 0
+      home(g).growth = 0
       band.members = 24
       clearDirty(g)
       step(g)
@@ -530,7 +541,7 @@ describe('scénarios', () => {
     const spot = { x: band.x + BAND_RULES.sight + 6, y: band.y }
     for (let i = 0; i < 24; i++) {
       g.herds = [{ id: 1, kind: 'cerf', ...spot, size: 8, goal: { ...spot } }]
-      g.tribe.food = 0
+      home(g).food = 0
       step(g)
       expect(g.herds[0]!.size).toBe(8)
     }
@@ -542,7 +553,7 @@ describe('scénarios', () => {
     const spot = { x: band.x + 2, y: band.y }
     for (let i = 0; i < 24; i++) {
       g.herds = [{ id: 1, kind: 'mammouth', ...spot, size: 4, goal: { ...spot } }]
-      g.tribe.food = 0
+      home(g).food = 0
       clearDirty(g)
       step(g)
       expect(g.herds[0]!.size).toBe(4)
@@ -556,7 +567,7 @@ describe('scénarios', () => {
     const spot = { x: band.x + 2, y: band.y }
     for (let i = 0; i < 200; i++) {
       g.herds = [{ id: 1, kind: 'sanglier', ...spot, size: 5, goal: { ...spot } }]
-      g.tribe.food = foodCapacity(g)
+      home(g).food = foodCapacity(g)
       clearDirty(g)
       step(g)
       expect(g.events.filter((e) => e.type === 'hunterKilled')).toEqual([])
@@ -571,22 +582,22 @@ describe('scénarios', () => {
     const lost: number[] = []
     for (let i = 0; i < 300 && lost.length === 0; i++) {
       g.herds = [{ id: 1, kind: 'cerf', ...spot, size: 8, goal: { ...spot } }]
-      g.tribe.food = foodCapacity(g) - 2
+      home(g).food = foodCapacity(g) - 2
       step(g)
       for (const e of g.events) if (e.type === 'meatLost') lost.push(e.amount)
       clearDirty(g)
     }
     expect(lost.length).toBe(1)
     expect(lost[0]).toBeGreaterThan(0)
-    expect(g.tribe.food).toBeLessThanOrEqual(foodCapacity(g))
+    expect(home(g).food).toBeLessThanOrEqual(foodCapacity(g))
   })
 
   it('l’errance de la faune ne puise pas dans l’aléa de la partie', () => {
     const run = (withHerds: boolean) => {
       const g = createGame(options)
       // Sans chasseurs : seule l'errance des bêtes pourrait toucher à l'aléa de la partie.
-      g.camps[0]!.members = HUNT_RULES.peoplePerHunter - 1
-      g.tribe.population = HUNT_RULES.peoplePerHunter - 1
+      g.camps[0]!.members = 1 / HUNT_RULES.share - 1
+      g.tribe.population = 1 / HUNT_RULES.share - 1
       if (!withHerds) g.herds = []
       for (let i = 0; i < 50; i++) step(g)
       return g.rng.state
@@ -597,10 +608,10 @@ describe('scénarios', () => {
   it('une personne sur quelques-unes chasse, dans chaque campement', () => {
     const g = createGame(options)
     const band = g.camps[0]!
-    expect(huntersOf(g)).toBe(Math.floor(TRIBE_RULES.startPopulation / HUNT_RULES.peoplePerHunter))
+    expect(huntersOf(g)).toBe(Math.floor(TRIBE_RULES.startPopulation / (1 / HUNT_RULES.share)))
     // Deux bandes : chacune compte ses chasseurs, les restes ne s'additionnent pas.
-    band.members = HUNT_RULES.peoplePerHunter * 2 - 1
-    g.camps.push({ ...band, id: 99, members: HUNT_RULES.peoplePerHunter * 2 - 1 })
+    band.members = (1 / HUNT_RULES.share) * 2 - 1
+    g.camps.push({ ...band, id: 99, members: (1 / HUNT_RULES.share) * 2 - 1 })
     expect(huntersOf(g)).toBe(2)
   })
 

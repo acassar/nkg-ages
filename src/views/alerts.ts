@@ -4,8 +4,9 @@ import {
   bandsOf,
   campEfficiency,
   cannotStart,
-  foodCapacity,
+  campCapacity,
   INVENTION_KINDS,
+  larderOf,
   PLAYER,
   RELATION_RULES,
   seasonOf,
@@ -30,26 +31,36 @@ export const ALERT_RULES = {
 export function alertsOf(state: GameState): AlertView[] {
   const alerts: AlertView[] = []
   const { tribe } = state
-  const home = state.camps.find((c) => c.owner === PLAYER) ?? null
   const at = (p: { x: number; y: number } | null) => (p ? { x: p.x, y: p.y } : null)
 
-  if (tribe.starvingMonths > 0)
-    alerts.push({
-      id: 'famine',
-      level: 'danger',
-      text: 'Famine : la tribu perd des siens chaque mois',
-      target: at(home),
-    })
-  else {
+  // Chaque campement vit de sa réserve : c'est lui qu'on montre quand elle s'épuise.
+  const mine = state.camps.filter((c) => c.owner === PLAYER)
+  const nameOf = (c: (typeof mine)[number]) =>
+    mine.length === 1 ? 'La tribu' : `${c.village ? 'Village' : 'Bande'} de ${c.members ?? 0}`
+  for (const camp of mine) {
+    const larder = larderOf(camp)
+    if (larder.starvingMonths > 0) {
+      alerts.push({
+        id: `famine-${camp.id}`,
+        level: 'danger',
+        text: `Famine : ${mine.length === 1 ? 'la tribu' : nameOf(camp).toLowerCase()} perd des siens chaque mois`,
+        target: at(camp),
+      })
+      continue
+    }
     const balance =
-      tribe.lastProduction + tribe.lastCrops - tribe.lastConsumption - tribe.lastSpoiled
-    const months = balance < 0 ? tribe.food / -balance : Infinity
+      larder.lastProduction +
+      larder.lastMeat +
+      larder.lastCrops -
+      larder.lastConsumption -
+      larder.lastSpoiled
+    const months = balance < 0 ? larder.food / -balance : Infinity
     if (months < ALERT_RULES.lowFoodMonths)
       alerts.push({
-        id: 'vivres',
+        id: `vivres-${camp.id}`,
         level: 'danger',
-        text: `Vivres pour ${Math.max(0, Math.floor(months))} mois à ce rythme`,
-        target: at(home),
+        text: `${mine.length === 1 ? 'Vivres' : `${nameOf(camp)} : vivres`} pour ${Math.max(0, Math.floor(months))} mois à ce rythme`,
+        target: at(camp),
       })
   }
 
@@ -67,13 +78,18 @@ export function alertsOf(state: GameState): AlertView[] {
   // L'automne finit : la réserve doit tenir l'hiver, où la cueillette s'effondre.
   const month = state.clock.tick % 12
   if (seasonOf(month) === 'automne' && seasonOf((month + 2) % 12) === 'hiver') {
-    const need = tribe.lastConsumption * ALERT_RULES.winterMonths
-    if (tribe.food < need)
+    const hungry = mine.find(
+      (c) => larderOf(c).food < larderOf(c).lastConsumption * ALERT_RULES.winterMonths,
+    )
+    if (hungry)
       alerts.push({
         id: 'hiver',
         level: 'warning',
-        text: 'L’hiver approche et les réserves sont maigres',
-        target: at(home),
+        text:
+          mine.length === 1
+            ? 'L’hiver approche et les réserves sont maigres'
+            : `L’hiver approche et la réserve de la ${nameOf(hungry).toLowerCase()} est maigre`,
+        target: at(hungry),
       })
   }
 
@@ -89,18 +105,23 @@ export function alertsOf(state: GameState): AlertView[] {
       target: null,
     })
 
-  if (tribe.food >= foodCapacity(state))
+  const full = mine.find((c) => larderOf(c).food >= campCapacity(state, c) && c.members)
+  const spoiled = mine.reduce((sum, c) => sum + larderOf(c).lastSpoiled, 0)
+  if (full)
     alerts.push({
       id: 'reserves-pleines',
       level: 'info',
-      text: 'Réserves pleines : les chasseurs se reposent',
-      target: at(home),
+      text:
+        mine.length === 1
+          ? 'Réserves pleines : les chasseurs se reposent'
+          : `${nameOf(full)} : réserve pleine, ses chasseurs se reposent`,
+      target: at(full),
     })
-  else if (tribe.lastSpoiled >= ALERT_RULES.spoiledWorth)
+  else if (spoiled >= ALERT_RULES.spoiledWorth)
     alerts.push({
       id: 'gaspillage',
       level: 'info',
-      text: `${Math.round(tribe.lastSpoiled)} rations gâtées le mois dernier`,
+      text: `${Math.round(spoiled)} rations gâtées le mois dernier`,
       target: null,
     })
 

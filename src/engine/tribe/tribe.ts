@@ -20,6 +20,32 @@ export interface TribeState {
   materials: Partial<Record<ResourceKind, number>>
 }
 
+/**
+ * Un groupe qui vit de sa réserve : la tribu d'un peuple voisin, ou un campement du joueur
+ * (bande ou village), qui a ses propres vivres.
+ */
+export type Group = Omit<TribeState, 'materials'>
+
+/** Réserve d'un campement du joueur : ses vivres et son dernier bilan (ses gens sont à part). */
+export type Larder = Omit<Group, 'population'> & {
+  /** Rations de viande rapportées par ses chasseurs au dernier mois. */
+  lastMeat: number
+}
+
+/** Une réserve neuve, avec tant de rations. */
+export function createLarder(food: number): Larder {
+  return {
+    food,
+    growth: 0,
+    starvingMonths: 0,
+    lastProduction: 0,
+    lastConsumption: 0,
+    lastSpoiled: 0,
+    lastCrops: 0,
+    lastMeat: 0,
+  }
+}
+
 export function createTribe(rules: TribeRules = TRIBE_RULES): TribeState {
   return {
     population: rules.startPopulation,
@@ -84,7 +110,7 @@ export const NO_BONUS: TribeBonus = { gather: 0, storageMonths: 0 }
  * `available` : rations qu'offre le territoire ce mois-ci (voir territoryFood).
  */
 export function tickTribe(
-  tribe: TribeState,
+  tribe: Group,
   available: number,
   bonus: TribeBonus = NO_BONUS,
   /** Habitants occupés ailleurs (les chasseurs) : ils mangent mais ne cueillent pas. */

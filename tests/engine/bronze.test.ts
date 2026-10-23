@@ -14,6 +14,7 @@ import {
 import { cannotStart } from '@/engine/inventions/inventions'
 import { placeDeposits } from '@/engine/resources/deposits'
 import { generateWorld } from '@/engine/world/generate'
+import { home } from '../home'
 
 const options = {
   seed: 'bronze',
@@ -73,15 +74,15 @@ describe('bronze', () => {
 
   it('le bronze fait rendre davantage la terre et les champs, d’autant plus que son rang est haut', () => {
     const month = (g: GameState) => {
-      const before = g.tribe.food
+      const before = home(g).food
       step(g)
-      return g.tribe.food - before
+      return home(g).food - before
     }
     const run = (rank?: 'E' | 'S') => {
       const g = createGame(options)
       // Hors hiver, réserve à moitié pleine : ni plancher à 0 ni plafond ne masquent l'écart.
       g.clock.tick = 5
-      g.tribe.food = foodCapacity(g) / 2
+      home(g).food = foodCapacity(g) / 2
       if (rank) g.inventions.ranks.bronze = rank
       return month(g)
     }
@@ -94,7 +95,7 @@ describe('bronze', () => {
     const farm = createGame(options)
     farm.inventions.ranks.agriculture = 'E'
     farm.tribe.population = VILLAGE_RULES.peoplePerVillage
-    farm.tribe.food = VILLAGE_RULES.foodCost
+    home(farm).food = VILLAGE_RULES.foodCost
     applyCommand(farm, { type: 'buildVillage' })
     const harvest = VILLAGE_RULES.harvestMonths[0]!
     const plain = cropsOf(farm, harvest)

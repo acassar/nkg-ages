@@ -39,6 +39,12 @@ import {
   depositHeld,
   resourceKnown,
   foodCapacity,
+  campCapacity,
+  huntersIn,
+  huntingOf,
+  larderOf,
+  tribeLarder,
+  HUNT_RULES,
   INVENTION_KINDS,
   INVENTION_RULES,
   inventionStat,
@@ -56,6 +62,7 @@ import {
   type GameEvent,
   type Camp,
   type GameState,
+  type Larder,
   type Rect,
   unionRect,
 } from '@/engine'
@@ -64,6 +71,7 @@ import {
   BIOME_IDS,
   type BandView,
   type CampView,
+  type LarderView,
   type DepositView,
   type InventionView,
   type SeasonView,
@@ -169,6 +177,7 @@ export function buildGameView(state: GameState, full = false): GameView {
         upgrade: upgradeOf(state, c),
         members: c.owner === PLAYER ? (c.members ?? 0) : null,
         band: bandView(state, c),
+        larder: larderView(state, c),
       })),
     fog: patchOf(state.fog.cells, state.world.width, full ? whole : state.fog.dirty),
     territory: territoryPatch(
@@ -267,7 +276,9 @@ function noticeOf(state: GameState, event: GameEvent): string {
     case 'defeat':
       return 'Défaite : la tribu a disparu.'
     case 'famine':
-      return 'Famine : les réserves sont vides, la tribu perd des siens chaque mois.'
+      return state.camps.filter((c) => c.owner === PLAYER).length > 1
+        ? 'Famine : la réserve d’une de vos bandes est vide, elle perd des siens chaque mois.'
+        : 'Famine : les réserves sont vides, la tribu perd des siens chaque mois.'
     case 'invented': {
       const rules = INVENTION_RULES[event.invention]
       const stat = statAt(rules.range, event.rank)
@@ -324,26 +335,51 @@ function rareNotice(event: Extract<GameEvent, { type: 'rare' }>): string {
   return `${rules.name} (${rules.rank}) : ${what}.`
 }
 
-/** La tribu, arrondie pour l'affichage. */
+/** Bilan du dernier mois d'une réserve : cueillette, viande et moisson, moins repas et pertes. */
+function balanceOf(larder: Larder): number {
+  const { lastProduction, lastMeat, lastCrops, lastConsumption, lastSpoiled } = larder
+  return (
+    Math.round((lastProduction + lastMeat + lastCrops - lastConsumption - lastSpoiled) * 10) / 10
+  )
+}
+
+/** La réserve d'un campement du joueur et la part de ses gens qui chassent. */
+function larderView(state: GameState, camp: Camp): LarderView | null {
+  if (camp.owner !== PLAYER) return null
+  const larder = larderOf(camp)
+  const capacity = campCapacity(state, camp)
+  return {
+    food: Math.floor(larder.food),
+    capacity: Math.floor(capacity),
+    balance: balanceOf(larder),
+    gathered: Math.round(larder.lastProduction * 10) / 10,
+    meat: Math.round(larder.lastMeat * 10) / 10,
+    starving: larder.starvingMonths > 0,
+    hunting: huntingOf(camp),
+    maxHunting: HUNT_RULES.maxShare,
+    hunters: huntersIn(camp),
+    resting: larder.food >= capacity,
+  }
+}
+
+/** La tribu, arrondie pour l'affichage : ses vivres sont la somme de ceux des campements. */
 function tribeView(state: GameState): TribeView {
   const { tribe } = state
+  const larder = tribeLarder(state)
   return {
     population: tribe.population,
-    food: Math.floor(tribe.food),
+    food: Math.floor(larder.food),
     foodCapacity: Math.floor(foodCapacity(state)),
-    foodBalance:
-      Math.round(
-        (tribe.lastProduction + tribe.lastCrops - tribe.lastConsumption - tribe.lastSpoiled) * 10,
-      ) / 10,
-    spoiled: Math.round(tribe.lastSpoiled * 10) / 10,
-    starving: tribe.starvingMonths > 0,
+    foodBalance: balanceOf(larder),
+    spoiled: Math.round(larder.lastSpoiled * 10) / 10,
+    starving: larder.starvingMonths > 0,
     materials: RESOURCE_KINDS.filter((k) => tribe.materials[k] !== undefined).map((k) => ({
       kind: k,
       name: RESOURCE_RULES[k].name,
       amount: Math.floor(tribe.materials[k]!),
     })),
     hunters: huntersOf(state),
-    huntersResting: tribe.food >= foodCapacity(state),
+    huntersResting: larder.food >= foodCapacity(state),
     camps: state.camps.filter((c) => c.owner === PLAYER).length,
     bands: bandsOf(state).length,
     efficiency: tribeEfficiency(state),
@@ -355,7 +391,7 @@ function tribeView(state: GameState): TribeView {
     maxCities: maxCities(state),
     cityCost: `${CITY_RULES.foodCost} rations et ${CITY_RULES.copperCost} cuivre`,
     cityBlocked: cannotBuildCity(state),
-    crops: Math.round(tribe.lastCrops),
+    crops: Math.round(larder.lastCrops),
   }
 }
 

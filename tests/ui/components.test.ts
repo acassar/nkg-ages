@@ -165,6 +165,13 @@ describe('écran de jeu', () => {
     const split = wrapper.find('[data-testid=band-split]')
     expect(split.attributes('disabled')).toBeDefined()
     expect(split.attributes('title')).toMatch(/personnes/)
+    // Sa propre réserve, et le curseur entre cueillette et chasse.
+    expect(wrapper.find('[data-testid=camp-larder]').text()).toMatch(/vivres/)
+    const hunting = wrapper.find('[data-testid=camp-hunting]')
+    await hunting.setValue('0.4')
+    await hunting.trigger('change')
+    await flushPromises()
+    expect(game.view!.camps.find((c) => c.id === camp.id)!.larder!.hunting).toBe(0.4)
     // Migrer seule : un interrupteur.
     await wrapper.find('[data-testid=band-roaming]').trigger('click')
     await flushPromises()

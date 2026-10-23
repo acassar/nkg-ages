@@ -103,6 +103,7 @@ export function exploit(
 /**
  * Abondance moyenne autour d'un point (cellules de terre dans le rayon), pondérée par la
  * richesse : 1 pour des terres intactes. Rend aussi la richesse offerte (somme pondérée).
+ * Avec `owner`, les terres d'un autre peuple ne comptent pas : la bande ne peut y cueillir.
  */
 export function forageAround(
   world: World,
@@ -111,6 +112,7 @@ export function forageAround(
   x: number,
   y: number,
   radius: number,
+  owner?: Uint8Array,
 ): { mean: number; offered: number } {
   let total = 0
   let offered = 0
@@ -130,6 +132,7 @@ export function forageAround(
       if (dx * dx + dy * dy > r2) continue
       const i = cy * world.width + cx
       if (isWater(world.biome[i]!)) continue
+      if (owner && owner[i] !== NO_OWNER && owner[i] !== PLAYER) continue
       total += weights[i]!
       offered += weights[i]! * abundance[i]!
     }

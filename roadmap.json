@@ -190,6 +190,10 @@
           "status": "done"
         },
         {
+          "title": "Vivres par bande, cueillette ou chasse au choix",
+          "status": "done"
+        },
+        {
           "title": "Savoir qui vieillit (brouillard qui se voile)",
           "status": "todo"
         },
@@ -239,6 +243,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-23",
+      "text": "Jeu : plus de réserve commune ; chaque bande ou village vit de ses propres vivres, mis en commun seulement avec les campements proches, et règle d'un curseur la part de ses gens qui chassent plutôt que de cueillir (la viande va dans la même réserve) ; une bande ne compte plus les terres d'un autre peuple comme les siennes"
+    },
     {
       "date": "2026-10-23",
       "text": "Jeu : plus d'éclaireurs ni de chasseurs à piloter ; on ne contrôle que les bandes, qui voient deux fois plus loin que leur zone, chassent seules les troupeaux qu'elles voient (pas les mammouths) et défendent le camp avec leurs chasseurs, une personne sur six ; une bande qui migre seule sans meilleur site connu part vers l'inconnu"

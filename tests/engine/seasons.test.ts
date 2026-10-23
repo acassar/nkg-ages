@@ -10,6 +10,7 @@ import {
 import { CLIMATE_RULES, SEASON_KINDS, SEASON_RULES } from '@/engine/content/seasons'
 import { climateOf, createGame, step } from '@/engine/game'
 import { TRIBE_RULES } from '@/engine/content/tribe'
+import { home } from '../home'
 
 describe('saisons', () => {
   it('chaque mois a une saison, chaque saison trois mois', () => {
@@ -79,7 +80,7 @@ describe('saisons en partie', () => {
     const produced: number[] = []
     for (let i = 0; i < 24; i++) {
       step(g)
-      produced[g.clock.tick % 12] = g.tribe.lastProduction
+      produced[g.clock.tick % 12] = home(g).lastProduction
     }
     expect(produced[1]!).toBeLessThan(produced[7]!)
     // Personne ne meurt de faim au premier hiver avec la réserve de départ.

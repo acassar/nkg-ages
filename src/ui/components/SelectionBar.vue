@@ -21,6 +21,28 @@ const bandState = computed(() => {
   if (band.target) parts.push('en marche')
   return parts.join(' · ')
 })
+const signed = new Intl.NumberFormat('fr-FR', {
+  signDisplay: 'exceptZero',
+  maximumFractionDigits: 1,
+})
+/** « 120 / 150 vivres · +3/mois » : la réserve propre au campement. */
+const larderState = computed(() => {
+  const l = camp.value?.larder
+  if (!l) return null
+  return `${l.food} / ${l.capacity} vivres · ${signed.format(l.balance)}/mois`
+})
+const larderTitle = computed(() => {
+  const l = camp.value?.larder
+  if (!l) return ''
+  return `Sa propre réserve (proche d'un autre campement, elle est mise en commun). Le mois dernier : ${l.gathered} rations cueillies, ${l.meat} de viande.`
+})
+
+function onHunting(event: Event) {
+  const c = camp.value
+  if (!c?.larder) return
+  void game.setHunting(c.id, Number((event.target as HTMLInputElement).value))
+}
+
 const upgradeLabel = computed(() =>
   camp.value?.upgrade?.to === 'city' ? 'Faire une cité' : 'Faire un village',
 )
@@ -44,6 +66,32 @@ function upgrade() {
       :title="`Au-delà de ${camp.band!.comfortSize} personnes, une bande cueille moins bien`"
       >{{ bandState }}</span
     >
+    <span
+      v-if="larderState"
+      class="why"
+      data-testid="camp-larder"
+      :class="{ alarm: camp.larder!.starving }"
+      :title="larderTitle"
+      >{{ larderState }}</span
+    >
+    <label
+      v-if="camp.larder"
+      class="hunting"
+      :title="`${camp.larder.hunters} chasseurs : ils rapportent de la viande s'ils voient du gibier, et défendent le camp. Les autres cueillent (et usent la terre).${camp.larder.resting ? ' Réserve pleine : ils se reposent.' : ''}`"
+    >
+      <span>Cueillette</span>
+      <input
+        type="range"
+        data-testid="camp-hunting"
+        min="0"
+        :max="camp.larder.maxHunting"
+        step="0.05"
+        :value="camp.larder.hunting"
+        aria-label="Part des gens qui chassent"
+        @change="onHunting"
+      />
+      <span>Chasse ({{ camp.larder.hunters }})</span>
+    </label>
     <template v-if="camp.band">
       <button
         class="ink-button"
@@ -103,6 +151,16 @@ function upgrade() {
 }
 .why.alarm {
   color: var(--ink-red);
+}
+.hunting {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink-soft);
+}
+.hunting input {
+  width: 80px;
+  accent-color: var(--ink);
 }
 .ink-button {
   font-size: 13px;

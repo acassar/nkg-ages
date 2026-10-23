@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { STEPS_PER_MONTH } from '@/engine/core/clock'
 import { advance, applyCommand, createGame, step } from '@/engine/game'
 import { loadGame, saveGame } from '@/engine/save/save'
+import { home } from '../home'
 
 const options = { seed: 'semaines', randomStart: false, width: 128, height: 64 }
 
@@ -39,10 +40,10 @@ describe('pas de la semaine', () => {
     const state = started()
     const band = state.camps[0]!
     const x = band.x
-    const food = state.tribe.food
+    const food = home(state).food
     advance(state)
     expect(band.x).toBeGreaterThan(x)
-    expect(state.tribe.food).toBe(food)
+    expect(home(state).food).toBe(food)
   })
 
   it('une partie sauvée en milieu de mois reprend au même pas', () => {
