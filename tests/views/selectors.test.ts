@@ -9,6 +9,7 @@ import {
   formatStat,
   patchOf,
 } from '@/views/selectors'
+import { home } from '../home'
 
 const game = () => createGame({ seed: 'vues', randomStart: false, width: 128, height: 64 })
 
@@ -115,10 +116,10 @@ describe('vues de partie', () => {
 
   it('montre la tribu, arrondie, et prévient de la famine', () => {
     const g = game()
-    g.tribe.food = 12.7
-    g.tribe.lastProduction = 10.04
-    g.tribe.lastConsumption = 12
-    g.events.push({ type: 'famine' })
+    home(g).food = 12.7
+    home(g).lastProduction = 10.04
+    home(g).lastConsumption = 12
+    g.events.push({ type: 'famine', campId: g.camps[0]!.id })
     const view = buildGameView(g)
     expect(view.tribe).toMatchObject({ population: 12, food: 12, foodBalance: -2, starving: false })
     expect(view.tribe.foodCapacity).toBeGreaterThan(0)
@@ -198,9 +199,9 @@ describe('vues de partie', () => {
     expect(summer.kind).toBe('ete')
     expect(summer.gather).toBeGreaterThan(100)
     g.events.push({ type: 'winter', yieldFactor: 0.48 })
-    g.tribe.lastProduction = 20
-    g.tribe.lastConsumption = 12
-    g.tribe.lastSpoiled = 1.5
+    home(g).lastProduction = 20
+    home(g).lastConsumption = 12
+    home(g).lastSpoiled = 1.5
     const view = buildGameView(g)
     expect(view.notices).toEqual([
       "L'hiver arrive : la cueillette tombe à 48 % jusqu'au printemps.",
@@ -215,10 +216,10 @@ describe('vues de partie', () => {
     expect(view.tribe.villageBlocked).toMatch(/Agriculture/)
     expect(view.camps[0]!.village).toBe(false)
     g.camps[0]!.village = true
-    g.tribe.lastProduction = 10
-    g.tribe.lastCrops = 30
-    g.tribe.lastConsumption = 12
-    g.tribe.lastSpoiled = 0
+    home(g).lastProduction = 10
+    home(g).lastCrops = 30
+    home(g).lastConsumption = 12
+    home(g).lastSpoiled = 0
     view = buildGameView(g)
     expect(view.camps[0]!.village).toBe(true)
     expect(view.tribe).toMatchObject({ villages: 1, crops: 30, foodBalance: 28 })
@@ -246,10 +247,11 @@ describe('vues de partie', () => {
       'Chasse : la réserve est pleine, 7 rations de viande sont perdues.',
     ])
     g.camps[0]!.members = 3
+    home(g).food = 0
     view = buildGameView(g)
     expect(view.tribe.hunters).toBe(0)
     expect(view.tribe.huntersResting).toBe(false)
-    g.tribe.food = view.tribe.foodCapacity + 1
+    home(g).food = view.tribe.foodCapacity + 1
     expect(buildGameView(g).tribe.huntersResting).toBe(true)
   })
 

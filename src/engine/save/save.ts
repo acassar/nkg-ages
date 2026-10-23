@@ -8,16 +8,18 @@ import { BAND_RULES } from '../content/bands'
 import { PLAYER } from '../territory/territory'
 import {
   createGame,
+  larderOf,
   syncMembers,
   type Camp,
   type GameState,
   type NewGameOptions,
   type Outcome,
   type People,
+  type PlayerTribe,
 } from '../game'
 import type { InventionsState } from '../inventions/inventions'
 import type { Deposit } from '../resources/deposits'
-import type { TribeState } from '../tribe/tribe'
+import { createLarder, type TribeState } from '../tribe/tribe'
 
 /** Version du format : une sauvegarde d'un autre format est refusée plutôt que mal relue. */
 export const SAVE_VERSION = 1
@@ -44,7 +46,8 @@ export interface SaveData {
   /** Éclaireurs et chasseurs d'avant les bandes seules : relus sans effet (ils comptaient déjà parmi les gens). */
   units?: unknown[]
   camps: Camp[]
-  tribe: TribeState
+  /** Avant les réserves par bande, la tribu tenait aussi les vivres de tous (`food`…). */
+  tribe: PlayerTribe & Partial<TribeState>
   deposits: Deposit[]
   herds: Herd[]
   /** Abondance des terres en plages (absente d'avant les bandes : tout est intact). */
@@ -181,8 +184,10 @@ export function loadGame(data: SaveData): GameState {
   if (data.peopleRng !== undefined) state.peopleRng = createRng(data.peopleRng)
   state.achievements = copy(data.achievements ?? {})
   state.camps = copy(data.camps)
-  // Un champ ajouté depuis la sauvegarde garde sa valeur de départ au lieu de manquer.
-  state.tribe = { ...state.tribe, ...copy(data.tribe) }
+  state.tribe = {
+    population: data.tribe.population,
+    materials: copy(data.tribe.materials ?? {}),
+  }
   state.deposits = copy(data.deposits)
   state.herds = copy(data.herds)
   state.inventions = copy(data.inventions)
@@ -244,6 +249,18 @@ export function loadGame(data: SaveData): GameState {
         Object.assign(c, { target: null, path: [], plannedFog: 0, patience: 0, ...c })
   }
   syncMembers(state)
+  // Sauvegarde d'avant les réserves par bande : les vivres de la tribu se partagent selon les gens.
+  const camps = state.camps.filter((c) => c.owner === PLAYER)
+  const people = camps.reduce((sum, c) => sum + (c.members ?? 0), 0)
+  for (const c of camps) {
+    if (c.larder) {
+      // Un champ ajouté depuis la sauvegarde garde sa valeur de départ au lieu de manquer.
+      c.larder = { ...createLarder(0), ...c.larder }
+      continue
+    }
+    const food = data.tribe.food ?? 0
+    larderOf(c).food = people > 0 ? (food * (c.members ?? 0)) / people : food / camps.length
+  }
 
   state.events = []
   return state

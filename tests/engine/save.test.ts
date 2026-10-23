@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import fc from 'fast-check'
-import { applyCommand, createGame, step, type GameState } from '@/engine/game'
+import { applyCommand, createGame, larderOf, step, type GameState } from '@/engine/game'
+import { PLAYER } from '@/engine/territory/territory'
 import { decodeRuns, encodeRuns, loadGame, saveGame, SAVE_VERSION } from '@/engine/save/save'
 
 const options = { seed: 'sauvegarde', randomStart: false, width: 192, height: 96 }
@@ -71,13 +72,27 @@ describe('sauvegarde', () => {
     expect(result.ok).toBe(true)
   })
 
-  it('une sauvegarde d’avant les saisons (sans pertes notées) se reprend sans trou', () => {
-    const data = saveGame(busyGame())
-    const old = { ...data, tribe: { ...data.tribe } } as typeof data
-    delete (old.tribe as Partial<typeof old.tribe>).lastSpoiled
-    const g = loadGame(old)
-    expect(g.tribe.lastSpoiled).toBe(0)
-    expect(g.tribe.population).toBe(data.tribe.population)
+  it('une sauvegarde d’avant les réserves par bande partage les vivres de la tribu selon les gens', () => {
+    const g = busyGame()
+    run(g, 6)
+    g.camps[0]!.members = 20
+    g.tribe.population = 20
+    applyCommand(g, { type: 'splitBand', campId: g.camps[0]!.id })
+    const data = JSON.parse(JSON.stringify(saveGame(g)))
+    // Comme avant : une seule réserve, tenue par la tribu, et des campements sans vivres.
+    data.tribe = { ...data.tribe, food: 90, growth: 0, starvingMonths: 0, lastSpoiled: 1 }
+    for (const c of data.camps) delete c.larder
+    const old = loadGame(data)
+    const camps = old.camps.filter((c) => c.owner === PLAYER)
+    expect(camps).toHaveLength(2)
+    expect(camps.map((c) => larderOf(c).food)).toEqual(
+      camps.map((c) => (90 * c.members!) / old.tribe.population),
+    )
+    expect(Object.keys(old.tribe).sort()).toEqual(['materials', 'population'])
+    // Un champ de réserve ajouté depuis manque : il repart de zéro.
+    const recent = JSON.parse(JSON.stringify(saveGame(g)))
+    delete recent.camps[0].larder.lastMeat
+    expect(loadGame(recent).camps[0]!.larder!.lastMeat).toBe(0)
   })
 
   it('rend l’abondance des terres et les zones des bandes telles quelles', () => {

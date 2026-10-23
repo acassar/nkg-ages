@@ -7,6 +7,7 @@ import { eventPossible, monthlyChance, pickEvent } from '@/engine/events/events'
 import { applyCommand, createGame, foodCapacity, step, type GameState } from '@/engine/game'
 import { PLAYER } from '@/engine/territory/territory'
 import { loadGame, saveGame } from '@/engine/save/save'
+import { home } from '../home'
 
 const options = { seed: 'sort', randomStart: false, width: 192, height: 96 }
 const context = { month: 6, years: 10, researching: true }
@@ -94,19 +95,19 @@ describe('événements rares : effets', () => {
     const g = createGame(options)
     g.clock.tick = 4 * 12 + 5
     forced(g, 'abondance')
-    const before = g.tribe.food
+    const before = home(g).food
     step(g)
     const event = g.events.find((e) => e.type === 'rare')
     expect(event).toMatchObject({ event: 'abondance' })
-    expect(g.tribe.food).toBeLessThanOrEqual(foodCapacity(g))
-    expect(g.tribe.food).toBeGreaterThan(before - g.tribe.population)
+    expect(home(g).food).toBeLessThanOrEqual(foodCapacity(g))
+    expect(home(g).food).toBeGreaterThan(before - g.tribe.population)
   })
 
   it('une tempête sur une réserve vide passe inaperçue', () => {
     const g = createGame(options)
     g.clock.tick = 5 * 12 + 9
     // Rien à récolter ni à chasser : la réserve reste vide après le repas du mois.
-    g.tribe.food = 0
+    home(g).food = 0
     g.abundance.fill(0)
     g.deposits = []
     g.herds = []

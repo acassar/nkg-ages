@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { PLAYER, RELATION_RULES } from '@/engine'
-import { createGame, step } from '@/engine/game'
+import { applyCommand, createGame, larderOf, step } from '@/engine/game'
 import { ALERT_RULES, alertsOf } from '@/views/alerts'
+import { home } from '../home'
 
 const game = () => createGame({ seed: 'alertes', randomStart: false, width: 128, height: 64 })
 const ids = (state: ReturnType<typeof game>) => alertsOf(state).map((a) => a.id)
@@ -21,34 +22,57 @@ describe('alertes', () => {
 
   it('la famine passe avant tout, et montre le camp', () => {
     const state = game()
-    state.tribe.starvingMonths = 2
+    home(state).starvingMonths = 2
     const [first] = alertsOf(state)
-    const home = state.camps.find((c) => c.owner === PLAYER)!
-    expect(first).toMatchObject({ id: 'famine', level: 'danger', target: { x: home.x, y: home.y } })
+    const camp = state.camps.find((c) => c.owner === PLAYER)!
+    expect(first).toMatchObject({
+      id: `famine-${camp.id}`,
+      level: 'danger',
+      target: { x: camp.x, y: camp.y },
+    })
+  })
+
+  it('chaque bande vit de sa réserve : l’alerte montre celle qui a faim', () => {
+    const state = game()
+    const first = state.camps.find((c) => c.owner === PLAYER)!
+    first.members = 20
+    state.tribe.population = 20
+    applyCommand(state, { type: 'splitBand', campId: first.id })
+    const second = state.camps.filter((c) => c.owner === PLAYER)[1]!
+    second.x = first.x + 30
+    larderOf(second).starvingMonths = 1
+    const alert = alertsOf(state).find((a) => a.id.startsWith('famine'))
+    expect(alert).toMatchObject({
+      id: `famine-${second.id}`,
+      text: 'Famine : bande de 10 perd des siens chaque mois',
+      target: { x: second.x, y: second.y },
+    })
+    expect(ids(state)).not.toContain(`famine-${first.id}`)
   })
 
   it('prévient quand les vivres ne tiennent plus que quelques mois', () => {
     const state = game()
-    state.tribe.food = 20
-    state.tribe.lastProduction = 0
-    state.tribe.lastCrops = 0
-    state.tribe.lastSpoiled = 0
-    state.tribe.lastConsumption = 12
-    const alert = alertsOf(state).find((a) => a.id === 'vivres')
+    home(state).food = 20
+    home(state).lastProduction = 0
+    home(state).lastCrops = 0
+    home(state).lastSpoiled = 0
+    home(state).lastConsumption = 12
+    const id = `vivres-${state.camps[0]!.id}`
+    const alert = alertsOf(state).find((a) => a.id === id)
     expect(alert?.text).toBe('Vivres pour 1 mois à ce rythme')
-    state.tribe.food = 12 * ALERT_RULES.lowFoodMonths
-    expect(ids(state)).not.toContain('vivres')
+    home(state).food = 12 * ALERT_RULES.lowFoodMonths
+    expect(ids(state)).not.toContain(id)
   })
 
   it('annonce l’hiver à la fin de l’automne quand la réserve est maigre', () => {
     const state = game()
     state.clock.tick = 10 // novembre
-    state.tribe.lastConsumption = 12
-    state.tribe.food = 10
+    home(state).lastConsumption = 12
+    home(state).food = 10
     expect(ids(state)).toContain('hiver')
-    state.tribe.food = 12 * ALERT_RULES.winterMonths
+    home(state).food = 12 * ALERT_RULES.winterMonths
     expect(ids(state)).not.toContain('hiver')
-    state.tribe.food = 10
+    home(state).food = 10
     state.clock.tick = 5 // juin
     expect(ids(state)).not.toContain('hiver')
   })
@@ -66,7 +90,7 @@ describe('alertes', () => {
 
   it('dit quand les réserves pleines mettent les chasseurs au repos', () => {
     const state = game()
-    state.tribe.food = 1e6
+    home(state).food = 1e6
     expect(ids(state)).toContain('reserves-pleines')
     expect(ids(state)).not.toContain('chasseur')
   })
@@ -74,7 +98,7 @@ describe('alertes', () => {
   it('range les alertes du plus grave au plus anodin, sans doublon', () => {
     const state = game()
     for (let i = 0; i < 30; i++) step(state)
-    state.tribe.starvingMonths = 1
+    home(state).starvingMonths = 1
     const order = { danger: 0, warning: 1, info: 2 }
     const alerts = alertsOf(state)
     const levels = alerts.map((a) => order[a.level])

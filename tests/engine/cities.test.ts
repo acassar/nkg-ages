@@ -16,6 +16,7 @@ import { createRng } from '@/engine/core/random'
 import { tickInventions } from '@/engine/inventions/inventions'
 import { PLAYER } from '@/engine/territory/territory'
 import { buildGameView } from '@/views/selectors'
+import { home } from '../home'
 
 const options = {
   seed: 'cités',
@@ -32,9 +33,9 @@ function scribes(): GameState {
   g.inventions.ranks.agriculture = 'E'
   g.inventions.ranks.ecriture = 'E'
   g.tribe.population = CITY_RULES.peoplePerCity
-  g.tribe.food = VILLAGE_RULES.foodCost
+  home(g).food = VILLAGE_RULES.foodCost
   applyCommand(g, { type: 'buildVillage' })
-  g.tribe.food = 1000
+  home(g).food = 1000
   g.tribe.materials.cuivre = CITY_RULES.copperCost
   return g
 }
@@ -46,9 +47,9 @@ describe('cités', () => {
     g.tribe.materials.cuivre = CITY_RULES.copperCost - 1
     expect(cannotBuildCity(g)).toMatch(/cuivre/)
     g.tribe.materials.cuivre = CITY_RULES.copperCost
-    g.tribe.food = CITY_RULES.foodCost - 1
+    home(g).food = CITY_RULES.foodCost - 1
     expect(cannotBuildCity(g)).toMatch(/rations/)
-    g.tribe.food = 1000
+    home(g).food = 1000
     g.tribe.population = CITY_RULES.peoplePerCity - 1
     expect(cannotBuildCity(g)).toMatch(/habitants/)
     g.tribe.population = CITY_RULES.peoplePerCity
@@ -61,9 +62,9 @@ describe('cités', () => {
   it('bâtir une cité coûte vivres et cuivre, puis pas plus que la population ne permet', () => {
     const g = scribes()
     const capacity = foodCapacity(g)
-    g.tribe.food = 500
+    home(g).food = 500
     expect(applyCommand(g, { type: 'buildCity' })).toEqual({ ok: true })
-    expect(g.tribe.food).toBe(500 - CITY_RULES.foodCost)
+    expect(home(g).food).toBe(500 - CITY_RULES.foodCost)
     expect(g.tribe.materials.cuivre).toBe(0)
     expect(g.camps.find((c) => c.owner === PLAYER)!.city).toBe(true)
     expect(foodCapacity(g)).toBeGreaterThan(capacity)

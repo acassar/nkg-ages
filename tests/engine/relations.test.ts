@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import fc from 'fast-check'
 import { RELATION_RULES } from '@/engine/content/relations'
-import { HUNT_RULES } from '@/engine/content/fauna'
 import {
   applyCommand,
   cannotTrade,
@@ -17,6 +16,7 @@ import {
 import { loadGame, saveGame } from '@/engine/save/save'
 import { createRng } from '@/engine/core/random'
 import { buildGameView } from '@/views/selectors'
+import { home } from '../home'
 
 function run(g: GameState, ticks: number): void {
   for (let i = 0; i < ticks; i++) step(g)
@@ -29,7 +29,7 @@ function neighbours(): GameState {
   const g = createGame(options)
   g.peoples[0]!.met = true
   g.peoples[0]!.tribe.food = 200
-  g.tribe.food = 40
+  home(g).food = 40
   g.tribe.materials.silex = 50
   return g
 }
@@ -39,7 +39,7 @@ describe('relations', () => {
     const g = neighbours()
     const p = g.peoples[0]!
     expect(applyCommand(g, { type: 'gift', people: p.owner })).toEqual({ ok: true })
-    expect(g.tribe.food).toBe(40 - RELATION_RULES.giftFood)
+    expect(home(g).food).toBe(40 - RELATION_RULES.giftFood)
     expect(p.relation).toBe(RELATION_RULES.giftRelation)
   })
 
@@ -75,14 +75,14 @@ describe('relations', () => {
     expect(applyCommand(g, { type: 'trade', people: p.owner })).toEqual({ ok: true })
     expect(g.tribe.materials.silex).toBe(50 - RELATION_RULES.tradeSilex)
     expect(p.tribe.food).toBe(theirs - RELATION_RULES.tradeFood)
-    expect(g.tribe.food).toBeLessThanOrEqual(foodCapacity(g))
+    expect(home(g).food).toBeLessThanOrEqual(foodCapacity(g))
   })
 
   it('réserve pleine : l’échange est refusé, sans payer de silex pour rien', () => {
     const g = neighbours()
     const p = g.peoples[0]!
     p.relation = 50
-    g.tribe.food = foodCapacity(g) - RELATION_RULES.tradeFood + 1
+    home(g).food = foodCapacity(g) - RELATION_RULES.tradeFood + 1
     const before = { silex: g.tribe.materials.silex, theirs: p.tribe.food, relation: p.relation }
     expect(applyCommand(g, { type: 'trade', people: p.owner })).toEqual({
       ok: false,
@@ -121,7 +121,7 @@ describe('relations', () => {
 
   it('la relation reste dans ses bornes, présents répétés compris', () => {
     const g = neighbours()
-    g.tribe.food = 100000
+    home(g).food = 100000
     const p = g.peoples[0]!
     for (let i = 0; i < 20; i++) {
       delete p.lastDeal
@@ -184,7 +184,7 @@ describe('tensions et raids', () => {
     p.relation = -100
     const raids: Extract<GameEvent, { type: 'raid' }>[] = []
     for (let i = 0; i < 120 && raids.length === 0; i++) {
-      g.tribe.food = 100
+      home(g).food = 100
       p.relation = -100
       step(g)
       for (const e of g.events) if (e.type === 'raid') raids.push(e)
@@ -202,17 +202,19 @@ describe('tensions et raids', () => {
   it('une réserve vide coûte une vie, jamais la dernière', () => {
     const g = close()
     const p = g.peoples[0]!
-    // Une bande trop petite pour avoir des chasseurs : personne ne défend la réserve.
-    g.camps[0]!.members = HUNT_RULES.peoplePerHunter - 1
+    // Une bande sans chasseurs : personne ne défend la réserve.
+    g.camps[0]!.hunting = 0
     let killed = 0
     for (let i = 0; i < 300; i++) {
-      g.tribe.food = 0
-      g.tribe.population = i % 2 ? 10 : 1
+      home(g).food = 0
+      g.camps[0]!.members = i % 2 ? 10 : 1
+      g.tribe.population = g.camps[0]!.members
       p.tribe.population = 50
       raid(g, p)
       for (const e of g.events) if (e.type === 'raid') killed += e.killed
       g.events = []
       expect(g.tribe.population).toBeGreaterThanOrEqual(1)
+      expect(g.camps[0]!.members).toBe(g.tribe.population)
     }
     expect(killed).toBeGreaterThan(0)
   })
@@ -221,10 +223,12 @@ describe('tensions et raids', () => {
     const g = close()
     const p = g.peoples[0]!
     const loss = (seed: number, food: number, hunters: number) => {
-      g.camps[0]!.members = hunters * HUNT_RULES.peoplePerHunter
+      // Vingt personnes, dont tant de chasseurs.
+      g.camps[0]!.members = 20
+      g.camps[0]!.hunting = hunters / 20
       g.peopleRng = createRng(`raid-${seed}`)
-      g.tribe.food = food
-      g.tribe.population = 10
+      home(g).food = food
+      g.tribe.population = 20
       p.tribe.population = 50
       g.events = []
       // Un raid à coup sûr : on rejoue jusqu'au tirage qui le déclenche, à graine égale.

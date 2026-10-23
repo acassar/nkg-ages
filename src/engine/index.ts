@@ -37,7 +37,7 @@ export { rollRank, statAt, rollStat } from './rarity/rarity'
 export type { RankedStat } from './rarity/rarity'
 export type { Deposit } from './resources/deposits'
 export { storageCapacity } from './tribe/tribe'
-export type { TribeState } from './tribe/tribe'
+export type { TribeState, Larder } from './tribe/tribe'
 export {
   createGame,
   applyCommand,
@@ -48,6 +48,11 @@ export {
   depositHeld,
   resourceKnown,
   foodCapacity,
+  campCapacity,
+  foodOf,
+  tribeLarder,
+  larderOf,
+  huntingOf,
   herdVisible,
   currentScore,
   tallyOf,
@@ -75,7 +80,15 @@ export {
   cropsOf,
   START_CHOICES,
 } from './game'
-export type { GameState, GameEvent, NewGameOptions, Camp, Outcome, People } from './game'
+export type {
+  GameState,
+  GameEvent,
+  NewGameOptions,
+  Camp,
+  Outcome,
+  People,
+  PlayerTribe,
+} from './game'
 export { goalSteps, goalReached, scoreOf } from './score/score'
 export type { Tally, GoalStep } from './score/score'
 export type { World } from './world/world'

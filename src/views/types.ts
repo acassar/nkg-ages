@@ -42,6 +42,26 @@ export interface CampView {
   members: number | null
   /** Bande nomade du joueur (pas un village) : sa marche et l'état de ses terres ; null sinon. */
   band: BandView | null
+  /** Réserve du campement du joueur (chacun vit de la sienne) ; null pour un voisin. */
+  larder: LarderView | null
+}
+
+export interface LarderView {
+  /** Rations en réserve, et ce qu'elle peut tenir. */
+  food: number
+  capacity: number
+  /** Bilan du dernier mois : cueillette, viande et moisson, moins repas et pertes. */
+  balance: number
+  /** Rations cueillies et viande rapportée au dernier mois. */
+  gathered: number
+  meat: number
+  starving: boolean
+  /** Part des gens qui chassent (de 0 à `maxHunting`), et combien cela fait de chasseurs. */
+  hunting: number
+  maxHunting: number
+  hunters: number
+  /** Réserve pleine : ses chasseurs ne chassent pas. */
+  resting: boolean
 }
 
 export interface BandView {
@@ -220,7 +240,7 @@ export interface DepositView {
 
 export interface TribeView {
   population: number
-  /** Réserve de nourriture, en rations (une ration nourrit une personne un mois). */
+  /** Vivres de tous les campements, en rations (une ration nourrit une personne un mois). */
   food: number
   foodCapacity: number
   /** Récolte moins consommation et pertes au dernier mois. */
@@ -230,7 +250,7 @@ export interface TribeView {
   starving: boolean
   /** Matériaux en réserve, arrondis. */
   materials: { kind: string; name: string; amount: number }[]
-  /** Chasseurs des campements (une personne sur quelques-unes) : ils chassent et défendent seuls. */
+  /** Chasseurs de tous les campements (chacun règle sa part) : ils chassent et défendent leur camp. */
   hunters: number
   /** Réserve pleine : les chasseurs ne chassent pas. */
   huntersResting: boolean

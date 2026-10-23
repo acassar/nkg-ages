@@ -31,8 +31,8 @@ const signed = new Intl.NumberFormat('fr-FR', {
       <span
         :title="
           game.view.tribe.spoiled > 0
-            ? `Réserve de nourriture : ${game.view.tribe.spoiled} rations gâtées le mois dernier`
-            : 'Réserve de nourriture (une ration nourrit une personne un mois)'
+            ? `Vivres de toutes vos bandes (chacune vit de sa réserve) : ${game.view.tribe.spoiled} rations gâtées le mois dernier`
+            : 'Vivres de toutes vos bandes : chacune vit de sa réserve (une ration nourrit une personne un mois)'
         "
       >
         <span class="label">Vivres</span>
@@ -45,8 +45,8 @@ const signed = new Intl.NumberFormat('fr-FR', {
       <span
         :title="
           game.view.tribe.huntersResting
-            ? 'Réserve pleine : les chasseurs se reposent'
-            : 'Chasseurs des bandes : ils chassent seuls autour du camp et le défendent'
+            ? 'Réserves pleines : les chasseurs se reposent'
+            : 'Chasseurs des bandes (chaque bande règle sa part) : ils chassent autour du camp et le défendent'
         "
       >
         <span class="label">Chasseurs</span>

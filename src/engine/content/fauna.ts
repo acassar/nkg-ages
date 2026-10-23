@@ -67,6 +67,10 @@ export const HUNT_RULES = {
   fleeDistance: 5,
   /** Les campements laissent les troupeaux plus dangereux que ceci (les mammouths). */
   maxDanger: 0.02,
-  /** Une personne sur tant chasse (elle ne cueille pas) ; elle défend aussi le camp. */
-  peoplePerHunter: 6,
+  /**
+   * Part des gens d'un campement qui chassent au lieu de cueillir, au départ ; chaque
+   * campement la règle, jusqu'à `maxShare`. Les chasseurs défendent aussi le camp.
+   */
+  share: 1 / 6,
+  maxShare: 0.5,
 } as const
