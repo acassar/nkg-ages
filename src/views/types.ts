@@ -78,6 +78,11 @@ export interface GameView {
    * seulement hors du brouillard inconnu). Seulement la zone modifiée.
    */
   territory: GridPatch | null
+  /**
+   * Abondance des terres par cellule, de 0 (épuisée) à 255 (intacte) : les bandes usent ce
+   * qu'elles cueillent, puis la terre repousse. Seulement la zone modifiée.
+   */
+  abundance: GridPatch | null
   /** Messages pour le joueur, nés depuis la vue précédente (déjà rédigés). */
   notices: string[]
   tribe: TribeView

@@ -1,6 +1,7 @@
 import { isWater } from '../content/biomes'
 import { BAND_RULES, type BandRules } from '../content/bands'
 import { claim, NO_OWNER, PLAYER, type TerritoryState } from '../territory/territory'
+import type { Rect } from '../core/geometry'
 import type { World } from '../world/world'
 
 /**
@@ -45,6 +46,24 @@ export function depletedCells(abundance: Float32Array): number[] {
   const out: number[] = []
   for (let i = 0; i < abundance.length; i++) if (abundance[i]! < 1) out.push(i)
   return out
+}
+
+/** Rectangle englobant ces cellules (indices de grille), ou null s'il n'y en a aucune. */
+export function cellsRect(cells: readonly number[], width: number): Rect | null {
+  if (cells.length === 0) return null
+  let x0 = Infinity
+  let y0 = Infinity
+  let x1 = -Infinity
+  let y1 = -Infinity
+  for (const i of cells) {
+    const x = i % width
+    const y = (i - x) / width
+    if (x < x0) x0 = x
+    if (x > x1) x1 = x
+    if (y < y0) y0 = y
+    if (y > y1) y1 = y
+  }
+  return { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 }
 }
 
 /**

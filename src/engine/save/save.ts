@@ -223,6 +223,7 @@ export function loadGame(data: SaveData): GameState {
   if (data.abundance) decodeRuns(data.abundance, size, state.abundance)
   else state.abundance.fill(1)
   state.depleted = depletedCells(state.abundance)
+  state.abundanceDirty = { x: 0, y: 0, w: state.world.width, h: state.world.height }
   if (data.bandCells) state.bandCells = [...data.bandCells]
   else {
     // Sauvegarde d'avant les bandes : le grand territoire fixe d'alors n'est plus qu'une zone

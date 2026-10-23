@@ -182,6 +182,10 @@
           "status": "done"
         },
         {
+          "title": "Terres épuisées visibles sur la carte",
+          "status": "done"
+        },
+        {
           "title": "Bandes seules : elles voient, chassent et défendent",
           "status": "done"
         },
@@ -238,6 +242,10 @@
     {
       "date": "2026-10-23",
       "text": "Jeu : plus d'éclaireurs ni de chasseurs à piloter ; on ne contrôle que les bandes, qui voient deux fois plus loin que leur zone, chassent seules les troupeaux qu'elles voient (pas les mammouths) et défendent le camp avec leurs chasseurs, une personne sur six ; une bande qui migre seule sans meilleur site connu part vers l'inconnu"
+    },
+    {
+      "date": "2026-10-23",
+      "text": "Carte : les terres usées par les bandes se voient enfin ; elles pâlissent vers l'ocre et se couvrent de hachures d'encre à mesure qu'elles s'épuisent, puis s'effacent quand elles repoussent"
     },
     {
       "date": "2026-10-23",
