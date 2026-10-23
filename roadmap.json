@@ -171,7 +171,7 @@
         },
         {
           "title": "Sonde d'équilibrage",
-          "status": "todo"
+          "status": "done"
         },
         {
           "title": "Ressources de leur époque",
@@ -223,6 +223,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-23",
+      "text": "Outils : sonde d'équilibrage (pnpm sonde), un robot joue 40 parties et date chaque étape ; l'arbre des inventions est fini en 33 ans, la population explose après 30 ans"
+    },
     {
       "date": "2026-10-23",
       "text": "Jouabilité : éclaireurs à former, ordre « Explorer » (touche E), clic sur un campement pour le faire grandir ou y former des recrues, curseur selon l'action"
