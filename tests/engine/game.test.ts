@@ -27,7 +27,8 @@ import { PLAYER } from '@/engine/territory/territory'
 import fc from 'fast-check'
 import { createRng } from '@/engine/core/random'
 
-const options = { seed: 'scénario', randomStart: false, width: 256, height: 128 }
+// Sans peuples voisins : ces scénarios suivent la tribu du joueur seule (voir peoples.test.ts).
+const options = { seed: 'scénario', randomStart: false, width: 256, height: 128, peoples: 0 }
 
 /** Empreinte de l'état, pour comparer deux parties. */
 function fingerprint(g: GameState): string {

@@ -105,7 +105,7 @@
       "features": [
         {
           "title": "Peuples IA sous le brouillard",
-          "status": "todo"
+          "status": "done"
         },
         {
           "title": "Relations et commerce",
@@ -181,6 +181,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-23",
+      "text": "J3 : peuples voisins sous le brouillard (jusqu'à 3) : ils cueillent, grandissent, fondent des campements et s'étendent ; on les rencontre en explorant, leurs frontières sont tracées à l'encre d'ardoise"
+    },
     {
       "date": "2026-10-23",
       "text": "J2 : agriculture (invention de rang E à S), villages bâtis sur les campements : portée, greniers et champs moissonnés d'août à octobre selon la fertilité"

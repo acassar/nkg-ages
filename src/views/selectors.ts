@@ -42,6 +42,7 @@ import {
   type GameEvent,
   type GameState,
   type Rect,
+  unionRect,
 } from '@/engine'
 import {
   BIOME_IDS,
@@ -123,18 +124,20 @@ export function buildGameView(state: GameState, full = false): GameView {
       path: u.path.map((p) => ({ x: p.x, y: p.y })),
       foundCamp: u.kind === 'eclaireur' ? { blocked: cannotFoundCamp(state, u) } : null,
     })),
-    camps: state.camps.map((c) => ({
-      id: c.id,
-      x: c.x,
-      y: c.y,
-      mine: c.owner === PLAYER,
-      village: c.village === true,
-    })),
+    camps: state.camps
+      .filter((c) => c.owner === PLAYER || known(state, c.x, c.y))
+      .map((c) => ({
+        id: c.id,
+        x: c.x,
+        y: c.y,
+        mine: c.owner === PLAYER,
+        village: c.village === true,
+        people: state.peoples.find((p) => p.owner === c.owner)?.name ?? null,
+      })),
     fog: patchOf(state.fog.cells, state.world.width, full ? whole : state.fog.dirty),
-    territory: patchOf(
-      state.territory.owner,
-      state.world.width,
-      full ? whole : state.territory.dirty,
+    territory: territoryPatch(
+      state,
+      full ? whole : changed(state.territory.dirty, state.fog.dirty),
     ),
     notices: state.events.map((e) => noticeOf(state, e)),
     tribe: tribeView(state),
@@ -209,6 +212,10 @@ function noticeOf(state: GameState, event: GameEvent): string {
       return rareNotice(event)
     case 'winter':
       return `L'hiver arrive : la cueillette tombe à ${Math.round(event.yieldFactor * 100)} % jusqu'au printemps.`
+    case 'peopleMet':
+      return `Rencontre : vos éclaireurs aperçoivent les terres du ${event.name}.`
+    case 'peopleGone':
+      return `Le ${event.name} a disparu : ses terres sont désertes.`
     case 'meatLost':
       return `Chasse : la réserve est pleine, ${event.amount} rations de viande sont perdues.`
     case 'hunterKilled':
@@ -291,6 +298,38 @@ function depositViews(state: GameState): DepositView[] {
       held: depositHeld(state, d),
       yield: Math.round(depositYield(d) * 10) / 10,
     }))
+}
+
+function changed(a: Rect | null, b: Rect | null): Rect | null {
+  return b ? unionRect(a, b) : a
+}
+
+/** Cellule déjà découverte par le joueur (vue ou déjà vue). */
+function known(state: GameState, x: number, y: number): boolean {
+  const i = Math.floor(y) * state.world.width + Math.floor(x)
+  return state.fog.cells[i] !== Visibility.Unknown
+}
+
+/**
+ * Propriétaires de la zone modifiée, sans rien trahir : sous le brouillard inconnu, les terres
+ * d'un peuple voisin restent blanches. La zone suit aussi le brouillard, pour qu'elles
+ * paraissent dès qu'on les découvre.
+ */
+function territoryPatch(state: GameState, rect: Rect | null): GridPatch | null {
+  const patch = patchOf(state.territory.owner, state.world.width, rect)
+  if (!patch) return null
+  const { cells } = state.fog
+  for (let y = 0; y < patch.h; y++) {
+    for (let x = 0; x < patch.w; x++) {
+      const k = y * patch.w + x
+      if (
+        patch.data[k]! > PLAYER &&
+        cells[(patch.y + y) * state.world.width + patch.x + x] === Visibility.Unknown
+      )
+        patch.data[k] = 0
+    }
+  }
+  return patch
 }
 
 export function patchOf(cells: Uint8Array, width: number, rect: Rect | null): GridPatch | null {

@@ -2,7 +2,14 @@ import type { ClockState } from '../core/clock'
 import type { Rect } from '../core/geometry'
 import { createRng } from '../core/random'
 import type { Herd } from '../fauna/fauna'
-import { createGame, type Camp, type GameState, type NewGameOptions, type Outcome } from '../game'
+import {
+  createGame,
+  type Camp,
+  type GameState,
+  type NewGameOptions,
+  type Outcome,
+  type People,
+} from '../game'
 import type { InventionsState } from '../inventions/inventions'
 import type { Deposit } from '../resources/deposits'
 import type { TribeState } from '../tribe/tribe'
@@ -23,6 +30,9 @@ export interface SaveData {
   faunaRng: number
   /** Absent des sauvegardes d'avant les événements rares : on repart alors de la graine. */
   eventRng?: number
+  /** Peuples voisins et leur aléa : absents d'avant les peuples (la tribu y était seule). */
+  peoples?: People[]
+  peopleRng?: number
   /** Empreinte du monde : si la génération a changé depuis, la sauvegarde n'a plus de sens. */
   world?: number
   units: Unit[]
@@ -38,8 +48,12 @@ export interface SaveData {
     owner: number[]
     version: number
     ownedCount: number
-    frontier: number[]
+    /** Frontières par propriétaire ; `frontier` : celle du joueur, d'avant les peuples. */
+    frontiers?: number[][]
+    frontier?: number[]
     playerWeight: number
+    ownerCells?: number[]
+    ownerWeight?: number[]
   }
 }
 
@@ -95,6 +109,8 @@ export function saveGame(state: GameState): SaveData {
     rng: state.rng.state,
     faunaRng: state.faunaRng.state,
     eventRng: state.eventRng.state,
+    peoples: copy(state.peoples),
+    peopleRng: state.peopleRng.state,
     world: worldPrint(state),
     units: copy(state.units),
     camps: copy(state.camps),
@@ -114,8 +130,10 @@ export function saveGame(state: GameState): SaveData {
       owner: encodeRuns(state.territory.owner),
       version: state.territory.version,
       ownedCount: state.territory.ownedCount,
-      frontier: [...state.territory.frontier],
+      frontiers: state.territory.frontiers.map((f) => [...f]),
       playerWeight: state.territory.playerWeight,
+      ownerCells: [...state.territory.ownerCells],
+      ownerWeight: [...state.territory.ownerWeight],
     },
   }
 }
@@ -135,6 +153,8 @@ export function loadGame(data: SaveData): GameState {
   state.rng = createRng(data.rng)
   state.faunaRng = createRng(data.faunaRng)
   if (data.eventRng !== undefined) state.eventRng = createRng(data.eventRng)
+  state.peoples = copy(data.peoples ?? [])
+  if (data.peopleRng !== undefined) state.peopleRng = createRng(data.peopleRng)
   state.units = copy(data.units)
   state.camps = copy(data.camps)
   // Un champ ajouté depuis la sauvegarde garde sa valeur de départ au lieu de manquer.
@@ -158,8 +178,18 @@ export function loadGame(data: SaveData): GameState {
   territory.owner = decodeRuns(data.territory.owner, size)
   territory.version = data.territory.version
   territory.ownedCount = data.territory.ownedCount
-  territory.frontier = [...data.territory.frontier]
+  territory.frontiers = data.territory.frontiers
+    ? data.territory.frontiers.map((f) => [...f])
+    : [[], [...(data.territory.frontier ?? [])]]
   territory.playerWeight = data.territory.playerWeight
+  if (data.territory.ownerCells && data.territory.ownerWeight) {
+    territory.ownerCells = [...data.territory.ownerCells]
+    territory.ownerWeight = [...data.territory.ownerWeight]
+  } else {
+    // Sauvegarde d'avant les peuples : le joueur seul, recompté depuis la grille.
+    territory.ownerCells = [0, data.territory.ownedCount]
+    territory.ownerWeight = [0, data.territory.playerWeight]
+  }
   territory.dirty = { x: 0, y: 0, w: state.world.width, h: state.world.height }
 
   state.events = []

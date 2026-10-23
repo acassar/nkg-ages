@@ -16,13 +16,17 @@ export interface TerritoryState {
   /** Nombre de cellules tenues, tous propriétaires confondus. */
   ownedCount: number
   /**
-   * Cellules tenues qui ont peut-être encore un voisin à prendre.
-   * Purgée au fil des tirages : l'intérieur du territoire n'y reste pas.
+   * Par propriétaire, cellules tenues qui ont peut-être encore un voisin à prendre.
+   * Purgées au fil des tirages : l'intérieur du territoire n'y reste pas. Chacun a la sienne,
+   * pour que la croissance d'un peuple ne prenne rien sur celle d'un autre.
    */
-  frontier: number[]
+  frontiers: number[][]
   /** Poids de chaque cellule (ex. nourriture) et somme sur les cellules du joueur. */
   weights: Float32Array | null
   playerWeight: number
+  /** Par propriétaire (indice = numéro) : cellules tenues et somme de leurs poids. */
+  ownerCells: number[]
+  ownerWeight: number[]
 }
 
 export interface Seat {
@@ -45,9 +49,11 @@ export function createTerritory(
     version: 0,
     dirty: null,
     ownedCount: 0,
-    frontier: [],
+    frontiers: [],
     weights,
     playerWeight: 0,
+    ownerCells: [],
+    ownerWeight: [],
   }
 }
 
@@ -67,6 +73,14 @@ export function claim(territory: TerritoryState, x: number, y: number, owner: nu
   const weight = territory.weights?.[i] ?? 0
   if (previous === PLAYER) territory.playerWeight -= weight
   if (owner === PLAYER) territory.playerWeight += weight
+  if (previous !== NO_OWNER) {
+    bump(territory.ownerCells, previous!, -1)
+    bump(territory.ownerWeight, previous!, -weight)
+  }
+  if (owner !== NO_OWNER) {
+    bump(territory.ownerCells, owner, 1)
+    bump(territory.ownerWeight, owner, weight)
+  }
   if (owner === NO_OWNER) {
     territory.ownedCount--
     // Les voisines possédées d'une cellule libérée redeviennent des bords d'expansion.
@@ -75,12 +89,18 @@ export function claim(territory: TerritoryState, x: number, y: number, owner: nu
       const ny = y + dy
       if (nx < 0 || ny < 0 || nx >= territory.width || ny >= territory.height) continue
       const n = ny * territory.width + nx
-      if (territory.owner[n] !== NO_OWNER) territory.frontier.push(n)
+      if (territory.owner[n] !== NO_OWNER) frontierOf(territory, territory.owner[n]!).push(n)
     }
-  } else territory.frontier.push(i)
+  } else frontierOf(territory, owner).push(i)
   territory.version++
   territory.dirty = unionRect(territory.dirty, { x, y, w: 1, h: 1 })
   return true
+}
+
+/** Ajoute à la case d'un tableau par propriétaire, sans y laisser de trou (sauvegarde JSON). */
+function bump(values: number[], owner: number, delta: number): void {
+  while (values.length <= owner) values.push(0)
+  values[owner]! += delta
 }
 
 /** Voisins libres, de terre et dans la portée d'un des sièges, d'une cellule tenue. */
@@ -105,36 +125,49 @@ function freeNeighbors(
   return out
 }
 
+/** Frontière d'un propriétaire, créée au besoin (sans trou dans le tableau, pour JSON). */
+export function frontierOf(territory: TerritoryState, owner: number): number[] {
+  while (territory.frontiers.length <= owner) territory.frontiers.push([])
+  return territory.frontiers[owner]!
+}
+
 /**
- * Croissance organique : on tire une cellule de la frontière et l'on prend un de ses voisins
- * libres. Une cellule sans voisin libre quitte la frontière, si bien que la croissance
- * ne s'essouffle pas quand le territoire grandit. Le hasard donne des contours irréguliers.
+ * Croissance organique : pour chaque propriétaire, on tire une cellule de sa frontière et
+ * l'on prend un de ses voisins libres. Une cellule sans voisin libre quitte la frontière, si
+ * bien que la croissance ne s'essouffle pas quand le territoire grandit. Chacun gagne
+ * `claimsPerSeat` cellules par campement, dans l'ordre des propriétaires : un voisin ne
+ * ralentit ni n'accélère la croissance des autres. Le hasard donne des contours irréguliers.
  */
 export function growTerritory(
   territory: TerritoryState,
   world: World,
   seats: readonly Seat[],
   rng: Rng,
-  claims: number,
+  claimsPerSeat: number,
 ): void {
-  const { frontier } = territory
-  let taken = 0
-  // Garde-fou : chaque tirage prend une cellule ou retire une cellule de la frontière.
-  for (let guard = 0; taken < claims && frontier.length > 0 && guard < claims * 8; guard++) {
-    const k = rng.int(0, frontier.length - 1)
-    const from = frontier[k]!
-    const owner = territory.owner[from]!
+  const owners = [...new Set(seats.map((s) => s.owner))].sort((a, b) => a - b)
+  for (const owner of owners) {
     // Un propriétaire peut avoir plusieurs campements : chacun porte sa portée.
     const own = seats.filter((s) => s.owner === owner)
-    const options = own.length > 0 ? freeNeighbors(territory, world, own, from) : []
-    if (options.length === 0) {
-      frontier[k] = frontier[frontier.length - 1]!
-      frontier.pop()
-      continue
+    const claims = claimsPerSeat * own.length
+    const frontier = frontierOf(territory, owner)
+    let taken = 0
+    // Garde-fou : chaque tirage prend une cellule ou retire une cellule de la frontière.
+    for (let guard = 0; taken < claims && frontier.length > 0 && guard < claims * 8; guard++) {
+      const k = rng.int(0, frontier.length - 1)
+      const from = frontier[k]!
+      // Une cellule passée à un autre (ou libérée) n'est plus de cette frontière.
+      const options =
+        territory.owner[from] === owner ? freeNeighbors(territory, world, own, from) : []
+      if (options.length === 0) {
+        frontier[k] = frontier[frontier.length - 1]!
+        frontier.pop()
+        continue
+      }
+      const [x, y] = rng.pick(options)
+      claim(territory, x, y, owner)
+      taken++
     }
-    const [x, y] = rng.pick(options)
-    claim(territory, x, y, owner)
-    taken++
   }
 }
 

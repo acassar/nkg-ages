@@ -68,7 +68,7 @@ describe('territoire', () => {
     expect(claim(t, 1, 1, PLAYER)).toBe(true)
     expect(claim(t, 1, 1, PLAYER)).toBe(false)
     expect(t.ownedCount).toBe(1)
-    expect(t.frontier).toEqual([5])
+    expect(t.frontiers[PLAYER]).toEqual([5])
   })
 
   it('ne s’essouffle pas : chaque tick gagne autant de cellules tant qu’il reste de la place', () => {
@@ -91,7 +91,7 @@ describe('territoire', () => {
 
   it('vide sa frontière une fois la portée remplie', () => {
     const { territory } = grown('rempli', 50000)
-    expect(territory.frontier.length).toBe(0)
+    expect(territory.frontiers.every((f) => f.length === 0)).toBe(true)
   })
 
   it('compte une cellule reprise par un autre propriétaire une seule fois', () => {
@@ -107,9 +107,9 @@ describe('territoire', () => {
     const t = createTerritory(4, 4)
     claim(t, 1, 1, PLAYER)
     claim(t, 2, 1, PLAYER)
-    t.frontier.length = 0
+    t.frontiers[PLAYER]!.length = 0
     claim(t, 2, 1, NO_OWNER)
-    expect(t.frontier).toEqual([5])
+    expect(t.frontiers[PLAYER]).toEqual([5])
   })
 
   it('prend d’un coup les terres reliées au siège, sans eau ni île voisine', () => {

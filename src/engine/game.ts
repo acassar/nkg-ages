@@ -8,15 +8,18 @@ import { BIOMES, type BiomeId } from './content/biomes'
 import { climateAmplitude, seasonalYield, seasonStarting, spoilage } from './climate/seasons'
 import { TRIBE_RULES } from './content/tribe'
 import {
+  claim,
   claimAround,
   createTerritory,
   growTerritory,
+  NO_OWNER,
   PLAYER,
   type Seat,
   type TerritoryState,
 } from './territory/territory'
 import { findPath, knownPassable, pathBlocked } from './units/path'
 import { CAMP_RULES } from './content/camps'
+import { PEOPLE_NAMES, PEOPLE_RULES } from './content/peoples'
 import { FERTILITY, VILLAGE_RULES } from './content/villages'
 import { RIVER_RULES } from './content/rivers'
 import { ANIMAL_RULES, HUNT_RULES, type AnimalKind } from './content/fauna'
@@ -70,6 +73,17 @@ export interface NewGameOptions {
   height?: number
   /** Faux : pas d'événements rares (scénarios d'essai, partie sans surprise). */
   rareEvents?: boolean
+  /** Nombre de peuples voisins au plus (par défaut PEOPLE_RULES.count ; 0 : la tribu est seule). */
+  peoples?: number
+}
+
+/** Un peuple voisin : il vit sous le brouillard, sur ses terres (propriétaire `owner`). */
+export interface People {
+  owner: number
+  name: string
+  tribe: TribeState
+  /** Le joueur l'a déjà aperçu. */
+  met: boolean
 }
 
 export interface Camp {
@@ -101,6 +115,10 @@ export type GameEvent =
   | { type: 'rare'; event: EventKind; amount: number; rank?: Rank }
   /** L'hiver commence : la cueillette baisse jusqu'au printemps. */
   | { type: 'winter'; yieldFactor: number }
+  /** Le joueur aperçoit pour la première fois un peuple voisin. */
+  | { type: 'peopleMet'; name: string }
+  /** Un peuple déjà rencontré a disparu. */
+  | { type: 'peopleGone'; name: string }
   /** La réserve était pleine : une part de la viande rapportée est perdue. */
   | { type: 'meatLost'; amount: number }
 
@@ -121,6 +139,9 @@ export interface GameState {
   faunaRng: Rng
   /** Aléa des événements rares, à part lui aussi. */
   eventRng: Rng
+  /** Peuples voisins, et l'aléa de leurs décisions. */
+  peoples: People[]
+  peopleRng: Rng
   units: Unit[]
   camps: Camp[]
   fog: FogState
@@ -158,6 +179,8 @@ export function createGame(options: NewGameOptions): GameState {
     rng,
     faunaRng: createRng(`errance:${world.seed}`),
     eventRng: createRng(`evenements:${world.seed}`),
+    peoples: [],
+    peopleRng: createRng(`peuples:${world.seed}`),
     units: [],
     camps: [],
     fog: createFog(world.width, world.height),
@@ -178,8 +201,33 @@ export function createGame(options: NewGameOptions): GameState {
   ensureNearStart(state.deposits, world, owner, PLAYER, site, createRng(`depart:${world.seed}`))
   state.units.push(newUnit(state, 'eclaireur', cx, cy))
   for (let i = 0; i < START_HUNTERS; i++) state.units.push(newHunter(state, i))
+  placePeoples(state, site, options.peoples ?? PEOPLE_RULES.count)
   updateFog(state.fog, viewersOf(state))
   return state
+}
+
+/** Installe les peuples voisins sur des sites viables, loin du joueur et les uns des autres. */
+function placePeoples(state: GameState, player: StartSite, count: number): void {
+  if (count <= 0) return
+  const sites = findStarts(state.world, createRng(`sites-peuples:${state.world.seed}`), count + 8)
+  const taken: { x: number; y: number }[] = [player]
+  for (const site of sites) {
+    if (state.peoples.length >= count) break
+    if (taken.some((t) => Math.hypot(t.x - site.x, t.y - site.y) < PEOPLE_RULES.spacing)) continue
+    taken.push(site)
+    const owner = PLAYER + 1 + state.peoples.length
+    const tribe = createTribe()
+    tribe.population = PEOPLE_RULES.startPopulation
+    state.peoples.push({
+      owner,
+      name: PEOPLE_NAMES[state.peoples.length % PEOPLE_NAMES.length]!,
+      tribe,
+      met: false,
+    })
+    const camp: Camp = { id: state.nextId++, owner, x: site.x + 0.5, y: site.y + 0.5 }
+    state.camps.push(camp)
+    claimAround(state.territory, state.world, seatOf(camp), TRIBE_RULES.startTerritoryRadius)
+  }
 }
 
 function newUnit(state: GameState, kind: Unit['kind'], x: number, y: number): Unit {
@@ -236,9 +284,16 @@ export function cannotFoundCamp(state: GameState, unit: Unit): string | null {
     return `Un campement de plus pour ${CAMP_RULES.peoplePerCamp} habitants`
   const x = Math.floor(unit.x) + 0.5
   const y = Math.floor(unit.y) + 0.5
-  if (state.camps.some((c) => Math.hypot(c.x - x, c.y - y) < CAMP_RULES.minDistance))
-    return 'Trop près d’un autre campement'
+  // Un camp voisin caché sous le brouillard ne se trahit pas par un refus.
+  const near = state.camps.some(
+    (c) =>
+      (c.owner === PLAYER || knownCell(state, c.x, c.y)) &&
+      Math.hypot(c.x - x, c.y - y) < CAMP_RULES.minDistance,
+  )
+  if (near) return 'Trop près d’un autre campement'
   if (!isPassable(state.world, x, y)) return 'Impossible de camper ici'
+  const held = state.territory.owner[Math.floor(y) * state.world.width + Math.floor(x)]!
+  if (held !== NO_OWNER && held !== PLAYER) return 'Ces terres appartiennent à un autre peuple'
   if (state.tribe.food < CAMP_RULES.foodCost) return `Il faut ${CAMP_RULES.foodCost} rations`
   return null
 }
@@ -273,6 +328,11 @@ function villageSite(state: GameState, campId?: number): Camp | undefined {
   return state.camps.find(
     (c) => c.owner === PLAYER && !c.village && (campId === undefined || c.id === campId),
   )
+}
+
+/** Cellule déjà découverte par le joueur. */
+function knownCell(state: GameState, x: number, y: number): boolean {
+  return state.fog.cells[Math.floor(y) * state.world.width + Math.floor(x)] !== Visibility.Unknown
 }
 
 /**
@@ -396,19 +456,21 @@ export function step(state: GameState): void {
   const pace = 1 + inventionMean(state.inventions, 'portage') / 100
   for (const unit of state.units) if (!moveUnit(unit, state.world, pace)) replan(state, unit)
   hunt(state)
-  growTerritory(
-    state.territory,
-    state.world,
-    seatsOf(state),
-    state.rng,
-    CAMP_RULES.growthPerTick * state.camps.length,
-  )
+  // Le joueur et les peuples poussent chacun avec leur aléa : tant qu'ils ne se touchent pas,
+  // la présence des voisins ne change rien au territoire du joueur.
+  const seats = seatsOf(state)
+  const mine = seats.filter((s) => s.owner === PLAYER)
+  const theirs = seats.filter((s) => s.owner !== PLAYER)
+  growTerritory(state.territory, state.world, mine, state.rng, CAMP_RULES.growthPerTick)
+  growTerritory(state.territory, state.world, theirs, state.peopleRng, CAMP_RULES.growthPerTick)
   harvest(state)
+  for (const people of state.peoples) livePeople(state, people)
   fortune(state)
   const invented = tickInventions(state.inventions, state.tribe.population, state.rng)
   if (invented)
     state.events.push({ type: 'invented', invention: invented.kind, rank: invented.rank })
   updateFog(state.fog, viewersOf(state))
+  meetPeoples(state)
   // Le terrain découvert peut couper le chemin prévu : on le recalcule.
   for (const unit of state.units) {
     if (!unit.target || unit.plannedFog === state.fog.version) continue
@@ -455,7 +517,9 @@ export function sightOf(state: GameState, unit: Unit): number {
 function viewersOf(state: GameState) {
   return [
     ...state.units.map((u) => ({ x: u.x, y: u.y, sight: sightOf(state, u) })),
-    ...state.camps.map((c) => ({ x: c.x, y: c.y, sight: CAMP_RULES.sight })),
+    ...state.camps
+      .filter((c) => c.owner === PLAYER)
+      .map((c) => ({ x: c.x, y: c.y, sight: CAMP_RULES.sight })),
   ]
 }
 
@@ -529,6 +593,82 @@ export function climateOf(state: GameState): number {
     sum += state.world.temperature[i]!
   }
   return climateAmplitude(sum / camps.length)
+}
+
+/**
+ * Un mois de vie d'un peuple voisin : il cueille sur ses terres au fil des saisons, puis
+ * fonde un campement quand sa population le permet. Disparu, il laisse ses terres vides.
+ */
+function livePeople(state: GameState, people: People): void {
+  const { tribe, owner } = people
+  if (tribe.population <= 0) return
+  const camps = state.camps.filter((c) => c.owner === owner)
+  const month = state.clock.tick % 12
+  const home = camps[0]
+  const t = home
+    ? state.world.temperature[Math.floor(home.y) * state.world.width + Math.floor(home.x)]!
+    : 0.5
+  const season = seasonalYield(month, climateAmplitude(t))
+  const available = territoryFood(state.territory.ownerWeight[owner] ?? 0) * season
+  tickTribe(tribe, available)
+  if (tribe.population <= 0) {
+    state.camps = state.camps.filter((c) => c.owner !== owner)
+    // Ses terres redeviennent libres : d'autres pourront s'y étendre.
+    const { width } = state.world
+    state.territory.owner.forEach((o, i) => {
+      if (o === owner) claim(state.territory, i % width, Math.floor(i / width), NO_OWNER)
+    })
+    if (people.met) state.events.push({ type: 'peopleGone', name: people.name })
+    return
+  }
+  const allowed = Math.min(
+    PEOPLE_RULES.maxCamps,
+    1 + Math.floor(tribe.population / PEOPLE_RULES.peoplePerCamp),
+  )
+  if (camps.length === 0 || camps.length >= allowed || tribe.food < PEOPLE_RULES.campCost) return
+  const rng = state.peopleRng
+  const { min, max } = PEOPLE_RULES.campDistance
+  for (let attempt = 0; attempt < PEOPLE_RULES.campAttempts; attempt++) {
+    const from = rng.pick(camps)
+    const angle = rng.range(0, Math.PI * 2)
+    const dist = rng.range(min, max)
+    const cx = Math.floor(from.x + Math.cos(angle) * dist)
+    const cy = Math.floor(from.y + Math.sin(angle) * dist)
+    if (!inBounds(state.world, cx, cy) || !isPassable(state.world, cx + 0.5, cy + 0.5)) continue
+    const held = state.territory.owner[cy * state.world.width + cx]!
+    if (held !== NO_OWNER && held !== owner) continue
+    const x = cx + 0.5
+    const y = cy + 0.5
+    if (state.camps.some((c) => Math.hypot(c.x - x, c.y - y) < CAMP_RULES.minDistance)) continue
+    tribe.food -= PEOPLE_RULES.campCost
+    const camp: Camp = { id: state.nextId++, owner, x, y }
+    state.camps.push(camp)
+    claimAround(state.territory, state.world, seatOf(camp), CAMP_RULES.claimRadius)
+    return
+  }
+}
+
+/**
+ * Le joueur rencontre un peuple dès qu'une de ses terres est en vue : on ne regarde que
+ * dans le champ de vision des observateurs, quelques centaines de cellules.
+ */
+function meetPeoples(state: GameState): void {
+  if (!state.peoples.some((p) => !p.met)) return
+  const { width, height } = state.world
+  const { owner } = state.territory
+  for (const v of viewersOf(state)) {
+    const r = Math.ceil(v.sight)
+    for (let y = Math.max(0, Math.floor(v.y) - r); y <= Math.min(height - 1, v.y + r); y++) {
+      for (let x = Math.max(0, Math.floor(v.x) - r); x <= Math.min(width - 1, v.x + r); x++) {
+        const o = owner[y * width + x]!
+        if (o <= PLAYER || (x + 0.5 - v.x) ** 2 + (y + 0.5 - v.y) ** 2 > v.sight * v.sight) continue
+        const people = state.peoples.find((p) => p.owner === o)
+        if (!people || people.met) continue
+        people.met = true
+        state.events.push({ type: 'peopleMet', name: people.name })
+      }
+    }
+  }
 }
 
 /** Le sort du mois : au plus un événement rare, appliqué tout de suite. */
@@ -755,8 +895,7 @@ export function tallyOf(state: GameState): Tally {
 }
 
 function territoryOf(state: GameState): number {
-  // Toutes les cellules tenues sont au joueur tant qu'il n'y a pas d'autre peuple.
-  return state.territory.ownedCount
+  return state.territory.ownerCells[PLAYER] ?? 0
 }
 
 /** Score courant ; après une victoire, il garde le bonus gagné ce jour-là. */
