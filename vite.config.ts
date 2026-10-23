@@ -12,6 +12,7 @@ export default defineConfig({
   worker: { format: 'es' },
   test: {
     include: ['tests/**/*.test.ts'],
+    setupFiles: ['tests/setup.ts'],
     environment: 'node',
     coverage: {
       provider: 'v8',

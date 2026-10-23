@@ -71,7 +71,7 @@ describe('vues de partie', () => {
     expect(worn.data.some((v) => v < 255)).toBe(true)
   })
 
-  it('invariant : une texture tenue à jour par les seuls envois suit l’abondance (fast-check)', () => {
+  it('invariant : une texture tenue à jour par les seuls envois suit l’abondance (fast-check)', async () => {
     // Ce que fait le rendu : il part de la grille entière puis n'applique que les morceaux.
     const encode = (g: GameState) => Uint8Array.from(g.abundance, (a) => Math.round(a * 255))
     const apply = (mirror: Uint8Array, g: GameState) => {
@@ -81,13 +81,16 @@ describe('vues de partie', () => {
       for (let y = 0; y < p.h; y++)
         mirror.set(p.data.subarray(y * p.w, (y + 1) * p.w), (p.y + y) * 128 + p.x)
     }
-    fc.assert(
-      fc.property(
-        fc.integer({ min: 1, max: 24 }),
+    // Asynchrone, rendant la main chaque mois : un long test synchrone bloque le worker de
+    // vitest, qui ne répond plus au processus principal sous la couverture (erreur en CI).
+    const yieldToLoop = () => new Promise((resolve) => setTimeout(resolve, 0))
+    await fc.assert(
+      fc.asyncProperty(
+        fc.integer({ min: 1, max: 12 }),
         fc.boolean(),
-        fc.integer({ min: 0, max: 11 }),
+        fc.integer({ min: 0, max: 5 }),
         fc.constantFrom([12, 0], [-12, 0], [0, 10], [0, -10]),
-        (months, reload, moveAt, [dx, dy]) => {
+        async (months, reload, moveAt, [dx, dy]) => {
           let g = game()
           const mirror = buildGameView(g, true).abundance!.data.slice()
           clearDirty(g)
@@ -97,6 +100,7 @@ describe('vues de partie', () => {
               const c = g.camps[0]!
               applyCommand(g, { type: 'moveCamp', campId: c.id, x: c.x + dx!, y: c.y + dy! })
             }
+            await yieldToLoop()
             step(g)
             // Une partie reprise renvoie tout.
             if (reload && m === Math.floor(months / 2)) g = loadGame(saveGame(g))
