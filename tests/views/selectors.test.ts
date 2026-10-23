@@ -107,6 +107,22 @@ describe('vues de partie', () => {
     expect(view.tribe).toMatchObject({ camps: 1, maxCamps: 1 })
   })
 
+  it('rédige les événements rares avec leur rang', () => {
+    const g = game()
+    g.events.push(
+      { type: 'rare', event: 'maladie', amount: -1 },
+      { type: 'rare', event: 'nouveauxVenus', amount: 3 },
+      { type: 'rare', event: 'filon', amount: 0, rank: 'A' },
+      { type: 'rare', event: 'tempete', amount: -9 },
+    )
+    expect(buildGameView(g).notices).toEqual([
+      'Maladie (C) : une maladie emporte 1 personne.',
+      'Nouveaux venus (C) : 3 errants rejoignent la tribu.',
+      'Filon (A) : un filon de silex de rang A affleure sur le territoire.',
+      'Tempête (D) : une tempête gâte une part de la réserve, 9 rations perdues.',
+    ])
+  })
+
   it('montre la saison, annonce l’hiver et compte la nourriture gâtée dans le bilan', () => {
     const g = game()
     expect(buildGameView(g).season).toMatchObject({ kind: 'hiver', name: 'Hiver' })

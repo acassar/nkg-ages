@@ -95,7 +95,7 @@
         },
         {
           "title": "Événements rares",
-          "status": "todo"
+          "status": "done"
         }
       ]
     },
@@ -181,6 +181,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-23",
+      "text": "J2 : événements rares de rang E à S (abondance, tempête, maladie, nouveaux venus, migration, filon, étoile filante) ; la sauvegarde vérifie l'empreinte du monde"
+    },
     {
       "date": "2026-10-23",
       "text": "J2 : saisons (cueillette maigre l'hiver, riche l'été), climat selon la latitude du campement, réserve qui se gâte et que le fumage protège"

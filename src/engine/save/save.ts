@@ -21,6 +21,10 @@ export interface SaveData {
   clock: ClockState
   rng: number
   faunaRng: number
+  /** Absent des sauvegardes d'avant les événements rares : on repart alors de la graine. */
+  eventRng?: number
+  /** Empreinte du monde : si la génération a changé depuis, la sauvegarde n'a plus de sens. */
+  world?: number
   units: Unit[]
   camps: Camp[]
   tribe: TribeState
@@ -71,6 +75,18 @@ export function decodeRuns(runs: readonly number[], length: number): Uint8Array 
   return cells
 }
 
+/** Empreinte FNV-1a des biomes et des fleuves : change dès que la génération change. */
+export function worldPrint(state: Pick<GameState, 'world'>): number {
+  let hash = 0x811c9dc5
+  for (const grid of [state.world.biome, state.world.river]) {
+    for (let i = 0; i < grid.length; i++) {
+      hash ^= grid[i]!
+      hash = Math.imul(hash, 0x01000193)
+    }
+  }
+  return hash >>> 0
+}
+
 export function saveGame(state: GameState): SaveData {
   return {
     version: SAVE_VERSION,
@@ -78,6 +94,8 @@ export function saveGame(state: GameState): SaveData {
     clock: copy(state.clock),
     rng: state.rng.state,
     faunaRng: state.faunaRng.state,
+    eventRng: state.eventRng.state,
+    world: worldPrint(state),
     units: copy(state.units),
     camps: copy(state.camps),
     tribe: copy(state.tribe),
@@ -110,10 +128,13 @@ export function loadGame(data: SaveData): GameState {
   if (data?.version !== SAVE_VERSION) throw new Error('Sauvegarde d’une autre version du jeu')
   const state = createGame(data.options)
   const size = state.world.width * state.world.height
+  if (data.world !== undefined && data.world !== worldPrint(state))
+    throw new Error('Sauvegarde d’un monde que cette version du jeu ne génère plus')
   state.clock = copy(data.clock)
   // L'état d'un générateur est sa graine : le recréer depuis cet état reprend la même suite.
   state.rng = createRng(data.rng)
   state.faunaRng = createRng(data.faunaRng)
+  if (data.eventRng !== undefined) state.eventRng = createRng(data.eventRng)
   state.units = copy(data.units)
   state.camps = copy(data.camps)
   // Un champ ajouté depuis la sauvegarde garde sa valeur de départ au lieu de manquer.
