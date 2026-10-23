@@ -27,14 +27,32 @@ export const PLAYER_INK = hex('#8c2f1c')
 /** Encre des peuples voisins : un bleu d'ardoise, bien distinct du rouge du joueur. */
 export const RIVAL_INK = hex('#2f4a6b')
 
-/** Encres des rangs de rareté, du terne (E) à l'or (S). */
+/**
+ * Couleurs des rangs de rareté, sur l'échelle que les joueurs connaissent déjà :
+ * gris, vert, bleu, violet, orange, or. Assez saturées pour se distinguer d'un coup d'œil.
+ */
 export const RANK_COLORS: Readonly<Record<RankLetter, Rgb>> = {
-  E: hex('#8a8170'),
-  D: hex('#5f7d4c'),
-  C: hex('#3e6e8e'),
-  B: hex('#6b4b8f'),
-  A: hex('#b8622a'),
-  S: hex('#c9a227'),
+  E: hex('#8c8a82'),
+  D: hex('#4e8a3a'),
+  C: hex('#2f6fae'),
+  B: hex('#7a45b0'),
+  A: hex('#d06a1c'),
+  S: hex('#e3b31b'),
+}
+
+/** Luminance relative (WCAG) d'une couleur. */
+export function luminance([r, g, b]: Rgb): number {
+  const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
+}
+
+/** Encre lisible sur un fond : le papier sur un fond sombre, l'encre sur un fond clair. */
+export function inkOn(background: Rgb): Rgb {
+  const contrast = (a: Rgb) => {
+    const [hi, lo] = [luminance(a), luminance(background)].sort((x, y) => y - x)
+    return (hi! + 0.05) / (lo! + 0.05)
+  }
+  return contrast(PAPER) >= contrast(INK) ? PAPER : INK
 }
 
 export function cssColor(rgb: Rgb, alpha = 1): string {
