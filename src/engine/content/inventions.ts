@@ -18,6 +18,7 @@ export type InventionKind =
   | 'harpon'
   | 'portage'
   | 'agriculture'
+  | 'bronze'
 
 export interface InventionRules {
   name: string
@@ -143,6 +144,17 @@ export const INVENTION_RULES: Readonly<Record<InventionKind, InventionRules>> = 
     work: 300,
     cost: { silex: 10 },
     requires: ['panier', 'taille'],
+  },
+  bronze: {
+    name: 'Bronze',
+    description:
+      'Cuivre et étain fondus ensemble : haches et faucilles, la cueillette et les champs rendent davantage.',
+    stat: 'Rendement',
+    unit: '%',
+    range: { e: { mean: 15, spread: 0 }, s: { mean: 50, spread: 0 } },
+    work: 360,
+    cost: { cuivre: 12, etain: 6 },
+    requires: ['agriculture'],
   },
 }
 

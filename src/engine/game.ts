@@ -46,6 +46,7 @@ import { flee, placeHerds, regrow, wander, type Herd } from './fauna/fauna'
 import {
   depositYield,
   ensureNearStart,
+  ensureWithinReach,
   heldBy,
   placeDeposits,
   type Deposit,
@@ -206,6 +207,7 @@ export function createGame(options: NewGameOptions): GameState {
   claimAround(state.territory, world, seatsOf(state)[0]!, TRIBE_RULES.startTerritoryRadius)
   const owner = state.territory.owner
   ensureNearStart(state.deposits, world, owner, PLAYER, site, createRng(`depart:${world.seed}`))
+  ensureWithinReach(state.deposits, world, site, createRng(`metaux:${world.seed}`))
   state.units.push(newUnit(state, 'eclaireur', cx, cy))
   for (let i = 0; i < START_HUNTERS; i++) state.units.push(newHunter(state, i))
   placePeoples(state, site, options.peoples ?? PEOPLE_RULES.count)
@@ -591,7 +593,10 @@ function harvest(state: GameState): void {
   const basket = inventionStat(state.inventions, 'panier')
   const inv = state.inventions
   const bonus = {
-    gather: basket ? Math.max(0, rollStat(basket, state.rng)) / 100 : 0,
+    // Panier (tiré chaque mois) et outils de bronze s'ajoutent.
+    gather:
+      (basket ? Math.max(0, rollStat(basket, state.rng)) / 100 : 0) +
+      inventionMean(inv, 'bronze') / 100,
     storageMonths: storageBonus(state),
     growth: inventionMean(inv, 'feu') / 100,
     famineShield: -inventionMean(inv, 'peaux') / 100,
@@ -914,7 +919,8 @@ export function cropsOf(state: GameState, month: number): number {
     }
   }
   const skill = inventionMean(state.inventions, 'agriculture') / 100
-  return fertility * VILLAGE_RULES.cropPerCell * (1 + skill)
+  const tools = inventionMean(state.inventions, 'bronze') / 100
+  return fertility * VILLAGE_RULES.cropPerCell * (1 + skill) * (1 + tools)
 }
 
 /** Réserve maximale de la tribu, conservation comprise. */

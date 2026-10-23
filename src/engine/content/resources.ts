@@ -4,7 +4,7 @@ import { Biome, type BiomeId } from './biomes'
  * Ressources de la carte : données pures. Chaque gisement a un rang (E à S) qui
  * multiplie son rendement.
  */
-export type ResourceKind = 'baies' | 'poisson' | 'silex'
+export type ResourceKind = 'baies' | 'poisson' | 'silex' | 'cuivre' | 'etain'
 
 export interface ResourceRules {
   name: string
@@ -21,6 +21,11 @@ export interface ResourceRules {
   yield: number
   /** Si présent : un gisement est garanti sur une terre à cette distance du départ, au plus. */
   nearStart?: number
+  /**
+   * Si présent : un gisement est garanti dans cet anneau autour du départ (distances min et
+   * max), sur une terre libre, à aller chercher en explorant et en fondant des campements.
+   */
+  withinReach?: readonly [number, number]
 }
 
 export const RESOURCE_RULES: Readonly<Record<ResourceKind, ResourceRules>> = {
@@ -48,6 +53,23 @@ export const RESOURCE_RULES: Readonly<Record<ResourceKind, ResourceRules>> = {
     yield: 0.5,
     // Sans silex à portée, la lance resterait hors d'atteinte sur la plupart des cartes.
     nearStart: 4,
+  },
+  // Métaux rares, sans garantie au départ : il faut explorer et s'étendre pour les tenir.
+  cuivre: {
+    name: 'Cuivre',
+    category: 'material',
+    biomes: [Biome.Hills, Biome.Mountain],
+    density: 1 / 250,
+    yield: 0.3,
+    withinReach: [12, 40],
+  },
+  etain: {
+    name: 'Étain',
+    category: 'material',
+    biomes: [Biome.Hills, Biome.Mountain, Biome.Desert],
+    density: 1 / 350,
+    yield: 0.2,
+    withinReach: [12, 40],
   },
 }
 
