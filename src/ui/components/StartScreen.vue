@@ -34,6 +34,16 @@ function start() {
       <button type="submit" class="ink-button primary" :disabled="game.loading">
         {{ game.loading ? 'Le monde se dessine…' : 'Nouvelle partie' }}
       </button>
+      <button
+        v-if="game.savedGame"
+        type="button"
+        class="ink-button resume"
+        data-testid="resume"
+        :disabled="game.loading"
+        @click="game.resume()"
+      >
+        Reprendre la partie « {{ game.savedGame.seed }} » · {{ game.savedGame.dateLabel }}
+      </button>
       <p v-if="game.error" class="error" role="alert">{{ game.error }}</p>
     </form>
   </main>
@@ -88,6 +98,9 @@ input[name='seed'] {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+.resume {
+  overflow-wrap: anywhere;
 }
 .error {
   color: var(--ink-red);

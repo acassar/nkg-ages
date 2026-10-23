@@ -10,7 +10,7 @@ const benchmark = new URLSearchParams(location.search).has('bench')
 onMounted(async () => {
   if (!benchmark) return
   // Mesure : monde fixe, vue entière, temps à vitesse 5.
-  await game.newGame({ seed: 'banc-essai', randomStart: false })
+  await game.newGame({ seed: 'banc-essai', randomStart: false }, false)
   await game.setSpeed(5)
   await game.setPaused(false)
 })

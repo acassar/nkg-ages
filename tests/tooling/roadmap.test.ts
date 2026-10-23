@@ -21,7 +21,10 @@ describe('roadmap graphique', () => {
   })
 
   it('repère le jalon en cours', () => {
-    expect(currentMilestone(roadmap)).toBe('J1')
+    // Le premier jalon qui a encore une fonctionnalité à faire : le test suit la vraie roadmap.
+    const open = roadmap.milestones.find((m) => m.features.some((f) => f.status !== 'done'))
+    expect(open).toBeDefined()
+    expect(currentMilestone(roadmap)).toBe(open?.id)
   })
 
   it('signale les erreurs de forme', () => {

@@ -77,7 +77,7 @@
         },
         {
           "title": "Sauvegarde automatique",
-          "status": "todo"
+          "status": "done"
         }
       ]
     },
@@ -184,6 +184,10 @@
     {
       "date": "2026-10-23",
       "text": "J2 : saisons (cueillette maigre l'hiver, riche l'été), climat selon la latitude du campement, réserve qui se gâte et que le fumage protège"
+    },
+    {
+      "date": "2026-10-22",
+      "text": "J1 : sauvegarde automatique (toutes les 20 s, en quittant, onglet caché) et reprise depuis l'accueil, à l'identique"
     },
     {
       "date": "2026-10-22",

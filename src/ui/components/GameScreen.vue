@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted } from 'vue'
 import { useGameStore } from '../stores/game'
 import GoalsPanel from './GoalsPanel.vue'
 import InventionsPanel from './InventionsPanel.vue'
@@ -8,6 +9,13 @@ import SelectionBar from './SelectionBar.vue'
 import TopBar from './TopBar.vue'
 
 const game = useGameStore()
+
+// L'onglet passe en arrière-plan (ou se ferme) : on range la partie sans attendre le prochain tour.
+function onHidden() {
+  if (document.visibilityState === 'hidden') void game.saveNow()
+}
+onMounted(() => document.addEventListener('visibilitychange', onHidden))
+onBeforeUnmount(() => document.removeEventListener('visibilitychange', onHidden))
 
 defineProps<{ benchmark?: boolean }>()
 </script>

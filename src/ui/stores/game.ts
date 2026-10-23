@@ -1,22 +1,35 @@
 import { defineStore } from 'pinia'
 import { markRaw, ref, shallowRef } from 'vue'
 import {
+  createSaveSlot,
   createWorkerClient,
   type Command,
   type GameClient,
   type GameView,
   type InventionKind,
   type NewGameOptions,
+  type SaveData,
+  type SaveSlot,
+  type SaveSummary,
   type Speed,
   type WorldSnapshot,
 } from '@/client'
 
 let clientFactory: () => GameClient = createWorkerClient
+let slotFactory: () => SaveSlot = () => createSaveSlot()
 
 /** Pour les tests : remplace le client du navigateur (Worker) par un autre. */
 export function useClientFactory(factory: () => GameClient): void {
   clientFactory = factory
 }
+
+/** Pour les tests : remplace l'emplacement de sauvegarde (localStorage) par un autre. */
+export function useSaveSlotFactory(factory: () => SaveSlot): void {
+  slotFactory = factory
+}
+
+/** Intervalle de la sauvegarde automatique, en temps réel (ms). */
+export const AUTOSAVE_MS = 20_000
 
 type ViewListener = (view: GameView) => void
 
@@ -31,7 +44,12 @@ export const useGameStore = defineStore('game', () => {
   const loading = ref(false)
   const selected = ref<Set<number>>(new Set())
   const viewListeners = new Set<ViewListener>()
+  const slot = slotFactory()
+  /** Partie à reprendre, montrée sur l'écran d'accueil. */
+  const savedGame = shallowRef<SaveSummary | null>(slot.summary())
   let client: GameClient | null = null
+  let autosaveTimer: ReturnType<typeof setInterval> | null = null
+  let saving = false
   let unsubscribe: (() => void) | null = null
   let errorTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -43,21 +61,69 @@ export const useGameStore = defineStore('game', () => {
     if (message && transient) errorTimer = setTimeout(() => (error.value = null), 4000)
   }
 
-  function disconnect() {
+  /** Lâche la partie ; `keep` : elle est d'abord rangée, puis fermée une fois la sauvegarde reçue. */
+  function disconnect(keep = false) {
+    if (autosaveTimer) clearInterval(autosaveTimer)
+    autosaveTimer = null
     unsubscribe?.()
     unsubscribe = null
-    client?.dispose()
+    const old = client
     client = null
+    if (!old) return
+    if (keep) void storeFrom(old).finally(() => old.dispose())
+    else old.dispose()
   }
 
   function receive(next: GameView) {
     view.value = markRaw(next)
+    // Une tribu disparue ne se reprend pas : on oublie sa sauvegarde.
+    if (next.outcome?.type === 'defeat') forgetSave()
     const notice = next.notices.at(-1)
     if (notice) report(notice, true)
     for (const listener of viewListeners) listener(next)
   }
 
-  async function newGame(options: NewGameOptions) {
+  function forgetSave() {
+    slot.clear()
+    savedGame.value = null
+  }
+
+  /** Range la partie en cours. Sans effet hors partie, après une défaite ou si le stockage refuse. */
+  async function saveNow() {
+    if (client) await storeFrom(client)
+  }
+
+  async function storeFrom(current: GameClient) {
+    // La date est lue tout de suite : la vue peut être effacée avant la réponse.
+    const label = view.value?.dateLabel
+    if (!saving || !label || view.value?.outcome?.type === 'defeat') return
+    try {
+      const save = await current.save()
+      if (save && slot.write(save, label)) savedGame.value = slot.summary()
+    } catch {
+      // Partie fermée entre-temps : rien à ranger.
+    }
+  }
+
+  /** `autosave` faux : partie jetable (mesures), qui ne remplace pas la sauvegarde du joueur. */
+  const newGame = (options: NewGameOptions, autosave = true) =>
+    open((c) => c.newGame(options), autosave)
+
+  /** Reprend la partie sauvegardée ; une sauvegarde illisible est oubliée. */
+  async function resume() {
+    const save = slot.read()
+    if (!save) {
+      forgetSave()
+      return report('Aucune partie à reprendre')
+    }
+    await open((c) => c.load(save as SaveData))
+    if (!client) forgetSave()
+  }
+
+  async function open(
+    start: (c: GameClient) => Promise<{ world: WorldSnapshot; view: GameView }>,
+    autosave = true,
+  ) {
     loading.value = true
     report(null)
     try {
@@ -70,10 +136,12 @@ export const useGameStore = defineStore('game', () => {
         stopViews()
         stopFailures()
       }
-      const started = await current.newGame(options)
+      const started = await start(current)
       world.value = markRaw(started.world)
       selected.value = new Set(started.view.units.map((u) => u.id))
       receive(started.view)
+      saving = autosave
+      if (autosave) autosaveTimer = setInterval(() => void saveNow(), AUTOSAVE_MS)
     } catch (e) {
       disconnect()
       world.value = null
@@ -134,8 +202,9 @@ export const useGameStore = defineStore('game', () => {
     return send({ type: 'moveUnits', unitIds, x, y })
   }
 
+  /** Quitte vers l'accueil ; la partie est rangée d'abord pour pouvoir la reprendre. */
   function quit() {
-    disconnect()
+    disconnect(true)
     world.value = null
     view.value = null
     selected.value = new Set()
@@ -150,7 +219,10 @@ export const useGameStore = defineStore('game', () => {
     error,
     loading,
     selected,
+    savedGame,
     newGame,
+    resume,
+    saveNow,
     send,
     onView,
     setSpeed,
