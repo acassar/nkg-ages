@@ -127,7 +127,7 @@
         },
         {
           "title": "Cités, routes, écriture",
-          "status": "todo"
+          "status": "done"
         },
         {
           "title": "Merveilles très rares",
@@ -181,6 +181,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-23",
+      "text": "J4 : écriture (inventions plus rapides), routes (on marche plus vite sur ses terres) et cités : un village grandi qui porte plus loin, stocke plus et fait avancer le savoir"
+    },
     {
       "date": "2026-10-23",
       "text": "J4 : bronze : gisements de cuivre et d'étain (rares, au moins un de chaque à portée d'exploration) et invention Bronze, qui fait rendre davantage la cueillette et les champs"

@@ -179,6 +179,7 @@ export const useGameStore = defineStore('game', () => {
     send({ type: 'invent', invention: invention as InventionKind })
   const recruitHunter = () => send({ type: 'recruitHunter' })
   const buildVillage = () => send({ type: 'buildVillage' })
+  const buildCity = () => send({ type: 'buildCity' })
   const gift = (people: number) => send({ type: 'gift', people })
   const trade = (people: number) => send({ type: 'trade', people })
 
@@ -236,6 +237,7 @@ export const useGameStore = defineStore('game', () => {
     invent,
     recruitHunter,
     buildVillage,
+    buildCity,
     gift,
     trade,
     foundCamp,

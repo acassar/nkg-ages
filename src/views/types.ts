@@ -48,6 +48,8 @@ export interface CampView {
   mine: boolean
   /** Village (champs, greniers) plutôt que simple campement. */
   village: boolean
+  /** Cité (un village grandi) : dessinée plus grande encore. */
+  city: boolean
   /** Nom du peuple voisin qui le tient, ou null pour le joueur. */
   people: string | null
 }
@@ -196,6 +198,11 @@ export interface TribeView {
   maxVillages: number
   villageCost: number
   villageBlocked: string | null
+  /** Cités tenues, combien la population en permet, leur coût (« 150 rations et 6 cuivre »). */
+  cities: number
+  maxCities: number
+  cityCost: string
+  cityBlocked: string | null
   /** Moisson du dernier mois (0 hors saison ou sans village). */
   crops: number
 }

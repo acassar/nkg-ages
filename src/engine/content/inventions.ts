@@ -19,6 +19,8 @@ export type InventionKind =
   | 'portage'
   | 'agriculture'
   | 'bronze'
+  | 'ecriture'
+  | 'routes'
 
 export interface InventionRules {
   name: string
@@ -155,6 +157,27 @@ export const INVENTION_RULES: Readonly<Record<InventionKind, InventionRules>> = 
     work: 360,
     cost: { cuivre: 12, etain: 6 },
     requires: ['agriculture'],
+  },
+  ecriture: {
+    name: 'Écriture',
+    description:
+      'Signes gravés et comptes tenus : les inventions avancent plus vite, et les villages peuvent devenir des cités.',
+    stat: 'Savoir',
+    unit: '%',
+    range: { e: { mean: 20, spread: 0 }, s: { mean: 80, spread: 0 } },
+    work: 400,
+    cost: {},
+    requires: ['bronze'],
+  },
+  routes: {
+    name: 'Routes',
+    description: 'Chemins battus entre les campements : on marche plus vite sur ses terres.',
+    stat: 'Vitesse sur vos terres',
+    unit: '%',
+    range: { e: { mean: 25, spread: 0 }, s: { mean: 100, spread: 0 } },
+    work: 260,
+    cost: { silex: 20 },
+    requires: ['portage', 'agriculture'],
   },
 }
 

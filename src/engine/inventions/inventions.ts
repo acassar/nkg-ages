@@ -73,10 +73,12 @@ export function tickInventions(
   state: InventionsState,
   population: number,
   rng: Rng,
+  /** Travail en plus (0,2 = +20 %) : écriture, cités. */
+  boost = 0,
 ): { kind: InventionKind; rank: Rank } | null {
   const current = state.current
   if (!current) return null
-  current.progress += workPerMonth(population)
+  current.progress += workPerMonth(population) * (1 + boost)
   if (current.progress < current.work) return null
   const rank = rollRank(rng)
   const kind = current.kind

@@ -39,8 +39,8 @@ export class OverlayPainter {
       const p = worldToScreen(camera, camp.x, camp.y)
       ctx.beginPath()
       if (camp.village) {
-        // Village : une maison (toit sur un carré), plus grande qu'une tente.
-        const s = 10
+        // Village : une maison (toit sur un carré), plus grande qu'une tente ; cité : plus encore.
+        const s = camp.city ? 14 : 10
         ctx.moveTo(p.x, p.y - s * 1.1)
         ctx.lineTo(p.x + s, p.y - s * 0.2)
         ctx.lineTo(p.x + s * 0.75, p.y - s * 0.2)
