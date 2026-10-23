@@ -194,7 +194,8 @@ describe('tensions et raids', () => {
     let killed = 0
     for (let i = 0; i < 300; i++) {
       g.tribe.food = 0
-      g.tribe.population = 2
+      // La disette passe avant le raid dans le mois : de quoi garder plus d'une vie.
+      g.tribe.population = 10
       p.relation = -100
       p.tribe.population = 50
       step(g)
