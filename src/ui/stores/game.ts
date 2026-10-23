@@ -179,6 +179,8 @@ export const useGameStore = defineStore('game', () => {
     send({ type: 'invent', invention: invention as InventionKind })
   const recruitHunter = () => send({ type: 'recruitHunter' })
   const buildVillage = () => send({ type: 'buildVillage' })
+  const gift = (people: number) => send({ type: 'gift', people })
+  const trade = (people: number) => send({ type: 'trade', people })
 
   /** Le premier éclaireur choisi fonde un campement là où il se tient. */
   function foundCamp() {
@@ -234,6 +236,8 @@ export const useGameStore = defineStore('game', () => {
     invent,
     recruitHunter,
     buildVillage,
+    gift,
+    trade,
     foundCamp,
     moveSelectedTo,
     quit,

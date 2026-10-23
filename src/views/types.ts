@@ -79,6 +79,8 @@ export interface GameView {
   score: number
   /** Objectif de l'ère, élément par élément. */
   goal: GoalView[]
+  /** Peuples voisins rencontrés et encore en vie. */
+  peoples: PeopleView[]
   /** Fin de partie, ou null tant qu'elle dure. */
   outcome: OutcomeView | null
 }
@@ -88,6 +90,22 @@ export interface SeasonView {
   name: string
   /** Cueillette du mois, en % de la moyenne de l'année (climat des campements compris). */
   gather: number
+}
+
+export interface PeopleView {
+  /** Numéro du peuple, à renvoyer dans les commandes. */
+  id: number
+  name: string
+  /** Population arrondie (on ne la connaît qu'à peu près). */
+  population: number
+  /** Relation de -100 à 100, et l'humeur qui va avec (« Amical »). */
+  relation: number
+  mood: string
+  giftCost: string
+  giftBlocked: string | null
+  /** Ce qu'on donne et ce qu'on reçoit (« 10 silex → 25 rations »). */
+  trade: string
+  tradeBlocked: string | null
 }
 
 export interface GoalView {

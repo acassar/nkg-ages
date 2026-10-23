@@ -86,10 +86,12 @@ describe('villages', () => {
   })
 
   it('la moisson rentre en réserve, bornée par sa capacité', () => {
+    // Une seule partie, remise au mois d'avant la moisson à chaque exécution : générer un
+    // monde par exécution frôlait le délai de la CI (et charger une sauvegarde le régénère).
+    const g = farmers()
+    applyCommand(g, { type: 'buildVillage' })
     fc.assert(
       fc.property(fc.integer({ min: 0, max: 400 }), (food) => {
-        const g = farmers()
-        applyCommand(g, { type: 'buildVillage' })
         g.clock.tick = VILLAGE_RULES.harvestMonths[0]! - 1
         g.tribe.food = food
         step(g)
@@ -99,7 +101,7 @@ describe('villages', () => {
       }),
       { numRuns: 8 },
     )
-  })
+  }, 30_000)
 
   it('un village porte le territoire plus loin', () => {
     const run = (village: boolean) => {

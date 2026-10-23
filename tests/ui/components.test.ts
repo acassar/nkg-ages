@@ -10,6 +10,7 @@ import GameScreen from '@/ui/components/GameScreen.vue'
 import GoalsPanel from '@/ui/components/GoalsPanel.vue'
 import InventionsPanel from '@/ui/components/InventionsPanel.vue'
 import OutcomeDialog from '@/ui/components/OutcomeDialog.vue'
+import PeoplesPanel from '@/ui/components/PeoplesPanel.vue'
 import SelectionBar from '@/ui/components/SelectionBar.vue'
 import TopBar from '@/ui/components/TopBar.vue'
 import { AUTOSAVE_MS, useClientFactory, useGameStore, useSaveSlotFactory } from '@/ui/stores/game'
@@ -239,6 +240,34 @@ describe('fin de partie', () => {
     expect(wrapper.find('[data-testid=keep-playing]').exists()).toBe(false)
     await wrapper.findAll('button').at(-1)!.trigger('click')
     expect(game.world).toBeNull()
+  })
+})
+
+describe('peuples voisins', () => {
+  it('le panneau n’apparaît qu’après une rencontre, et ses boutons passent par le client', async () => {
+    const game = useGameStore()
+    await game.newGame({ seed: 'voisinage', randomStart: false, width: 128, height: 64 })
+    const wrapper = mount(PeoplesPanel)
+    expect(wrapper.find('[data-testid=peoples]').exists()).toBe(false)
+    const people = {
+      id: 7,
+      name: 'Peuple du Héron',
+      population: 40,
+      relation: 0,
+      mood: 'Neutre',
+      giftCost: '30 rations',
+      giftBlocked: null,
+      trade: '10 silex → 25 rations',
+      tradeBlocked: 'Ils ne vous font pas assez confiance',
+    }
+    game.view = { ...game.view!, peoples: [people] }
+    await flushPromises()
+    expect(wrapper.find('[data-testid=people-7]').text()).toContain('Neutre (0)')
+    expect(wrapper.find('[data-testid=trade]').attributes('disabled')).toBeDefined()
+    await wrapper.find('[data-testid=gift]').trigger('click')
+    await flushPromises()
+    // Le moteur ne connaît pas ce peuple : il refuse, et le refus s'affiche.
+    expect(game.error).toBe('Peuple inconnu')
   })
 })
 

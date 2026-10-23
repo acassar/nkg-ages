@@ -109,7 +109,7 @@
         },
         {
           "title": "Relations et commerce",
-          "status": "todo"
+          "status": "done"
         },
         {
           "title": "Tensions et raids",
@@ -181,6 +181,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-23",
+      "text": "J3 : relations avec les peuples rencontrés (de hostile à allié), présents de vivres et échange de silex contre des vivres"
+    },
     {
       "date": "2026-10-23",
       "text": "J3 : peuples voisins sous le brouillard (jusqu'à 3) : ils cueillent, grandissent, fondent des campements et s'étendent ; on les rencontre en explorant, leurs frontières sont tracées à l'encre d'ardoise"

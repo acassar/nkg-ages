@@ -153,7 +153,8 @@ export function loadGame(data: SaveData): GameState {
   state.rng = createRng(data.rng)
   state.faunaRng = createRng(data.faunaRng)
   if (data.eventRng !== undefined) state.eventRng = createRng(data.eventRng)
-  state.peoples = copy(data.peoples ?? [])
+  // Un peuple d'une sauvegarde d'avant les relations part de la neutralité.
+  state.peoples = copy(data.peoples ?? []).map((p) => ({ ...p, relation: p.relation ?? 0 }))
   if (data.peopleRng !== undefined) state.peopleRng = createRng(data.peopleRng)
   state.units = copy(data.units)
   state.camps = copy(data.camps)

@@ -1,6 +1,10 @@
 import {
   Biome,
   climateOf,
+  cannotGift,
+  cannotTrade,
+  moodOf,
+  RELATION_RULES,
   cannotBuildVillage,
   maxVillages,
   villageCount,
@@ -160,6 +164,19 @@ export function buildGameView(state: GameState, full = false): GameView {
       need: s.need,
       done: s.have >= s.need,
     })),
+    peoples: state.peoples
+      .filter((p) => p.met && p.tribe.population > 0)
+      .map((p) => ({
+        id: p.owner,
+        name: p.name,
+        population: Math.max(10, Math.round(p.tribe.population / 10) * 10),
+        relation: Math.round(p.relation),
+        mood: moodOf(p.relation),
+        giftCost: `${RELATION_RULES.giftFood} rations`,
+        giftBlocked: cannotGift(state, p),
+        trade: `${RELATION_RULES.tradeSilex} silex → ${RELATION_RULES.tradeFood} rations`,
+        tradeBlocked: cannotTrade(state, p),
+      })),
     outcome: state.outcome
       ? {
           type: state.outcome.type,
