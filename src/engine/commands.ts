@@ -16,6 +16,10 @@ export type Command =
   | { type: 'foundCamp'; unitId: number }
   /** Forme un chasseur parmi la tribu ; il paraît au camp. */
   | { type: 'recruitHunter' }
+  /** Offre des vivres à un peuple voisin rencontré (désigné par son numéro de propriétaire). */
+  | { type: 'gift'; people: number }
+  /** Échange du silex contre des vivres avec un peuple voisin. */
+  | { type: 'trade'; people: number }
   /** Fait d'un campement un village (le plus ancien qui ne l'est pas, sans `campId`). */
   | { type: 'buildVillage'; campId?: number }
 

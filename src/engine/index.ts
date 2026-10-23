@@ -46,6 +46,9 @@ export {
   maxHunters,
   huntersResting,
   climateOf,
+  cannotGift,
+  cannotTrade,
+  moodOf,
   cannotBuildVillage,
   maxVillages,
   villageCount,
@@ -65,3 +68,4 @@ export { VILLAGE_RULES, FERTILITY } from './content/villages'
 export { EVENT_KINDS, EVENT_RULES, EVENT_RULES_GLOBAL } from './content/events'
 export type { EventKind } from './content/events'
 export { PEOPLE_RULES, PEOPLE_NAMES } from './content/peoples'
+export { RELATION_RULES, MOODS } from './content/relations'

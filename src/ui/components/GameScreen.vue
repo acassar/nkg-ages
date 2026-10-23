@@ -5,6 +5,7 @@ import GoalsPanel from './GoalsPanel.vue'
 import InventionsPanel from './InventionsPanel.vue'
 import MapView from './MapView.vue'
 import OutcomeDialog from './OutcomeDialog.vue'
+import PeoplesPanel from './PeoplesPanel.vue'
 import SelectionBar from './SelectionBar.vue'
 import TopBar from './TopBar.vue'
 
@@ -27,6 +28,7 @@ defineProps<{ benchmark?: boolean }>()
     <InventionsPanel />
     <SelectionBar />
     <GoalsPanel />
+    <PeoplesPanel />
     <p v-if="game.error" class="notice parchment" role="alert" data-testid="notice">
       {{ game.error }}
       <button class="close" aria-label="Fermer" @click="game.dismissError()">×</button>

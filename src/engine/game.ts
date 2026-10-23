@@ -20,6 +20,7 @@ import {
 import { findPath, knownPassable, pathBlocked } from './units/path'
 import { CAMP_RULES } from './content/camps'
 import { PEOPLE_NAMES, PEOPLE_RULES } from './content/peoples'
+import { MOODS, RELATION_RULES } from './content/relations'
 import { FERTILITY, VILLAGE_RULES } from './content/villages'
 import { RIVER_RULES } from './content/rivers'
 import { ANIMAL_RULES, HUNT_RULES, type AnimalKind } from './content/fauna'
@@ -84,6 +85,8 @@ export interface People {
   tribe: TribeState
   /** Le joueur l'a déjà aperçu. */
   met: boolean
+  /** Relation avec le joueur, de -100 (hostile) à 100 (allié). */
+  relation: number
 }
 
 export interface Camp {
@@ -223,6 +226,7 @@ function placePeoples(state: GameState, player: StartSite, count: number): void 
       name: PEOPLE_NAMES[state.peoples.length % PEOPLE_NAMES.length]!,
       tribe,
       met: false,
+      relation: 0,
     })
     const camp: Camp = { id: state.nextId++, owner, x: site.x + 0.5, y: site.y + 0.5 }
     state.camps.push(camp)
@@ -411,6 +415,25 @@ export function applyCommand(state: GameState, command: Command): CommandResult 
       updateFog(state.fog, viewersOf(state))
       return { ok: true }
     }
+    case 'gift': {
+      const people = state.peoples.find((p) => p.owner === command.people)
+      const reason = cannotGift(state, people)
+      if (reason || !people) return { ok: false, reason: reason ?? 'Peuple inconnu' }
+      state.tribe.food -= RELATION_RULES.giftFood
+      people.tribe.food += RELATION_RULES.giftFood
+      shiftRelation(people, RELATION_RULES.giftRelation)
+      return { ok: true }
+    }
+    case 'trade': {
+      const people = state.peoples.find((p) => p.owner === command.people)
+      const reason = cannotTrade(state, people)
+      if (reason || !people) return { ok: false, reason: reason ?? 'Peuple inconnu' }
+      state.tribe.materials.silex = (state.tribe.materials.silex ?? 0) - RELATION_RULES.tradeSilex
+      people.tribe.food -= RELATION_RULES.tradeFood
+      state.tribe.food = Math.min(foodCapacity(state), state.tribe.food + RELATION_RULES.tradeFood)
+      shiftRelation(people, RELATION_RULES.tradeRelation)
+      return { ok: true }
+    }
     case 'buildVillage': {
       const reason = cannotBuildVillage(state, command.campId)
       if (reason) return { ok: false, reason }
@@ -595,6 +618,39 @@ export function climateOf(state: GameState): number {
   return climateAmplitude(sum / camps.length)
 }
 
+/** Pourquoi le joueur ne peut pas faire de présent à ce peuple, ou null. */
+export function cannotGift(state: GameState, people: People | undefined): string | null {
+  if (!people || !people.met || people.tribe.population <= 0) return 'Peuple inconnu'
+  if (state.tribe.food < RELATION_RULES.giftFood)
+    return `Il faut ${RELATION_RULES.giftFood} rations`
+  return null
+}
+
+/** Pourquoi le joueur ne peut pas échanger avec ce peuple, ou null. */
+export function cannotTrade(state: GameState, people: People | undefined): string | null {
+  if (!people || !people.met || people.tribe.population <= 0) return 'Peuple inconnu'
+  if (people.relation < RELATION_RULES.tradeMinRelation)
+    return 'Ils ne vous font pas assez confiance'
+  if ((state.tribe.materials.silex ?? 0) < RELATION_RULES.tradeSilex)
+    return `Il faut ${RELATION_RULES.tradeSilex} silex`
+  const keep =
+    people.tribe.population * TRIBE_RULES.rationPerPerson * RELATION_RULES.tradeReserveMonths
+  if (people.tribe.food - RELATION_RULES.tradeFood < keep) return 'Leurs réserves sont trop maigres'
+  return null
+}
+
+function shiftRelation(people: People, delta: number): void {
+  people.relation = Math.max(
+    RELATION_RULES.min,
+    Math.min(RELATION_RULES.max, people.relation + delta),
+  )
+}
+
+/** Humeur d'un peuple envers le joueur, d'après sa relation. */
+export function moodOf(relation: number): string {
+  return MOODS.find((m) => relation >= m.from)!.name
+}
+
 /**
  * Un mois de vie d'un peuple voisin : il cueille sur ses terres au fil des saisons, puis
  * fonde un campement quand sa population le permet. Disparu, il laisse ses terres vides.
@@ -602,6 +658,12 @@ export function climateOf(state: GameState): number {
 function livePeople(state: GameState, people: People): void {
   const { tribe, owner } = people
   if (tribe.population <= 0) return
+  // Négligée, la relation revient vers la neutralité.
+  const drift = RELATION_RULES.driftPerMonth
+  people.relation =
+    people.relation > 0
+      ? Math.max(0, people.relation - drift)
+      : Math.min(0, people.relation + drift)
   const camps = state.camps.filter((c) => c.owner === owner)
   const month = state.clock.tick % 12
   const home = camps[0]

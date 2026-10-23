@@ -157,6 +157,19 @@ describe('vues de partie', () => {
     expect(view.tribe).toMatchObject({ villages: 1, crops: 30, foodBalance: 28 })
   })
 
+  it('ne liste que les peuples rencontrés, avec leur humeur et ce qu’on peut leur proposer', () => {
+    const g = createGame({ seed: 'voisins', randomStart: false, width: 320, height: 160 })
+    expect(buildGameView(g).peoples).toEqual([])
+    const p = g.peoples[0]!
+    p.met = true
+    p.relation = 25
+    p.tribe.population = 137
+    const [view] = buildGameView(g).peoples
+    expect(view).toMatchObject({ id: p.owner, name: p.name, population: 140, mood: 'Amical' })
+    expect(view!.trade).toBe('10 silex → 25 rations')
+    expect(view!.tradeBlocked).toMatch(/silex/)
+  })
+
   it('montre les chasseurs et ce qui empêche d’en former, et prévient de la viande perdue', () => {
     const g = game()
     g.events.push({ type: 'meatLost', amount: 7 })
