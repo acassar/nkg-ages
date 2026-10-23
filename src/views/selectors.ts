@@ -235,12 +235,11 @@ function noticeOf(state: GameState, event: GameEvent): string {
     case 'peopleMet':
       return `Rencontre : vos éclaireurs aperçoivent les terres du ${event.name}.`
     case 'raid': {
-      const loss =
-        event.killed > 0
-          ? `la réserve était vide, ${event.killed} des vôtres ${event.killed > 1 ? 'sont tués' : 'est tué'}`
-          : `${event.stolen} rations volées`
+      if (event.killed > 0)
+        return `Raid du ${event.name} : la réserve était vide, ${event.killed} des vôtres ${event.killed > 1 ? 'sont tués' : 'est tué'}.`
+      if (event.stolen === 0) return `Raid du ${event.name} : vos chasseurs les repoussent.`
       const saved = event.saved > 0 ? ` (vos chasseurs en sauvent ${event.saved})` : ''
-      return `Raid du ${event.name} : ${loss}${saved}.`
+      return `Raid du ${event.name} : ${event.stolen} rations volées${saved}.`
     }
     case 'peopleGone':
       return `Le ${event.name} a disparu : ses terres sont désertes.`

@@ -678,7 +678,7 @@ export function closeCamps(state: GameState, owner: number): number {
  * Raid d'un peuple hostile : il emporte des vivres, d'autant plus qu'il est nombreux ; les
  * chasseurs en sauvent une part. Une réserve vide coûte une vie à la place.
  */
-function raid(state: GameState, people: People): void {
+export function raid(state: GameState, people: People): void {
   if (state.peopleRng.next() >= RELATION_RULES.raidChance) return
   const { tribe } = state
   const hunters = state.units.filter((u) => u.kind === 'chasseur').length
@@ -693,7 +693,9 @@ function raid(state: GameState, people: People): void {
   if (stolen > 0) {
     tribe.food -= stolen
     people.tribe.food += stolen
-  } else if (tribe.population > 1) {
+  } else if (tribe.food < 1 && tribe.population > 1 && state.peopleRng.next() >= defense) {
+    // Réserve vraiment vide : ils prennent une vie, à moins que les chasseurs ne les arrêtent.
+    // Une petite réserve que la défense protège entièrement ne coûte rien.
     killed = 1
     tribe.population -= 1
   }
@@ -719,7 +721,8 @@ function livePeople(state: GameState, people: People): void {
     people.relation > 0
       ? Math.max(0, people.relation - drift)
       : Math.min(0, people.relation + drift)
-  shiftRelation(people, -RELATION_RULES.tensionPerMonth * closeCamps(state, owner))
+  // Avant la rencontre, les campements voisins s'ignorent : pas de rancune accumulée.
+  if (people.met) shiftRelation(people, -RELATION_RULES.tensionPerMonth * closeCamps(state, owner))
   if (people.met && people.relation <= RELATION_RULES.raidBelow) raid(state, people)
   const camps = state.camps.filter((c) => c.owner === owner)
   const month = state.clock.tick % 12
