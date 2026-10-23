@@ -86,6 +86,8 @@ export interface GameView {
   achievements: AchievementView[]
   /** Conseil du moment pour débuter, ou null. */
   hint: string | null
+  /** Ce qui demande l'attention du joueur maintenant, du plus grave au plus anodin. */
+  alerts: AlertView[]
   /** Peuples voisins rencontrés et encore en vie. */
   peoples: PeopleView[]
   /** Fin de partie, ou null tant qu'elle dure. */
@@ -115,6 +117,15 @@ export interface PeopleView {
   tradeBlocked: string | null
   /** Ce qui aigrit la relation en ce moment, ou null (« Campements trop proches des leurs »). */
   tension: string | null
+}
+
+export interface AlertView {
+  /** Identifiant stable d'une vue à l'autre (« famine », « raids-2 »). */
+  id: string
+  level: 'danger' | 'warning' | 'info'
+  text: string
+  /** Lieu à montrer quand on clique sur l'alerte, ou null. */
+  target: { x: number; y: number } | null
 }
 
 export interface AchievementView {

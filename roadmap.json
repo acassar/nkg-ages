@@ -154,6 +154,48 @@
       ]
     },
     {
+      "id": "É1",
+      "title": "Jouabilité",
+      "features": [
+        {
+          "title": "Tempo plus lent, alertes",
+          "status": "done"
+        },
+        {
+          "title": "Carte lisible : pictogrammes et rareté",
+          "status": "todo"
+        },
+        {
+          "title": "Éclaireurs, ordre Explorer, choix du campement",
+          "status": "todo"
+        },
+        {
+          "title": "Sonde d'équilibrage",
+          "status": "todo"
+        },
+        {
+          "title": "Ressources de leur époque",
+          "status": "todo"
+        },
+        {
+          "title": "Bandes nomades et scission",
+          "status": "todo"
+        },
+        {
+          "title": "Sédentarisation, passage au Néolithique",
+          "status": "todo"
+        },
+        {
+          "title": "Arbre des inventions",
+          "status": "todo"
+        },
+        {
+          "title": "Diplomatie utile, sons",
+          "status": "todo"
+        }
+      ]
+    },
+    {
       "id": "J6+",
       "title": "Ères suivantes",
       "features": [
@@ -181,6 +223,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-23",
+      "text": "Jouabilité : le mois se joue en quatre semaines (vitesse 1 = une saison en 12 s, unités toujours fluides) ; panneau d'alertes rétractable qui centre la carte"
+    },
     {
       "date": "2026-10-23",
       "text": "Performance : le brouillard compte ses cellules découvertes au fil de l'eau ; le conseil d'exploration ne parcourt plus la carte à chaque vue"

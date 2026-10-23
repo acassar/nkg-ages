@@ -1,6 +1,14 @@
 /** API publique du moteur. Les autres couches n'importent que d'ici. */
 export type { Command, CommandResult } from './commands'
-export { SPEEDS, TICKS_PER_SECOND, ticksDue, dateOfTick, isSpeed } from './core/clock'
+export {
+  SPEEDS,
+  MONTHS_PER_SECOND,
+  STEPS_PER_MONTH,
+  stepsDue,
+  stepsPerSecond,
+  dateOfTick,
+  isSpeed,
+} from './core/clock'
 export type { Speed, ClockState, GameDate } from './core/clock'
 export type { Rect } from './core/geometry'
 export { unionRect } from './core/geometry'
@@ -32,6 +40,7 @@ export type { UnitKind } from './units/units'
 export {
   createGame,
   applyCommand,
+  advance,
   step,
   clearDirty,
   startYear,
