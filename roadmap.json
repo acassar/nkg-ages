@@ -123,7 +123,7 @@
       "features": [
         {
           "title": "Bronze : cuivre et étain",
-          "status": "todo"
+          "status": "done"
         },
         {
           "title": "Cités, routes, écriture",
@@ -181,6 +181,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-23",
+      "text": "J4 : bronze : gisements de cuivre et d'étain (rares, au moins un de chaque à portée d'exploration) et invention Bronze, qui fait rendre davantage la cueillette et les champs"
+    },
     {
       "date": "2026-10-23",
       "text": "J3 : relations avec les peuples rencontrés (de hostile à allié), présents de vivres et échange de silex contre des vivres"

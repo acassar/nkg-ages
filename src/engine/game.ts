@@ -587,12 +587,14 @@ function harvest(state: GameState): void {
   const season = seasonalYield(month, amplitude)
   if (seasonStarting(month) === 'hiver')
     state.events.push({ type: 'winter', yieldFactor: seasonalYield(month, amplitude) })
-  const tools = 1 + inventionMean(state.inventions, 'bronze') / 100
-  const available = territoryFood(state.territory.playerWeight, depositFood) * season * tools
+  const available = territoryFood(state.territory.playerWeight, depositFood) * season
   const basket = inventionStat(state.inventions, 'panier')
   const inv = state.inventions
   const bonus = {
-    gather: basket ? Math.max(0, rollStat(basket, state.rng)) / 100 : 0,
+    // Panier (tiré chaque mois) et outils de bronze s'ajoutent.
+    gather:
+      (basket ? Math.max(0, rollStat(basket, state.rng)) / 100 : 0) +
+      inventionMean(inv, 'bronze') / 100,
     storageMonths: storageBonus(state),
     growth: inventionMean(inv, 'feu') / 100,
     famineShield: -inventionMean(inv, 'peaux') / 100,

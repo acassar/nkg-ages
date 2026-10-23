@@ -148,7 +148,7 @@ export const INVENTION_RULES: Readonly<Record<InventionKind, InventionRules>> = 
   bronze: {
     name: 'Bronze',
     description:
-      'Cuivre et étain fondus ensemble : haches et faucilles font rendre davantage la terre et les champs.',
+      'Cuivre et étain fondus ensemble : haches et faucilles, la cueillette et les champs rendent davantage.',
     stat: 'Rendement',
     unit: '%',
     range: { e: { mean: 15, spread: 0 }, s: { mean: 50, spread: 0 } },

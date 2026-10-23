@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest'
+import fc from 'fast-check'
 import { RESOURCE_RULES } from '@/engine/content/resources'
 import { VILLAGE_RULES } from '@/engine/content/villages'
 import { createRng } from '@/engine/core/random'
-import { applyCommand, createGame, cropsOf, step, type GameState } from '@/engine/game'
+import {
+  applyCommand,
+  createGame,
+  cropsOf,
+  foodCapacity,
+  step,
+  type GameState,
+} from '@/engine/game'
 import { cannotStart } from '@/engine/inventions/inventions'
 import { placeDeposits } from '@/engine/resources/deposits'
 import { generateWorld } from '@/engine/world/generate'
@@ -29,6 +37,25 @@ describe('bronze', () => {
     }
   })
 
+  it('du cuivre et de l’étain attendent toujours à portée d’exploration', () => {
+    fc.assert(
+      fc.property(fc.string({ minLength: 1, maxLength: 8 }), (seed) => {
+        const g = createGame({ ...options, seed, randomStart: true })
+        const camp = g.camps[0]!
+        for (const kind of ['cuivre', 'etain'] as const) {
+          const [near, far] = RESOURCE_RULES[kind].withinReach!
+          const inRing = g.deposits.filter((d) => {
+            const r = Math.hypot(d.x + 0.5 - camp.x, d.y + 0.5 - camp.y)
+            return d.kind === kind && r >= near - 1 && r <= far + 1
+          })
+          expect(inRing.length).toBeGreaterThan(0)
+        }
+        expect(new Set(g.deposits.map((d) => d.id)).size).toBe(g.deposits.length)
+      }),
+      { numRuns: 12 },
+    )
+  }, 60_000)
+
   it('il faut l’agriculture, puis du cuivre et de l’étain', () => {
     const g = createGame(options)
     expect(cannotStart(g.inventions, 'bronze', g.tribe.materials)).toMatch(/Agriculture/)
@@ -50,7 +77,9 @@ describe('bronze', () => {
     }
     const run = (rank?: 'E' | 'S') => {
       const g = createGame(options)
-      g.tribe.food = 0
+      // Hors hiver, réserve à moitié pleine : ni plancher à 0 ni plafond ne masquent l'écart.
+      g.clock.tick = 5
+      g.tribe.food = foodCapacity(g) / 2
       if (rank) g.inventions.ranks.bronze = rank
       return month(g)
     }
