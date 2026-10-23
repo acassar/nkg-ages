@@ -18,7 +18,6 @@ import {
 import type { InventionsState } from '../inventions/inventions'
 import type { Deposit } from '../resources/deposits'
 import type { TribeState } from '../tribe/tribe'
-import type { Unit } from '../units/units'
 
 /** Version du format : une sauvegarde d'un autre format est refusée plutôt que mal relue. */
 export const SAVE_VERSION = 1
@@ -42,7 +41,8 @@ export interface SaveData {
   peopleRng?: number
   /** Empreinte du monde : si la génération a changé depuis, la sauvegarde n'a plus de sens. */
   world?: number
-  units: Unit[]
+  /** Éclaireurs et chasseurs d'avant les bandes seules : relus sans effet (ils comptaient déjà parmi les gens). */
+  units?: unknown[]
   camps: Camp[]
   tribe: TribeState
   deposits: Deposit[]
@@ -133,7 +133,6 @@ export function saveGame(state: GameState): SaveData {
     achievements: copy(state.achievements),
     peopleRng: state.peopleRng.state,
     world: worldPrint(state),
-    units: copy(state.units),
     camps: copy(state.camps),
     tribe: copy(state.tribe),
     deposits: copy(state.deposits),
@@ -181,7 +180,6 @@ export function loadGame(data: SaveData): GameState {
   state.peoples = copy(data.peoples ?? []).map((p) => ({ ...p, relation: p.relation ?? 0 }))
   if (data.peopleRng !== undefined) state.peopleRng = createRng(data.peopleRng)
   state.achievements = copy(data.achievements ?? {})
-  state.units = copy(data.units)
   state.camps = copy(data.camps)
   // Un champ ajouté depuis la sauvegarde garde sa valeur de départ au lieu de manquer.
   state.tribe = { ...state.tribe, ...copy(data.tribe) }

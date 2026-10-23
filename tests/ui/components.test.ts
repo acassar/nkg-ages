@@ -38,7 +38,8 @@ describe('écran de départ', () => {
     await flushPromises()
     const game = useGameStore()
     expect(game.world?.seed).toBe('chauvet')
-    expect(game.selected.size).toBe(3)
+    // La bande de départ est choisie d'emblée : un clic droit suffit pour la faire marcher.
+    expect(game.selectedCamp).toBe(game.view!.camps.find((c) => c.mine)!.id)
   })
 
   it('transmet la taille du monde, le nombre de voisins et les événements rares', async () => {
@@ -62,7 +63,7 @@ describe('conseils et succès', () => {
     const game = useGameStore()
     await game.newGame({ seed: 'conseil', randomStart: false, width: 128, height: 64 })
     const hint = mount(HintBox)
-    expect(hint.find('[data-testid=hint]').text()).toMatch(/éclaireur/)
+    expect(hint.find('[data-testid=hint]').text()).toMatch(/bande/)
     await hint.find('[data-testid=hint-close]').trigger('click')
     expect(hint.find('[data-testid=hint]').exists()).toBe(false)
     const goals = mount(GoalsPanel)
@@ -74,6 +75,9 @@ describe('alertes', () => {
   it('liste les alertes, se replie, et une alerte située centre la carte', async () => {
     const game = useGameStore()
     await game.newGame({ seed: 'alertes', randomStart: false, width: 128, height: 64 })
+    // Une alerte située (comme une bande sur des terres épuisées), ajoutée à la vue.
+    const here = { id: 'essai', level: 'info' as const, text: 'Ici', target: { x: 3, y: 4 } }
+    game.view = { ...game.view!, alerts: [...game.view!.alerts, here] }
     const wrapper = mount(AlertsPanel)
     const count = game.view!.alerts.length
     expect(count).toBeGreaterThan(0)
@@ -101,10 +105,9 @@ describe('barre du haut', () => {
     expect(wrapper.find('[data-testid=population]').text()).toBe('12')
     expect(wrapper.find('[data-testid=food]').text()).toBe('36')
     expect(wrapper.find('[data-testid=hunters]').text()).toBe('2')
-    // Deux chasseurs pour douze habitants : la tribu n'en entretient pas plus.
-    const recruit = wrapper.find('[data-testid=recruit]')
-    expect(recruit.attributes('disabled')).toBeDefined()
-    expect(recruit.attributes('title')).toMatch(/habitants/)
+    // Deux chasseurs pour douze habitants : une personne sur six chasse.
+    // Les chasseurs chassent seuls : rien à former.
+    expect(wrapper.find('[data-testid=recruit]').exists()).toBe(false)
     expect(wrapper.find('[data-testid=hunters-resting]').exists()).toBe(false)
     await wrapper.find('[data-testid=speed-4]').trigger('click')
     await flushPromises()
@@ -120,11 +123,11 @@ describe('barre du haut', () => {
   it('montre le refus du jeu sans planter', async () => {
     const game = useGameStore()
     await game.newGame({ seed: 'refus', randomStart: false, width: 128, height: 64 })
-    game.select([])
+    game.selectCamp(null)
     await game.moveSelectedTo(1, 1)
     expect(game.error).toBeNull()
-    game.select([999])
-    await game.moveSelectedTo(1, 1)
+    game.selectCamp(game.view!.camps[0]!.id)
+    await game.moveSelectedTo(-5, -5)
     expect(game.error).not.toBeNull()
   })
 })
@@ -138,11 +141,10 @@ describe('écran de jeu', () => {
     await game.newGame({ seed: 'avis', randomStart: false, width: 128, height: 64 })
     // La carte WebGL n'existe pas sous jsdom : on ne monte que l'avis.
     const wrapper = mount(GameScreen, { global: { stubs: { MapView: true } } })
-    const camp = game.view!.camps[0]!
-    game.select([999])
-    await game.moveSelectedTo(camp.x, camp.y)
+    game.selectCamp(game.view!.camps[0]!.id)
+    await game.moveSelectedTo(-5, -5)
     await flushPromises()
-    expect(wrapper.find('[data-testid=notice]').text()).toContain('Aucune unité')
+    expect(wrapper.find('[data-testid=notice]').text()).toContain('hors du monde')
     vi.advanceTimersByTime(4100)
     await flushPromises()
     expect(wrapper.find('[data-testid=notice]').exists()).toBe(false)
@@ -167,7 +169,7 @@ describe('écran de jeu', () => {
     await wrapper.find('[data-testid=band-roaming]').trigger('click')
     await flushPromises()
     expect(game.view!.camps.find((c) => c.id === camp.id)!.band!.roaming).toBe(true)
-    // Le clic droit envoie la bande, pas les unités (aucune n'est choisie), sur une terre en vue.
+    // Le clic droit envoie la bande choisie, sur une terre en vue.
     const world = game.world!
     const water = [BIOME_IDS.Ocean, BIOME_IDS.DeepOcean] as number[]
     const dx = [3, -3, 2, -2, 4, -4].find(
@@ -180,61 +182,35 @@ describe('écran de jeu', () => {
     expect(game.view!.camps.find((c) => c.id === camp.id)!.band!.target).not.toBeNull()
   })
 
-  it('un clic sur un campement le choisit : il grandit et forme des recrues là', async () => {
+  it('un clic sur un campement le choisit : on voit ce qu’il peut devenir', async () => {
     const game = useGameStore()
     await game.newGame({ seed: 'camp-choisi', randomStart: false, width: 128, height: 64 })
     const wrapper = mount(SelectionBar)
     const camp = game.view!.camps.find((c) => c.mine)!
     game.selectCamp(camp.id)
     await flushPromises()
-    expect(game.selected.size).toBe(0)
     const panel = wrapper.find('[data-testid=camp-selection]')
     expect(panel.text()).toContain('Bande')
     // Sans agriculture, le village est refusé, et la raison est dite.
     expect(wrapper.find('[data-testid=camp-upgrade]').attributes('disabled')).toBeDefined()
     expect(wrapper.find('[data-testid=camp-why]').text()).toMatch(/Agriculture/)
-    // Un éclaireur se forme à ce campement.
-    const before = game.view!.tribe.scouts
-    game.view = {
-      ...game.view!,
-      tribe: { ...game.view!.tribe, scoutBlocked: null },
-    }
+    // Plus d'éclaireur ni de chasseur à former : la bande fait tout elle-même.
+    expect(wrapper.find('[data-testid=camp-scout]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid=camp-hunter]').exists()).toBe(false)
+    game.selectCamp(null)
     await flushPromises()
-    await wrapper.find('[data-testid=camp-scout]').trigger('click')
-    await flushPromises()
-    // Le moteur décide : la tribu de départ n'a qu'un éclaireur et pas d'habitants en plus.
-    expect(game.view!.tribe.scouts).toBe(before)
-    expect(game.error).toMatch(/éclaireur de plus/)
-    // Choisir une unité relâche le campement.
-    game.select([game.view!.units[0]!.id])
-    expect(game.selectedCamp).toBeNull()
-  })
-
-  it('le bouton Explorer envoie les unités choisies explorer seules', async () => {
-    const game = useGameStore()
-    await game.newGame({ seed: 'exploration', randomStart: false, width: 128, height: 64 })
-    const wrapper = mount(SelectionBar)
-    const scout = game.view!.units.find((u) => u.kind === 'eclaireur')!
-    game.select([scout.id])
-    await flushPromises()
-    await wrapper.find('[data-testid=explore]').trigger('click')
-    await flushPromises()
-    expect(game.error).toBeNull()
-    const moving = game.view!.units.find((u) => u.id === scout.id)!
-    expect(moving.exploring).toBe(true)
-    expect(moving.target).not.toBeNull()
-    expect(wrapper.find('[data-testid=explore]').attributes('aria-pressed')).toBe('true')
+    expect(wrapper.find('[data-testid=camp-selection]').exists()).toBe(false)
   })
 
   it('retour au menu : plus d’erreur ni de sélection', async () => {
     const game = useGameStore()
     await game.newGame({ seed: 'menu', randomStart: false, width: 128, height: 64 })
-    game.select([999])
-    await game.moveSelectedTo(1, 1)
+    game.selectCamp(game.view!.camps[0]!.id)
+    await game.moveSelectedTo(-5, -5)
     expect(game.error).not.toBeNull()
     game.quit()
     expect(game.error).toBeNull()
-    expect(game.selected.size).toBe(0)
+    expect(game.selectedCamp).toBeNull()
     expect(game.world).toBeNull()
   })
 
@@ -242,8 +218,8 @@ describe('écran de jeu', () => {
     const game = useGameStore()
     await game.newGame({ seed: 'fermer', randomStart: false, width: 128, height: 64 })
     const wrapper = mount(GameScreen, { global: { stubs: { MapView: true } } })
-    game.select([999])
-    await game.moveSelectedTo(1, 1)
+    game.selectCamp(game.view!.camps[0]!.id)
+    await game.moveSelectedTo(-5, -5)
     await flushPromises()
     await wrapper.find('[data-testid=notice] button').trigger('click')
     expect(game.error).toBeNull()
@@ -252,14 +228,14 @@ describe('écran de jeu', () => {
   it('ignore la réponse d’une commande arrivée après le retour au menu', async () => {
     const game = useGameStore()
     await game.newGame({ seed: 'tardif', randomStart: false, width: 128, height: 64 })
-    game.select([999])
-    const pending = game.moveSelectedTo(1, 1)
+    game.selectCamp(game.view!.camps[0]!.id)
+    const pending = game.moveSelectedTo(-5, -5)
     game.quit()
     await pending
     expect(game.error).toBeNull()
   })
 
-  it('montre un message du jeu (éclaireur qui renonce), puis l’efface seul', async () => {
+  it('montre un message du jeu (bande qui renonce), puis l’efface seul', async () => {
     vi.useFakeTimers()
     // Client en mémoire dont on peut pousser une vue à la main.
     let push: ((view: GameView) => void) | null = null
@@ -276,22 +252,12 @@ describe('écran de jeu', () => {
     const game = useGameStore()
     await game.newGame({ seed: 'avis-jeu', randomStart: false, width: 128, height: 64 })
     const wrapper = mount(GameScreen, { global: { stubs: { MapView: true } } })
-    push!({ ...game.view!, notices: ['Éclaireur renonce : aucun chemin connu.'] })
+    push!({ ...game.view!, notices: ['La bande s’arrête : aucun chemin connu.'] })
     await flushPromises()
-    expect(wrapper.find('[data-testid=notice]').text()).toContain('Éclaireur renonce')
+    expect(wrapper.find('[data-testid=notice]').text()).toContain('La bande s’arrête')
     vi.advanceTimersByTime(4100)
     await flushPromises()
     expect(wrapper.find('[data-testid=notice]').exists()).toBe(false)
-  })
-
-  it('Maj + clic ajoute ou retire une unité de la sélection', async () => {
-    const game = useGameStore()
-    await game.newGame({ seed: 'choix', randomStart: false, width: 128, height: 64 })
-    game.select([1])
-    game.toggleSelected(2)
-    expect([...game.selected]).toEqual([1, 2])
-    game.toggleSelected(1)
-    expect([...game.selected]).toEqual([2])
   })
 
   it('le panneau des inventions lance une invention par le client', async () => {

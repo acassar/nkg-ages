@@ -5,9 +5,14 @@
 export const BAND_RULES = {
   /** Rayon de la zone exploitée autour d'une bande, en cellules (elle la suit en marchant). */
   radius: 7,
+  /**
+   * Cellules que voit une bande autour d'elle : ses gens parcourent chaque jour bien plus
+   * que la zone qu'ils cueillent. C'est toute sa connaissance du pays (pistage en plus).
+   */
+  sight: 14,
   /** Cellules parcourues par pas (une semaine) en plaine. */
   speed: 1.5,
-  /** Détour accepté quand le terrain découvert coupe le chemin (comme les unités). */
+  /** Détour accepté quand le terrain découvert coupe le chemin prévu. */
   detour: 2,
   detourSlack: 30,
   /**

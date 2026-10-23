@@ -39,7 +39,7 @@ export function frontierTarget(world: World, knowledge: Knowledge, from: Point):
     const i = queue[head++]!
     const x = i % width
     const y = (i - x) / width
-    // La case de départ ne compte pas : l'unité y voit déjà tout ce qu'elle peut voir.
+    // La case de départ ne compte pas : on y voit déjà tout ce qu'on peut voir.
     if (i !== start && touchesUnknown(x, y)) return { x: x + 0.5, y: y + 0.5 }
     for (const [dx, dy] of DIRS) {
       const nx = x + dx

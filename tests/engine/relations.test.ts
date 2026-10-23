@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import fc from 'fast-check'
 import { RELATION_RULES } from '@/engine/content/relations'
+import { HUNT_RULES } from '@/engine/content/fauna'
 import {
   applyCommand,
   cannotTrade,
@@ -193,7 +194,7 @@ describe('tensions et raids', () => {
     const r = raids[0]!
     expect(r.name).toBe(p.name)
     expect(r.stolen).toBeGreaterThan(0)
-    // Deux chasseurs au départ : 20 % du butin sauvé.
+    // Deux chasseurs dans la bande de départ : 20 % du butin sauvé.
     expect(r.saved).toBeGreaterThan(0)
     expect(r.killed).toBe(0)
   })
@@ -201,7 +202,8 @@ describe('tensions et raids', () => {
   it('une réserve vide coûte une vie, jamais la dernière', () => {
     const g = close()
     const p = g.peoples[0]!
-    g.units = g.units.filter((u) => u.kind !== 'chasseur')
+    // Une bande trop petite pour avoir des chasseurs : personne ne défend la réserve.
+    g.camps[0]!.members = HUNT_RULES.peoplePerHunter - 1
     let killed = 0
     for (let i = 0; i < 300; i++) {
       g.tribe.food = 0
@@ -218,10 +220,8 @@ describe('tensions et raids', () => {
   it('plus de chasseurs ne fait jamais perdre plus, et une petite réserve défendue ne coûte pas de vie', () => {
     const g = close()
     const p = g.peoples[0]!
-    const hunter = g.units.find((u) => u.kind === 'chasseur')!
-    const others = g.units.filter((u) => u.kind !== 'chasseur')
     const loss = (seed: number, food: number, hunters: number) => {
-      g.units = [...others, ...Array.from({ length: hunters }, () => ({ ...hunter }))]
+      g.camps[0]!.members = hunters * HUNT_RULES.peoplePerHunter
       g.peopleRng = createRng(`raid-${seed}`)
       g.tribe.food = food
       g.tribe.population = 10

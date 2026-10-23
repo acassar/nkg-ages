@@ -96,8 +96,8 @@ export const INVENTION_RULES: Readonly<Record<InventionKind, InventionRules>> = 
   },
   pistage: {
     name: 'Pistage',
-    description: 'Les chasseurs lisent les traces et voient plus loin.',
-    stat: 'Vue des chasseurs',
+    description: 'Les chasseurs lisent les traces : les bandes voient plus loin.',
+    stat: 'Vue des bandes',
     unit: 'cases',
     range: { e: { mean: 1, spread: 0 }, s: { mean: 5, spread: 0 } },
     work: 100,
@@ -134,7 +134,7 @@ export const INVENTION_RULES: Readonly<Record<InventionKind, InventionRules>> = 
   },
   portage: {
     name: 'Portage',
-    description: 'Sacs et sangles : éclaireurs et chasseurs marchent plus vite.',
+    description: 'Sacs et sangles : les bandes marchent plus vite.',
     stat: 'Vitesse',
     unit: '%',
     range: { e: { mean: 8, spread: 0 }, s: { mean: 35, spread: 0 } },
@@ -190,7 +190,7 @@ export const INVENTION_RULES: Readonly<Record<InventionKind, InventionRules>> = 
   },
   routes: {
     name: 'Routes',
-    description: 'Chemins battus entre les campements : on marche plus vite sur ses terres.',
+    description: 'Chemins battus : les bandes marchent plus vite sur vos terres.',
     stat: 'Vitesse sur vos terres',
     unit: '%',
     range: { e: { mean: 25, spread: 0 }, s: { mean: 100, spread: 0 } },

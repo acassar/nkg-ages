@@ -17,7 +17,6 @@ export type { BiomeId } from './content/biomes'
 export { ERAS, FIRST_ERA, SCORE_RULES } from './content/eras'
 export { Visibility } from './fog/fog'
 export { PLAYER, NO_OWNER } from './territory/territory'
-export { UNIT_RULES } from './units/units'
 export { TRIBE_RULES } from './content/tribe'
 export { INVENTION_KINDS, INVENTION_RULES } from './content/inventions'
 export type { InventionKind } from './content/inventions'
@@ -30,7 +29,8 @@ export type { Herd } from './fauna/fauna'
 export { RANKS, RANK_RULES } from './content/rarity'
 export type { Rank } from './content/rarity'
 export { RESOURCE_KINDS, RESOURCE_RULES } from './content/resources'
-export { SCOUT_RULES, EXPLORE_RULES } from './content/units'
+export { EXPLORE_RULES } from './content/units'
+export { bandSight, herdsSeenBy } from './bands/sight'
 export type { ResourceKind } from './content/resources'
 export { depositYield } from './resources/deposits'
 export { rollRank, statAt, rollStat } from './rarity/rarity'
@@ -38,7 +38,6 @@ export type { RankedStat } from './rarity/rarity'
 export type { Deposit } from './resources/deposits'
 export { storageCapacity } from './tribe/tribe'
 export type { TribeState } from './tribe/tribe'
-export type { UnitKind } from './units/units'
 export {
   createGame,
   applyCommand,
@@ -50,7 +49,6 @@ export {
   resourceKnown,
   foodCapacity,
   herdVisible,
-  cannotRecruit,
   currentScore,
   tallyOf,
   bandsOf,
@@ -58,10 +56,8 @@ export {
   campEfficiency,
   tribeEfficiency,
   cannotSplit,
-  maxHunters,
-  maxScouts,
-  cannotRecruitScout,
-  huntersResting,
+  huntersIn,
+  huntersOf,
   climateOf,
   cannotGift,
   cannotTrade,

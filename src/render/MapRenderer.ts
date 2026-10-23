@@ -3,7 +3,6 @@ import type {
   DepositView,
   GameView,
   HerdView,
-  UnitView,
   WonderView,
   WorldSnapshot,
 } from '@/views/types'
@@ -14,9 +13,7 @@ export interface OverlayState {
   deposits: readonly DepositView[]
   wonders: readonly WonderView[]
   herds: readonly HerdView[]
-  units: readonly UnitView[]
   camps: readonly CampView[]
-  selected: ReadonlySet<number>
   /** Campement choisi d'un clic, entouré sur la carte (null : aucun). */
   selectedCamp?: number | null
 }

@@ -81,7 +81,7 @@ describe('client de jeu par Worker', () => {
   it('transmet le refus d’une commande', async () => {
     const { client } = setup()
     await client.newGame(options)
-    const result = await client.send({ type: 'moveUnits', unitIds: [], x: 1, y: 1 })
+    const result = await client.send({ type: 'moveCamp', campId: 999, x: 1, y: 1 })
     expect(result.ok).toBe(false)
   })
 

@@ -9,12 +9,10 @@ function run(g: GameState, ticks: number): void {
   for (let i = 0; i < ticks; i++) step(g)
 }
 
-/** Partie animée : l'éclaireur part au loin et la tribu cherche, pour que tout bouge. */
+/** Partie animée : la tribu cherche et la bande migre, pour que tout bouge. */
 function busyGame(): GameState {
   const g = createGame(options)
   applyCommand(g, { type: 'setPaused', paused: false })
-  const scout = g.units.find((u) => u.kind === 'eclaireur')!
-  applyCommand(g, { type: 'moveUnits', unitIds: [scout.id], x: scout.x + 30, y: scout.y + 10 })
   applyCommand(g, { type: 'invent', invention: 'lance' })
   // La bande migre seule : ses terres s'épuisent et sa zone se déplace.
   applyCommand(g, { type: 'setRoaming', campId: g.camps[0]!.id, roaming: true })
@@ -63,12 +61,12 @@ describe('sauvegarde', () => {
     const g = busyGame()
     run(g, 50)
     const copy = loadGame(saveGame(g))
-    const scout = copy.units.find((u) => u.kind === 'eclaireur')!
+    const band = copy.camps[0]!
     const result = applyCommand(copy, {
-      type: 'moveUnits',
-      unitIds: [scout.id],
-      x: scout.x - 5,
-      y: scout.y,
+      type: 'moveCamp',
+      campId: band.id,
+      x: band.x - 5,
+      y: band.y,
     })
     expect(result.ok).toBe(true)
   })
@@ -116,6 +114,21 @@ describe('sauvegarde', () => {
     // Sans bronze, rien n'est donné.
     delete data.inventions.ranks.bronze
     expect(loadGame(data).inventions.ranks.metallurgie).toBeUndefined()
+  })
+
+  it('une sauvegarde d’avant les bandes seules (éclaireurs, chasseurs) se reprend sans eux', () => {
+    const g = busyGame()
+    run(g, 12)
+    const data = JSON.parse(JSON.stringify(saveGame(g)))
+    // Comme avant : un éclaireur et deux chasseurs, déjà comptés parmi les gens.
+    data.units = [
+      { id: 90, kind: 'eclaireur', x: 3, y: 3, target: null, path: [], auto: false },
+      { id: 91, kind: 'chasseur', x: 3, y: 3, target: null, path: [], auto: false },
+    ]
+    const old = loadGame(data)
+    expect('units' in old).toBe(false)
+    expect(old.tribe.population).toBe(g.tribe.population)
+    expect(saveGame(old)).toEqual(saveGame(loadGame(saveGame(g))))
   })
 
   it('refuse une sauvegarde d’une autre version', () => {

@@ -16,7 +16,7 @@ describe('client de jeu en mémoire', () => {
       height: 64,
     })
     expect(world.biome.length).toBe(128 * 64)
-    expect(view.units).toHaveLength(3)
+    expect(view.camps.filter((c) => c.mine)).toHaveLength(1)
     expect(await client.send({ type: 'setSpeed', speed: 5 })).toEqual({ ok: true })
     await client.send({ type: 'togglePause' })
     scheduler.advance(4000)

@@ -205,7 +205,7 @@ describe('bandes en jeu', () => {
 
   it('une bande qui reste sur place épuise ses terres et cueille de moins en moins', () => {
     const g = createGame({ ...options, rareEvents: false })
-    g.units = []
+    g.herds = []
     // Assez de bras pour cueillir tout ce que les terres offrent : c'est la terre qui borne.
     g.tribe.population = 60
     g.tribe.food = 5000

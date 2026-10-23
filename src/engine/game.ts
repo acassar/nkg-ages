@@ -20,7 +20,6 @@ import {
 } from './territory/territory'
 import { findPath, knownPassable, pathBlocked } from './units/path'
 import { frontierTarget } from './units/explore'
-import { SCOUT_RULES } from './content/units'
 import { CAMP_RULES } from './content/camps'
 import { BAND_RULES } from './content/bands'
 import {
@@ -33,6 +32,7 @@ import {
   playerCells,
   refreshZones,
 } from './bands/bands'
+import { bandSight, herdsSeenBy, safePrey } from './bands/sight'
 import { PEOPLE_NAMES, PEOPLE_RULES } from './content/peoples'
 import { MOODS, RELATION_RULES } from './content/relations'
 import { CITY_RULES } from './content/cities'
@@ -78,16 +78,7 @@ import {
   tickTribe,
   type TribeState,
 } from './tribe/tribe'
-import {
-  isPassable,
-  moveAlong,
-  moveUnit,
-  stopMover,
-  stopUnit,
-  UNIT_RULES,
-  type Mover,
-  type Unit,
-} from './units/units'
+import { isPassable, moveAlong, stopMover, type Mover } from './units/units'
 import { generateWorld } from './world/generate'
 import { EVENT_RULES, EVENT_RULES_GLOBAL, type EventKind } from './content/events'
 import { pickEvent } from './events/events'
@@ -123,7 +114,7 @@ export interface People {
 
 /**
  * Un campement. Celui du joueur est une bande nomade tant qu'il n'est pas devenu village :
- * il marche (mêmes champs de trajet qu'une unité) et cueille autour de lui.
+ * il marche, cueille et chasse autour de lui. C'est par lui seul que la tribu voit le pays.
  */
 export interface Camp extends Partial<Mover> {
   id: number
@@ -147,10 +138,9 @@ export interface Camp extends Partial<Mover> {
 
 /** Ce qui est arrivé pendant les ticks, pour prévenir le joueur ; vidé à chaque envoi. */
 export type GameEvent =
-  | { type: 'unitGaveUp'; unitId: number }
   /** La réserve est vide : la tribu commence à perdre des siens. */
   | { type: 'famine' }
-  /** Un chasseur est mort à la chasse. */
+  /** Un chasseur d'un campement est mort à la chasse. */
   | { type: 'hunterKilled'; animal: AnimalKind }
   /** Une invention est achevée, avec le rang tiré (le meilleur rang est gardé). */
   | { type: 'invented'; invention: InventionKind; rank: Rank }
@@ -175,8 +165,6 @@ export type GameEvent =
   | { type: 'meatLost'; amount: number }
   /** Un succès est gagné (voir content/achievements). */
   | { type: 'achievement'; id: string; name: string }
-  /** Une unité en exploration ne trouve plus d'inconnu à sa portée : elle s'arrête. */
-  | { type: 'explored'; unitId: number }
   /** Une bande ne trouve plus de chemin connu vers sa destination : elle s'arrête. */
   | { type: 'bandGaveUp'; campId: number }
 
@@ -200,7 +188,6 @@ export interface GameState {
   /** Peuples voisins, et l'aléa de leurs décisions. */
   peoples: People[]
   peopleRng: Rng
-  units: Unit[]
   camps: Camp[]
   fog: FogState
   territory: TerritoryState
@@ -230,8 +217,6 @@ export interface GameState {
 
 /** Nombre de départs proposés quand le placement n'est pas aléatoire. */
 export const START_CHOICES = 3
-/** Chasseurs au départ (ils font partie de la population). */
-const START_HUNTERS = 2
 const MAX_WORLD_RETRIES = 8
 
 export function createGame(options: NewGameOptions): GameState {
@@ -251,7 +236,6 @@ export function createGame(options: NewGameOptions): GameState {
     eventRng: createRng(`evenements:${world.seed}`),
     peoples: [],
     peopleRng: createRng(`peuples:${world.seed}`),
-    units: [],
     camps: [],
     fog: createFog(world.width, world.height),
     territory: createTerritory(world.width, world.height, foodWeights(world)),
@@ -276,9 +260,6 @@ export function createGame(options: NewGameOptions): GameState {
   const owner = state.territory.owner
   ensureNearStart(state.deposits, world, owner, PLAYER, site, createRng(`depart:${world.seed}`))
   ensureWithinReach(state.deposits, world, site, createRng(`metaux:${world.seed}`))
-  state.units.push(newUnit(state, 'eclaireur', cx, cy))
-  for (let i = 0; i < START_HUNTERS; i++)
-    state.units.push(newRecruit(state, 'chasseur', state.camps[0]!, i))
   placePeoples(state, site, options.peoples ?? PEOPLE_RULES.count)
   updateFog(state.fog, viewersOf(state))
   return state
@@ -309,67 +290,16 @@ function placePeoples(state: GameState, player: StartSite, count: number): void 
   }
 }
 
-function newUnit(state: GameState, kind: Unit['kind'], x: number, y: number): Unit {
-  return {
-    id: state.nextId++,
-    kind,
-    x,
-    y,
-    target: null,
-    path: [],
-    plannedFog: 0,
-    patience: 0,
-    auto: false,
-  }
+/** Chasseurs d'un campement : une personne sur `peoplePerHunter`. */
+export function huntersIn(camp: Camp): number {
+  return Math.floor((camp.members ?? 0) / HUNT_RULES.peoplePerHunter)
 }
 
-/**
- * Une recrue se tient à côté de son campement, sur la terre ferme, pour rester distincte des
- * autres. Le campement est celui choisi par le joueur, ou le premier de la tribu.
- */
-function newRecruit(state: GameState, kind: Unit['kind'], camp: Camp, index: number): Unit {
-  const side = index % 2 === 0 ? 1 : -1
-  const dx = isPassable(state.world, camp.x + side, camp.y) ? side : 0
-  return newUnit(state, kind, camp.x + dx, camp.y)
-}
-
-/** Le campement du joueur où paraît une recrue : celui demandé, ou le premier. */
-function recruitCamp(state: GameState, campId?: number): Camp | undefined {
-  return state.camps.find((c) => c.owner === PLAYER && (campId === undefined || c.id === campId))
-}
-
-/** Éclaireurs que la tribu peut entretenir : un, plus un pour `peoplePerScout` habitants. */
-export function maxScouts(state: GameState): number {
-  return 1 + Math.floor(state.tribe.population / SCOUT_RULES.peoplePerScout)
-}
-
-/** Pourquoi on ne peut pas former d'éclaireur maintenant, ou null si on le peut. */
-export function cannotRecruitScout(state: GameState): string | null {
-  const scouts = state.units.filter((u) => u.kind === 'eclaireur').length
-  if (scouts >= maxScouts(state))
-    return `Un éclaireur de plus pour ${SCOUT_RULES.peoplePerScout} habitants`
-  if (state.tribe.food < SCOUT_RULES.recruitFood)
-    return `Il faut ${SCOUT_RULES.recruitFood} rations`
-  return null
-}
-
-/** Chasseurs que la tribu peut entretenir : un pour `peoplePerHunter` habitants. */
-export function maxHunters(state: GameState): number {
-  return Math.floor(state.tribe.population / HUNT_RULES.peoplePerHunter)
-}
-
-/** Réserve pleine : les chasseurs ne risquent pas leur vie et se reposent. */
-export function huntersResting(state: GameState): boolean {
-  return state.tribe.food >= foodCapacity(state)
-}
-
-/** Pourquoi on ne peut pas former de chasseur maintenant, ou null si on le peut. */
-export function cannotRecruit(state: GameState): string | null {
-  const hunters = state.units.filter((u) => u.kind === 'chasseur').length
-  if (hunters >= maxHunters(state))
-    return `Un chasseur pour ${HUNT_RULES.peoplePerHunter} habitants au plus`
-  if (state.tribe.food < HUNT_RULES.recruitFood) return `Il faut ${HUNT_RULES.recruitFood} rations`
-  return null
+/** Chasseurs de toute la tribu : ils mangent sans cueillir, et défendent les camps. */
+export function huntersOf(state: GameState): number {
+  let hunters = 0
+  for (const c of state.camps) if (c.owner === PLAYER) hunters += huntersIn(c)
+  return hunters
 }
 
 /** Une bande du joueur, prête à marcher. */
@@ -657,26 +587,6 @@ export function applyCommand(state: GameState, command: Command): CommandResult 
     case 'togglePause':
       state.clock.paused = !state.clock.paused
       return { ok: true }
-    case 'moveUnits': {
-      const { x, y } = command
-      if (!Number.isFinite(x) || !Number.isFinite(y) || !inBounds(state.world, x, y)) {
-        return { ok: false, reason: 'Destination hors du monde' }
-      }
-      // Seule l'eau déjà découverte est refusée : un clic dans le brouillard ne révèle rien.
-      if (!knownPassable(state.world, state.fog, x, y))
-        return { ok: false, reason: 'Destination infranchissable' }
-      const units = state.units.filter((u) => command.unitIds.includes(u.id))
-      if (units.length === 0) return { ok: false, reason: 'Aucune unité choisie' }
-      let routed = 0
-      // Dans un ordre de groupe, celle qui ne peut pas y aller s'arrête plutôt que de
-      // poursuivre son ancien ordre. Un ordre précis met fin à l'exploration.
-      for (const u of units) {
-        u.explore = false
-        if (orderUnit(state, u, x, y, false)) routed++
-      }
-      if (routed === 0) return { ok: false, reason: 'Aucun chemin connu vers cette destination' }
-      return { ok: true }
-    }
     case 'invent': {
       if (!INVENTION_KINDS.includes(command.invention))
         return { ok: false, reason: 'Invention inconnue' }
@@ -769,38 +679,6 @@ export function applyCommand(state: GameState, command: Command): CommandResult 
       citySite(state, command.campId)!.city = true
       return { ok: true }
     }
-    case 'recruitHunter': {
-      const reason = cannotRecruit(state)
-      if (reason) return { ok: false, reason }
-      const camp = recruitCamp(state, command.campId)
-      if (!camp) return { ok: false, reason: 'Aucun campement choisi' }
-      state.tribe.food -= HUNT_RULES.recruitFood
-      const hunters = state.units.filter((u) => u.kind === 'chasseur').length
-      state.units.push(newRecruit(state, 'chasseur', camp, hunters))
-      return { ok: true }
-    }
-    case 'recruitScout': {
-      const reason = cannotRecruitScout(state)
-      if (reason) return { ok: false, reason }
-      const camp = recruitCamp(state, command.campId)
-      if (!camp) return { ok: false, reason: 'Aucun campement choisi' }
-      state.tribe.food -= SCOUT_RULES.recruitFood
-      const scouts = state.units.filter((u) => u.kind === 'eclaireur').length
-      state.units.push(newRecruit(state, 'eclaireur', camp, scouts + 1))
-      return { ok: true }
-    }
-    case 'explore': {
-      const units = state.units.filter((u) => command.unitIds.includes(u.id))
-      if (units.length === 0) return { ok: false, reason: 'Aucune unité choisie' }
-      let going = 0
-      for (const u of units) {
-        stopUnit(u)
-        u.explore = true
-        if (exploreFrom(state, u)) going++
-      }
-      if (going === 0) return { ok: false, reason: 'Plus rien d’inconnu à portée' }
-      return { ok: true }
-    }
     default: {
       const unknown: never = command
       return { ok: false, reason: `Commande inconnue : ${JSON.stringify(unknown)}` }
@@ -808,38 +686,14 @@ export function applyCommand(state: GameState, command: Command): CommandResult 
   }
 }
 
-/** Envoie une unité vers un point par un chemin connu ; l'arrête et rend false sinon. */
-function orderUnit(state: GameState, u: Unit, x: number, y: number, auto: boolean): boolean {
-  const route = findPath(state.world, state.fog, u, { x, y })
-  if (!route) {
-    stopUnit(u)
-    return false
-  }
-  const rules = UNIT_RULES[u.kind]
-  u.target = { x, y }
-  u.path = route.points
-  u.plannedFog = state.fog.version
-  u.patience = route.cost * rules.detour + rules.detourSlack
-  u.auto = auto
-  return true
-}
-
-/** Joue un tick (un mois de jeu). */
 /**
- * Joue un pas (une semaine) : les unités et les bêtes bougent, le brouillard suit.
+ * Joue un pas (une semaine) : les bandes et les bêtes bougent, le brouillard suit.
  * Au dernier pas du mois, l'économie tourne : chasse, territoire, récolte, voisins, inventions.
  */
 export function advance(state: GameState): void {
   if (state.outcome?.type === 'defeat') return
   const pace = 1 + inventionMean(state.inventions, 'portage') / 100
-  const roads = 1 + inventionMean(state.inventions, 'routes') / 100
-  for (const unit of state.units) {
-    // Sur ses propres terres, les routes (si on les a) font marcher plus vite.
-    const home = state.territory.owner[cellOf(state, unit.x, unit.y)] === PLAYER
-    if (!moveUnit(unit, state.world, home ? pace * roads : pace)) replan(state, unit)
-  }
   if (marchBands(state, pace)) refreshBands(state)
-  for (const unit of state.units) if (unit.explore && !unit.target) exploreFrom(state, unit)
   for (const herd of state.herds) wander(herd, state.world, state.faunaRng)
   state.clock.step++
   if (state.clock.step >= STEPS_PER_MONTH) {
@@ -858,17 +712,24 @@ export function step(state: GameState): void {
 
 /** Les bandes en route avancent ; rend true si l'une a bougé (sa zone doit suivre). */
 function marchBands(state: GameState, pace: number): boolean {
+  const roads = 1 + inventionMean(state.inventions, 'routes') / 100
   let moved = false
   for (const band of bandsOf(state)) {
     if (!band.target) continue
     const mover = band as Mover
-    if (!moveAlong(mover, state.world, BAND_RULES.speed * pace)) replanBand(state, band)
+    // Sur ses propres terres, les routes (si on les a) font marcher plus vite.
+    const home = state.territory.owner[cellOf(state, band.x, band.y)] === PLAYER
+    const speed = BAND_RULES.speed * (home ? pace * roads : pace)
+    if (!moveAlong(mover, state.world, speed)) replanBand(state, band)
     moved = true
   }
   return moved
 }
 
-/** Comme `replan`, pour une bande : elle s'arrête si plus aucun chemin connu n'y mène. */
+/**
+ * Recalcule le chemin d'une bande sur la carte connue. Elle s'arrête si plus aucun chemin
+ * connu n'y mène, ou si le détour dépasse sa patience (elle n'erre pas tout un continent).
+ */
 function replanBand(state: GameState, band: Camp): void {
   const route =
     band.target &&
@@ -885,13 +746,16 @@ function replanBand(state: GameState, band: Camp): void {
 /**
  * Les bandes qui migrent seules partent quand leurs terres s'épuisent ou ne les nourrissent
  * pas, vers de meilleures ; une bande collée à une autre part vers n'importe quelles terres libres.
+ * Si elle ne connaît rien de mieux, elle part vers l'inconnu le plus proche, pour le découvrir.
  */
 function roam(state: GameState): void {
   for (const band of bandsOf(state)) {
     if (!band.roaming || band.target) continue
     const why = restless(state, band)
     if (!why) continue
-    const site = migrationSite(state, band, why === 'serrées' ? 0 : undefined)
+    const site =
+      migrationSite(state, band, why === 'serrées' ? 0 : undefined) ??
+      frontierTarget(state.world, state.fog, band)
     if (site) orderBand(state, band, site.x, site.y)
   }
 }
@@ -929,48 +793,11 @@ function month(state: GameState): void {
 /** Met le brouillard à jour ; le terrain découvert peut couper un chemin prévu. */
 function see(state: GameState): void {
   updateFog(state.fog, viewersOf(state))
-  for (const unit of state.units) {
-    if (!unit.target || unit.plannedFog === state.fog.version) continue
-    unit.plannedFog = state.fog.version
-    if (pathBlocked(state.world, state.fog, unit, unit.path)) replan(state, unit)
-  }
   for (const band of bandsOf(state)) {
     if (!band.target || band.plannedFog === state.fog.version) continue
     band.plannedFog = state.fog.version
     if (pathBlocked(state.world, state.fog, band, band.path ?? [])) replanBand(state, band)
   }
-}
-
-/**
- * Envoie une unité en exploration vers la lisière du connu la plus proche. Quand il n'en
- * reste aucune à sa portée, l'unité s'arrête et le joueur est prévenu. Rend true si elle part.
- */
-function exploreFrom(state: GameState, unit: Unit): boolean {
-  const target = frontierTarget(state.world, state.fog, unit)
-  if (target && orderUnit(state, unit, target.x, target.y, false)) {
-    unit.explore = true
-    return true
-  }
-  unit.explore = false
-  state.events.push({ type: 'explored', unitId: unit.id })
-  return false
-}
-
-/**
- * Recalcule le chemin d'une unité sur la carte connue. Elle s'arrête si plus aucun chemin
- * connu n'y mène, ou si le détour dépasse sa patience (elle n'erre pas tout un continent).
- */
-function replan(state: GameState, unit: Unit): void {
-  const route =
-    unit.target && findPath(state.world, state.fog, unit, unit.target, Math.max(0, unit.patience))
-  if (!route) {
-    // Une poursuite abandonnée ne mérite pas d'avertir le joueur.
-    if (!unit.auto) state.events.push({ type: 'unitGaveUp', unitId: unit.id })
-    stopUnit(unit)
-    return
-  }
-  unit.path = route.points
-  unit.plannedFog = state.fog.version
 }
 
 /** L'hôte appelle ceci après avoir transmis les zones modifiées. */
@@ -985,19 +812,10 @@ export function startYear(): number {
   return FIRST_ERA.startYear
 }
 
-/** Vue d'une unité : le pistage allonge celle des chasseurs. */
-export function sightOf(state: GameState, unit: Unit): number {
-  const tracking = unit.kind === 'chasseur' ? inventionMean(state.inventions, 'pistage') : 0
-  return UNIT_RULES[unit.kind].sight + tracking
-}
-
+/** Ce qui voit pour la tribu : ses campements seuls, bandes et villages. */
 function viewersOf(state: GameState) {
-  return [
-    ...state.units.map((u) => ({ x: u.x, y: u.y, sight: sightOf(state, u) })),
-    ...state.camps
-      .filter((c) => c.owner === PLAYER)
-      .map((c) => ({ x: c.x, y: c.y, sight: CAMP_RULES.sight })),
-  ]
+  const sight = bandSight(state.inventions)
+  return state.camps.filter((c) => c.owner === PLAYER).map((c) => ({ x: c.x, y: c.y, sight }))
 }
 
 function seatsOf(state: GameState): Seat[] {
@@ -1055,7 +873,7 @@ function harvest(state: GameState): void {
     famineShield: -inventionMean(inv, 'peaux') / 100,
     efficiency: tribeEfficiency(state),
   }
-  const hunters = state.units.filter((u) => u.kind === 'chasseur').length
+  const hunters = huntersOf(state)
   // Les moissons rentrent avant le repas du mois ; la réserve les borne comme le reste.
   const crops = tribe.population > 0 ? cropsOf(state, month) : 0
   tribe.food += crops
@@ -1142,12 +960,12 @@ export function closeCamps(state: GameState, owner: number): number {
 
 /**
  * Raid d'un peuple hostile : il emporte des vivres, d'autant plus qu'il est nombreux ; les
- * chasseurs en sauvent une part. Une réserve vide coûte une vie à la place.
+ * chasseurs des campements en sauvent une part. Une réserve vide coûte une vie à la place.
  */
 export function raid(state: GameState, people: People): void {
   if (state.peopleRng.next() >= RELATION_RULES.raidChance) return
   const { tribe } = state
-  const hunters = state.units.filter((u) => u.kind === 'chasseur').length
+  const hunters = huntersOf(state)
   const defense = Math.min(RELATION_RULES.maxDefense, hunters * RELATION_RULES.defensePerHunter)
   const wanted = Math.min(
     people.tribe.population * RELATION_RULES.raidFoodPerPerson,
@@ -1441,24 +1259,23 @@ export function depositHeld(state: GameState, deposit: Deposit): boolean {
 }
 
 /**
- * La faune erre ; les chasseurs abattent les bêtes à portée, et poursuivent seuls un
- * troupeau en vue (sauf les plus dangereux) quand le joueur ne leur a rien demandé.
- * Réserve pleine, ils ne risquent pas leur vie pour rien.
+ * Chaque campement chasse seul : ses chasseurs tentent chacun leur chance sur le plus proche
+ * des troupeaux qu'il voit (pas les plus dangereux). Réserve pleine, ils ne risquent pas leur vie.
  */
 function hunt(state: GameState): void {
   const { world, rng, faunaRng, tribe } = state
-  for (const unit of [...state.units]) {
-    if (unit.kind !== 'chasseur') continue
-    if (huntersResting(state)) continue
-    const capacity = foodCapacity(state)
-    const prey = nearestHerd(state, unit, HUNT_RULES.reach, false, 1)
-    if (prey) {
+  for (const camp of state.camps) {
+    if (camp.owner !== PLAYER) continue
+    for (let i = huntersIn(camp); i > 0 && tribe.population > 0; i--) {
+      const capacity = foodCapacity(state)
+      if (tribe.food >= capacity) break
+      const prey = herdsSeenBy(state, camp).find(safePrey)
+      if (!prey) break
       const rules = ANIMAL_RULES[prey.kind]
       // Le propulseur éloigne le chasseur de la bête : le danger baisse.
       const thrower = inventionStat(state.inventions, 'propulseur')
       const safety = thrower ? Math.min(1, Math.max(0, -rollStat(thrower, rng) / 100)) : 0
       if (rng.next() < rules.danger * (1 - safety)) {
-        state.units.splice(state.units.indexOf(unit), 1)
         tribe.population = Math.max(0, tribe.population - 1)
         state.events.push({ type: 'hunterKilled', animal: prey.kind })
         continue
@@ -1471,41 +1288,12 @@ function hunt(state: GameState): void {
         const lost = Math.floor(tribe.food + rules.meat - capacity)
         tribe.food = Math.min(tribe.food + rules.meat, capacity)
         if (lost >= 1) state.events.push({ type: 'meatLost', amount: lost })
-        flee(prey, world, faunaRng, unit, HUNT_RULES.fleeDistance)
+        flee(prey, world, faunaRng, camp, HUNT_RULES.fleeDistance)
       }
-      continue
     }
-    if (unit.target && !unit.auto) continue
-    if ((state.clock.tick + unit.id) % HUNT_RULES.chaseEvery !== 0) continue
-    const seen = nearestHerd(state, unit, HUNT_RULES.chaseRange, true, HUNT_RULES.autoMaxDanger)
-    if (seen) orderUnit(state, unit, seen.x, seen.y, true)
   }
   state.herds = state.herds.filter((h) => h.size > 0)
   for (const herd of state.herds) regrow(herd, faunaRng)
-}
-
-/**
- * Troupeau le plus proche à moins de `range`, d'un danger au plus `maxDanger` ;
- * `visible` : seulement s'il est en vue.
- */
-function nearestHerd(
-  state: GameState,
-  from: Unit,
-  range: number,
-  visible: boolean,
-  maxDanger: number,
-): Herd | null {
-  let best: Herd | null = null
-  let bestDistance = range
-  for (const herd of state.herds) {
-    const d = Math.hypot(herd.x - from.x, herd.y - from.y)
-    if (d > bestDistance) continue
-    if (ANIMAL_RULES[herd.kind].danger > maxDanger) continue
-    if (visible && !herdVisible(state, herd)) continue
-    best = herd
-    bestDistance = d
-  }
-  return best
 }
 
 /** Le joueur voit-il ce troupeau en ce moment ? */

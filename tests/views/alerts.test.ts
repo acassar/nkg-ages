@@ -7,12 +7,10 @@ const game = () => createGame({ seed: 'alertes', randomStart: false, width: 128,
 const ids = (state: ReturnType<typeof game>) => alertsOf(state).map((a) => a.id)
 
 describe('alertes', () => {
-  it('au départ : aucune invention en cours, l’éclaireur attend', () => {
+  it('au départ : aucune invention en cours, rien d’autre à piloter', () => {
     const state = game()
     expect(ids(state)).toContain('recherche')
-    const scout = state.units.find((u) => u.kind === 'eclaireur')!
-    const alert = alertsOf(state).find((a) => a.id === `eclaireur-${scout.id}`)
-    expect(alert?.target).toEqual({ x: scout.x, y: scout.y })
+    expect(ids(state).some((id) => id.startsWith('eclaireur') || id === 'chasseur')).toBe(false)
   })
 
   it('l’alerte de recherche disparaît dès qu’une invention tourne', () => {

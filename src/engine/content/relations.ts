@@ -28,7 +28,7 @@ export const RELATION_RULES = {
   /** Rations qu'un raid emporte par habitant du peuple, au plus une part de la réserve. */
   raidFoodPerPerson: 0.5,
   raidMaxShare: 0.4,
-  /** Part du butin sauvée par chasseur, au plus `maxDefense` (les chasseurs défendent le camp). */
+  /** Part du butin sauvée par chasseur des campements, au plus `maxDefense` (ils défendent le camp). */
   defensePerHunter: 0.1,
   maxDefense: 0.6,
   /** Après un raid, la colère retombe un peu. */

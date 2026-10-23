@@ -134,8 +134,8 @@ describe('peuples voisins', () => {
     const g = createGame(options)
     const people = g.peoples[0]!
     const camp = g.camps.find((c) => c.owner === people.owner)!
-    const scout = g.units.find((u) => u.kind === 'eclaireur')!
-    Object.assign(scout, { x: camp.x, y: camp.y })
+    // La bande arrive en vue de leur camp.
+    Object.assign(g.camps[0]!, { x: camp.x + 3, y: camp.y })
     step(g)
     expect(people.met).toBe(true)
     expect(g.events.filter((e) => e.type === 'peopleMet')).toEqual([
@@ -152,13 +152,10 @@ describe('peuples voisins', () => {
     expect(full.camps.filter((c) => !c.mine)).toEqual([])
     const rival = full.territory!.data.some((o) => o > PLAYER)
     expect(rival).toBe(false)
-    // Une fois l'éclaireur passé chez eux, leurs terres et leur camp paraissent.
+    // Une fois la bande passée près de chez eux, leurs terres et leur camp paraissent.
     const people = g.peoples[0]!
     const camp = g.camps.find((c) => c.owner === people.owner)!
-    Object.assign(
-      g.units.find((u) => u.kind === 'eclaireur')!,
-      { x: camp.x, y: camp.y },
-    )
+    Object.assign(g.camps[0]!, { x: camp.x + 3, y: camp.y })
     step(g)
     const view = buildGameView(g)
     expect(view.camps.find((c) => !c.mine)).toMatchObject({ people: people.name, mine: false })

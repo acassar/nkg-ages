@@ -38,7 +38,7 @@ describe('vues de partie', () => {
     const view = buildGameView(g, true)
     expect(view.fog).toMatchObject({ x: 0, y: 0, w: 128, h: 64 })
     expect(view.territory?.data.length).toBe(128 * 64)
-    expect(view.units[0]?.name).toBe('Éclaireur')
+    expect('units' in view).toBe(false)
     expect(view.camps[0]?.mine).toBe(true)
   })
 
@@ -50,8 +50,8 @@ describe('vues de partie', () => {
     // Rien ne bouge : rien à renvoyer.
     step(g)
     expect(buildGameView(g).fog).toBeNull()
-    const u = g.units[0]!
-    u.target = { x: u.x + 3, y: u.y }
+    const band = g.camps[0]!
+    band.target = { x: band.x + 3, y: band.y }
     step(g)
     const view = buildGameView(g)
     expect(view.fog).not.toBeNull()
@@ -151,7 +151,7 @@ describe('vues de partie', () => {
     g.events.push({ type: 'hunterKilled', animal: 'mammouth' })
     const view = buildGameView(g)
     expect(view.herds).toEqual([{ id: 1, kind: 'cerf', name: 'Cerfs', x: c.x, y: c.y, size: 5 }])
-    expect(view.notices).toEqual(['Chasse : un chasseur est mort face aux mammouths.'])
+    expect(view.notices).toEqual(['Chasse : un chasseur de la bande est mort face aux mammouths.'])
   })
 
   it('montre la bande : ses gens, son efficacité, ses terres et ce qui empêche de la scinder', () => {
@@ -237,18 +237,17 @@ describe('vues de partie', () => {
     expect(view!.tradeBlocked).toMatch(/silex/)
   })
 
-  it('montre les chasseurs et ce qui empêche d’en former, et prévient de la viande perdue', () => {
+  it('montre les chasseurs des bandes, et prévient de la viande perdue', () => {
     const g = game()
     g.events.push({ type: 'meatLost', amount: 7 })
     let view = buildGameView(g)
-    expect(view.tribe).toMatchObject({ hunters: 2, maxHunters: 2, recruitCost: 15 })
-    expect(view.tribe.recruitBlocked).toMatch(/habitants/)
+    expect(view.tribe.hunters).toBe(2)
     expect(view.notices).toEqual([
       'Chasse : la réserve est pleine, 7 rations de viande sont perdues.',
     ])
-    g.units = g.units.filter((u) => u.kind !== 'chasseur')
+    g.camps[0]!.members = 3
     view = buildGameView(g)
-    expect(view.tribe).toMatchObject({ hunters: 0, recruitBlocked: null })
+    expect(view.tribe.hunters).toBe(0)
     expect(view.tribe.huntersResting).toBe(false)
     g.tribe.food = view.tribe.foodCapacity + 1
     expect(buildGameView(g).tribe.huntersResting).toBe(true)
@@ -302,20 +301,20 @@ describe('vues de partie', () => {
   it('rédige les événements du moteur pour le joueur', () => {
     const g = game()
     expect(buildGameView(g).notices).toEqual([])
-    g.events.push({ type: 'unitGaveUp', unitId: g.units[0]!.id })
-    g.events.push({ type: 'unitGaveUp', unitId: 999 })
+    g.events.push({ type: 'bandGaveUp', campId: g.camps[0]!.id })
+    g.events.push({ type: 'hunterKilled', animal: 'sanglier' })
     expect(buildGameView(g).notices).toEqual([
-      'Éclaireur renonce : aucun chemin connu assez court ne mène à sa destination.',
-      'Une unité renonce : aucun chemin connu assez court ne mène à sa destination.',
+      'La bande s’arrête : aucun chemin connu assez court ne mène à sa destination.',
+      'Chasse : un chasseur de la bande est mort face aux sangliers.',
     ])
   })
 
   it("ne partage pas d'objets mutables avec le moteur", () => {
     const g = game()
-    g.units[0]!.target = { x: 3, y: 3 }
+    g.camps[0]!.target = { x: 3, y: 3 }
     const view = buildGameView(g)
-    view.units[0]!.target!.x = 99
-    expect(g.units[0]!.target!.x).toBe(3)
+    view.camps[0]!.band!.target!.x = 99
+    expect(g.camps[0]!.target!.x).toBe(3)
   })
 
   it('code l’altitude sur un octet, eau sous 128 et terre au-dessus', () => {
@@ -345,11 +344,5 @@ describe('campements choisis', () => {
     })
     g.camps[0]!.city = true
     expect(buildGameView(g).camps[0]!.upgrade).toBeNull()
-  })
-
-  it('compte les éclaireurs et dit pourquoi on ne peut pas en former', () => {
-    const tribe = buildGameView(game()).tribe
-    expect(tribe).toMatchObject({ scouts: 1, maxScouts: 1 })
-    expect(tribe.scoutBlocked).toMatch(/habitants/)
   })
 })

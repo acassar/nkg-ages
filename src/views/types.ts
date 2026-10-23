@@ -25,19 +25,6 @@ export interface WorldSnapshot {
   river: Uint8Array
 }
 
-export interface UnitView {
-  id: number
-  kind: string
-  name: string
-  x: number
-  y: number
-  target: { x: number; y: number } | null
-  /** Points de passage restants, le dernier étant la cible. */
-  path: { x: number; y: number }[]
-  /** Sous l'ordre « Explorer ». */
-  exploring: boolean
-}
-
 export interface CampView {
   id: number
   x: number
@@ -83,7 +70,6 @@ export interface GameView {
   dateLabel: string
   eraName: string
   season: SeasonView
-  units: UnitView[]
   camps: CampView[]
   /** Brouillard : 0 inconnu, 1 déjà vu, 2 visible. Seulement la zone modifiée. */
   fog: GridPatch | null
@@ -244,17 +230,8 @@ export interface TribeView {
   starving: boolean
   /** Matériaux en réserve, arrondis. */
   materials: { kind: string; name: string; amount: number }[]
-  /** Chasseurs en vie et nombre que la tribu peut entretenir. */
+  /** Chasseurs des campements (une personne sur quelques-unes) : ils chassent et défendent seuls. */
   hunters: number
-  maxHunters: number
-  /** Coût en rations d'un nouveau chasseur, et ce qui empêche d'en former un (ou null). */
-  recruitCost: number
-  recruitBlocked: string | null
-  /** Éclaireurs en vie, combien la tribu peut en entretenir, leur coût et ce qui bloque. */
-  scouts: number
-  maxScouts: number
-  scoutCost: number
-  scoutBlocked: string | null
   /** Réserve pleine : les chasseurs ne chassent pas. */
   huntersResting: boolean
   /** Campements tenus (bandes et villages), dont les bandes nomades. */

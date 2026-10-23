@@ -61,20 +61,12 @@ export const ANIMAL_RULES: Readonly<Record<AnimalKind, AnimalRules>> = {
 
 export const ANIMAL_KINDS = Object.keys(ANIMAL_RULES) as AnimalKind[]
 
-/** Règles de la chasse elle-même. */
+/** Règles de la chasse elle-même : chaque campement chasse seul autour de lui. */
 export const HUNT_RULES = {
-  /** Distance (cellules) à laquelle un chasseur peut tenter d'abattre une bête. */
-  reach: 1.5,
-  /** Un troupeau chassé fuit d'autant de cellules à l'opposé du chasseur. */
+  /** Un troupeau chassé fuit d'autant de cellules à l'opposé du campement. */
   fleeDistance: 5,
-  /** Un chasseur oisif poursuit seul un troupeau vu à moins de cette distance. */
-  chaseRange: 8,
-  /** Ticks entre deux recalculs de poursuite (le troupeau bouge). */
-  chaseEvery: 6,
-  /** En poursuite automatique, on laisse les troupeaux plus dangereux que ceci (les mammouths). */
-  autoMaxDanger: 0.02,
-  /** Un chasseur au plus pour tant d'habitants (un chasseur ne cueille pas). */
+  /** Les campements laissent les troupeaux plus dangereux que ceci (les mammouths). */
+  maxDanger: 0.02,
+  /** Une personne sur tant chasse (elle ne cueille pas) ; elle défend aussi le camp. */
   peoplePerHunter: 6,
-  /** Rations dépensées pour former un chasseur. */
-  recruitFood: 15,
 } as const
