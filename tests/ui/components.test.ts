@@ -38,6 +38,21 @@ describe('écran de départ', () => {
     expect(game.world?.seed).toBe('chauvet')
     expect(game.selected.size).toBe(3)
   })
+
+  it('transmet la taille du monde, le nombre de voisins et les événements rares', async () => {
+    const wrapper = mount(StartScreen)
+    await wrapper.find('input[name=seed]').setValue('lascaux')
+    await wrapper.find('select[name=size]').setValue('petit')
+    await wrapper.find('select[name=peoples]').setValue('0')
+    await wrapper.find('input[name=rareEvents]').setValue(false)
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+    const game = useGameStore()
+    expect(game.world).toMatchObject({ seed: 'lascaux', width: 384, height: 192 })
+    expect(game.view?.peoples).toEqual([])
+    await game.saveNow()
+    expect(slot.read()?.options).toMatchObject({ peoples: 0, rareEvents: false })
+  }, 30_000)
 })
 
 describe('barre du haut', () => {
