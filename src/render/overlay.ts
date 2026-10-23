@@ -27,7 +27,6 @@ export class OverlayPainter {
     const { ctx } = this
     ctx.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0)
     ctx.clearRect(0, 0, camera.viewWidth, camera.viewHeight)
-    const ink = cssColor(INK)
     const red = cssColor(PLAYER_INK)
     const paper = cssColor(PAPER)
     const rival = cssColor(RIVAL_INK)
@@ -87,41 +86,9 @@ export class OverlayPainter {
       if (camp.band?.target && camp.id === state.selectedCamp)
         this.paintRoute(camera, p, camp.band.target, camp.band.path)
     }
-
-    for (const unit of state.units) {
-      const p = worldToScreen(camera, unit.x, unit.y)
-      const selected = state.selected.has(unit.id)
-      if (unit.target && selected) this.paintRoute(camera, p, unit.target, unit.path)
-      ctx.beginPath()
-      ctx.arc(p.x, p.y, 6, 0, Math.PI * 2)
-      ctx.fillStyle = paper
-      ctx.fill()
-      ctx.lineWidth = selected ? 2.4 : 1.4
-      ctx.strokeStyle = selected ? red : ink
-      ctx.stroke()
-      ctx.beginPath()
-      if (unit.kind === 'chasseur') {
-        // Une lance en travers : le chasseur.
-        ctx.moveTo(p.x - 5, p.y + 9)
-        ctx.lineTo(p.x + 8, p.y - 14)
-        ctx.moveTo(p.x + 8, p.y - 14)
-        ctx.lineTo(p.x + 4, p.y - 12)
-        ctx.moveTo(p.x + 8, p.y - 14)
-        ctx.lineTo(p.x + 8, p.y - 9.5)
-      } else {
-        // Petit fanion : l'éclaireur.
-        ctx.moveTo(p.x, p.y - 6)
-        ctx.lineTo(p.x, p.y - 15)
-        ctx.lineTo(p.x + 7, p.y - 12)
-        ctx.lineTo(p.x, p.y - 9)
-      }
-      ctx.strokeStyle = ink
-      ctx.lineWidth = 1.2
-      ctx.stroke()
-    }
   }
 
-  /** Trajet restant d'un pion ou d'une bande choisis : pointillés jusqu'à un petit rond. */
+  /** Trajet restant de la bande choisie : pointillés jusqu'à un petit rond. */
   private paintRoute(
     camera: Camera,
     from: { x: number; y: number },

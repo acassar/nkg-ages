@@ -3,8 +3,6 @@
  * Les bandes nomades du joueur ont leurs propres règles (content/bands).
  */
 export const CAMP_RULES = {
-  /** Cellules visibles autour d'un campement. */
-  sight: 7,
   /** Le territoire d'un campement ne s'étend pas au-delà de ce rayon. */
   reach: 26,
   /** Terres prises d'un coup quand un peuple fonde un campement (son premier : `startTerritoryRadius`). */

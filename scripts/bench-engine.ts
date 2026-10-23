@@ -16,9 +16,9 @@ const t0 = performance.now()
 const game = createGame({ seed: 'banc-essai', randomStart: false })
 const worldMs = performance.now() - t0
 
-// L'éclaireur part vers des coins lointains, à travers le brouillard : chaque arrêt
+// La bande part vers des coins lointains, à travers le brouillard : chaque arrêt
 // (arrivée ou renoncement) relance un ordre, pour mesurer les recalculs de chemin.
-const scout = game.units[0]!
+const band = game.camps[0]!
 const { width, height } = game.world
 const targets = [
   [width * 0.1, height * 0.1],
@@ -32,13 +32,13 @@ let worstStepMs = 0
 const sendNext = () => {
   const [x, y] = targets[order++ % targets.length]!
   const t = performance.now()
-  applyCommand(game, { type: 'moveUnits', unitIds: [scout.id], x, y })
+  applyCommand(game, { type: 'moveCamp', campId: band.id, x, y })
   worstOrderMs = Math.max(worstOrderMs, performance.now() - t)
 }
 sendNext()
 const t1 = performance.now()
 for (let i = 0; i < STEPS; i++) {
-  if (!scout.target) sendNext()
+  if (!band.target) sendNext()
   const t = performance.now()
   advance(game)
   worstStepMs = Math.max(worstStepMs, performance.now() - t)

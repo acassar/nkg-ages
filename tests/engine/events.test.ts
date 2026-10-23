@@ -109,7 +109,7 @@ describe('événements rares : effets', () => {
     g.tribe.food = 0
     g.abundance.fill(0)
     g.deposits = []
-    g.units = []
+    g.herds = []
     forced(g, 'tempete')
     step(g)
     expect(g.events.some((e) => e.type === 'rare')).toBe(false)

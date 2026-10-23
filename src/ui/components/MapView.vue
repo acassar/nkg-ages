@@ -67,9 +67,7 @@ function loop(now: number) {
       deposits: game.view.deposits,
       wonders: game.view.wonders,
       herds: game.view.herds,
-      units: game.view.units,
       camps: game.view.camps,
-      selected: game.selected,
       selectedCamp: game.selectedCamp,
     })
     benchSample(performance.now() - t0, now)
@@ -105,11 +103,10 @@ function onKey(event: KeyboardEvent, down: boolean) {
   if (!down || event.repeat) return
   if (intent.kind === 'togglePause') void game.togglePause()
   if (intent.kind === 'speed') void game.setSpeed(intent.speed)
-  if (intent.kind === 'explore') void game.exploreSelected()
 }
 
 // Souris : glisser pour déplacer la carte, molette pour zoomer,
-// clic gauche pour choisir une unité ou un campement, clic droit pour envoyer les unités.
+// clic gauche pour choisir un campement, clic droit pour envoyer la bande choisie.
 let drag: { x: number; y: number; moved: boolean } | null = null
 
 function local(event: MouseEvent) {
@@ -156,45 +153,13 @@ function onPointerUp(event: PointerEvent) {
   drag = null
   if (wasDrag || !game.view) return
   const p = local(event)
-  const hit = unitAt(p)
-  // Maj + clic ajoute ou retire l'unité de la sélection.
-  if (event.shiftKey && hit) game.toggleSelected(hit.id)
-  else pickNext(p)
+  // Un clic dans le vide relâche le campement choisi.
+  game.selectCamp(campAt(p)?.id ?? null)
   updateCursor(p)
   dirty = true
 }
 
-/**
- * Choisit ce qui est sous le pointeur. Unités et campement se superposent souvent (les recrues
- * paraissent au camp) : un nouveau clic au même endroit passe au suivant.
- */
-function pickNext(p: { x: number; y: number }) {
-  const units = (game.view?.units ?? []).filter((u) => {
-    const s = worldToScreen(camera, u.x, u.y)
-    return Math.hypot(s.x - p.x, s.y - p.y) < 12
-  })
-  const camp = campAt(p)
-  const choices = [
-    ...units.map((u) => () => game.select([u.id])),
-    ...(camp ? [() => game.selectCamp(camp.id)] : []),
-  ]
-  if (choices.length === 0) return game.select([])
-  const current =
-    camp && game.selectedCamp === camp.id
-      ? units.length
-      : units.findIndex((u) => game.selected.size === 1 && game.selected.has(u.id))
-  choices[(current + 1) % choices.length]!()
-}
-
-/** Unité du joueur sous le pointeur, s'il y en a une. */
-function unitAt(p: { x: number; y: number }) {
-  return game.view?.units.find((u) => {
-    const s = worldToScreen(camera, u.x, u.y)
-    return Math.hypot(s.x - p.x, s.y - p.y) < 12
-  })
-}
-
-/** Campement du joueur sous le pointeur (les unités, posées dessus, passent d'abord). */
+/** Campement du joueur sous le pointeur, s'il y en a un. */
 function campAt(p: { x: number; y: number }) {
   return game.view?.camps.find((c) => {
     if (!c.mine) return false
@@ -205,19 +170,18 @@ function campAt(p: { x: number; y: number }) {
 
 /**
  * Curseur selon ce qu'un clic ferait : flèche au repos, main sur ce qu'on peut choisir,
- * viseur quand des unités ou une bande attendent une destination, interdit sur l'eau connue.
+ * viseur quand une bande attend une destination, interdit sur l'eau connue.
  */
 const cursor = ref<'default' | 'pointer' | 'crosshair' | 'not-allowed' | 'grabbing'>('default')
 
 function updateCursor(p: { x: number; y: number }) {
   if (drag?.moved) cursor.value = 'grabbing'
-  else if (unitAt(p) || campAt(p)) cursor.value = 'pointer'
-  else if (game.selected.size > 0 || selectedBandId() !== null)
-    cursor.value = onWater(p) ? 'not-allowed' : 'crosshair'
+  else if (campAt(p)) cursor.value = 'pointer'
+  else if (selectedBandId() !== null) cursor.value = onWater(p) ? 'not-allowed' : 'crosshair'
   else cursor.value = 'default'
 }
 
-/** La bande choisie (elle attend une destination comme une unité), ou null. */
+/** La bande choisie (elle attend une destination), ou null. */
 function selectedBandId(): number | null {
   const camp = game.view?.camps.find((c) => c.id === game.selectedCamp)
   return camp?.band ? camp.id : null

@@ -3,9 +3,8 @@ import {
   bandAbundance,
   bandsOf,
   campEfficiency,
-  cannotRecruit,
   cannotStart,
-  huntersResting,
+  foodCapacity,
   INVENTION_KINDS,
   PLAYER,
   RELATION_RULES,
@@ -90,7 +89,7 @@ export function alertsOf(state: GameState): AlertView[] {
       target: null,
     })
 
-  if (huntersResting(state))
+  if (tribe.food >= foodCapacity(state))
     alerts.push({
       id: 'reserves-pleines',
       level: 'info',
@@ -127,24 +126,6 @@ export function alertsOf(state: GameState): AlertView[] {
         target: at(band),
       })
   }
-
-  for (const unit of state.units) {
-    if (unit.kind !== 'eclaireur' || unit.target) continue
-    alerts.push({
-      id: `eclaireur-${unit.id}`,
-      level: 'info',
-      text: 'L’éclaireur attend vos ordres',
-      target: at(unit),
-    })
-  }
-
-  if (cannotRecruit(state) === null && !huntersResting(state))
-    alerts.push({
-      id: 'chasseur',
-      level: 'info',
-      text: 'Vous pouvez former un chasseur',
-      target: null,
-    })
 
   return alerts
 }

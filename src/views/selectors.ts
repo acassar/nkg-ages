@@ -26,7 +26,6 @@ import {
   PLAYER,
   ANIMAL_RULES,
   cannotStart,
-  cannotRecruit,
   currentScore,
   goalSteps,
   tallyOf,
@@ -36,12 +35,7 @@ import {
   campEfficiency,
   cannotSplit,
   tribeEfficiency,
-  maxHunters,
-  maxScouts,
-  cannotRecruitScout,
-  SCOUT_RULES,
-  huntersResting,
-  HUNT_RULES,
+  huntersOf,
   depositHeld,
   resourceKnown,
   foodCapacity,
@@ -59,7 +53,6 @@ import {
   EVENT_RULES,
   startYear,
   Visibility,
-  UNIT_RULES,
   type GameEvent,
   type Camp,
   type GameState,
@@ -163,16 +156,6 @@ export function buildGameView(state: GameState, full = false): GameView {
     dateLabel: formatDate(year, month),
     eraName: FIRST_ERA.name,
     season: seasonView(state, month),
-    units: state.units.map((u) => ({
-      id: u.id,
-      kind: u.kind,
-      name: UNIT_RULES[u.kind].name,
-      x: u.x,
-      y: u.y,
-      target: u.target ? { ...u.target } : null,
-      path: u.path.map((p) => ({ x: p.x, y: p.y })),
-      exploring: u.explore === true,
-    })),
     camps: state.camps
       .filter((c) => c.owner === PLAYER || known(state, c.x, c.y))
       .map((c) => ({
@@ -276,18 +259,8 @@ function dateLabelOf(tick: number): string {
 /** Rédige un événement du moteur pour le joueur. */
 function noticeOf(state: GameState, event: GameEvent): string {
   switch (event.type) {
-    case 'unitGaveUp': {
-      const unit = state.units.find((u) => u.id === event.unitId)
-      const name = unit ? UNIT_RULES[unit.kind].name : 'Une unité'
-      return `${name} renonce : aucun chemin connu assez court ne mène à sa destination.`
-    }
     case 'bandGaveUp':
       return 'La bande s’arrête : aucun chemin connu assez court ne mène à sa destination.'
-    case 'explored': {
-      const unit = state.units.find((u) => u.id === event.unitId)
-      const name = unit ? UNIT_RULES[unit.kind].name : 'L’éclaireur'
-      return `${name} a exploré tout ce qui est à sa portée : il attend vos ordres.`
-    }
     case 'victory':
       return `Victoire : la tribu a atteint l'objectif du ${FIRST_ERA.name.toLowerCase()}.`
     case 'defeat':
@@ -306,7 +279,7 @@ function noticeOf(state: GameState, event: GameEvent): string {
     case 'winter':
       return `L'hiver arrive : la cueillette tombe à ${Math.round(event.yieldFactor * 100)} % jusqu'au printemps.`
     case 'peopleMet':
-      return `Rencontre : vos éclaireurs aperçoivent les terres du ${event.name}.`
+      return `Rencontre : une de vos bandes aperçoit les terres du ${event.name}.`
     case 'raid': {
       if (event.killed > 0)
         return `Raid du ${event.name} : la réserve était vide, ${event.killed} des vôtres ${event.killed > 1 ? 'sont tués' : 'est tué'}.`
@@ -321,7 +294,7 @@ function noticeOf(state: GameState, event: GameEvent): string {
     case 'meatLost':
       return `Chasse : la réserve est pleine, ${event.amount} rations de viande sont perdues.`
     case 'hunterKilled':
-      return `Chasse : un chasseur est mort face aux ${ANIMAL_RULES[event.animal].name.toLowerCase()}.`
+      return `Chasse : un chasseur de la bande est mort face aux ${ANIMAL_RULES[event.animal].name.toLowerCase()}.`
   }
 }
 
@@ -368,15 +341,8 @@ function tribeView(state: GameState): TribeView {
       name: RESOURCE_RULES[k].name,
       amount: Math.floor(tribe.materials[k]!),
     })),
-    hunters: state.units.filter((u) => u.kind === 'chasseur').length,
-    maxHunters: maxHunters(state),
-    recruitCost: HUNT_RULES.recruitFood,
-    recruitBlocked: cannotRecruit(state),
-    scouts: state.units.filter((u) => u.kind === 'eclaireur').length,
-    maxScouts: maxScouts(state),
-    scoutCost: SCOUT_RULES.recruitFood,
-    scoutBlocked: cannotRecruitScout(state),
-    huntersResting: huntersResting(state),
+    hunters: huntersOf(state),
+    huntersResting: tribe.food >= foodCapacity(state),
     camps: state.camps.filter((c) => c.owner === PLAYER).length,
     bands: bandsOf(state).length,
     efficiency: tribeEfficiency(state),
@@ -509,10 +475,10 @@ function inventionViews(state: GameState): InventionView[] {
 }
 
 /**
- * Cellules découvertes au-delà desquelles on a exploré : au départ, la tribu en voit environ
- * 250, et ses chasseurs, laissés à eux-mêmes, n'en ajoutent guère.
+ * Cellules découvertes au-delà desquelles on a exploré : au départ, la bande en voit environ
+ * 600 ; il faut l'avoir un peu promenée pour en connaître le double.
  */
-const HINT_EXPLORED_CELLS = 400
+const HINT_EXPLORED_CELLS = 1200
 
 /**
  * Conseil du moment pour qui découvre le jeu : la première étape pas encore franchie, ou
@@ -521,15 +487,14 @@ const HINT_EXPLORED_CELLS = 400
 export function hintOf(state: GameState): string | null {
   const camps = state.camps.filter((c) => c.owner === PLAYER)
   const home = camps[0]
-  const scout = state.units.find((u) => u.kind === 'eclaireur')
-  // Durable : une fois assez de terres découvertes, le conseil ne revient pas quand
-  // l'éclaireur rentre au camp. Un ordre en cours suffit pour réagir tout de suite.
+  // Durable : une fois assez de terres découvertes, le conseil ne revient pas quand la bande
+  // s'arrête. Un ordre en cours suffit pour réagir tout de suite.
   const explored =
     camps.length > 1 ||
-    scout?.target != null ||
+    home?.target != null ||
     (home !== undefined && state.fog.known >= HINT_EXPLORED_CELLS)
   if (!explored)
-    return 'Choisissez l’éclaireur (clic) puis cliquez sur la carte : il explore et dissipe le brouillard.'
+    return 'Choisissez la bande (clic sur le camp) puis clic droit sur la carte : elle y marche, et ce qu’elle voit se dévoile.'
   const { ranks, current } = state.inventions
   if (Object.keys(ranks).length === 0 && !current)
     return 'Lancez une invention dans le panneau des inventions : le panier nourrit mieux, la lance rend la chasse plus sûre.'

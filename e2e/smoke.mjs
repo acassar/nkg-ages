@@ -1,5 +1,5 @@
 /**
- * Test de fumée sur le build : lancer une partie, régler le temps, envoyer l'éclaireur.
+ * Test de fumée sur le build : lancer une partie, régler le temps, envoyer la bande.
  * En bureau puis en téléphone. Usage : pnpm build && pnpm e2e
  */
 import assert from 'node:assert/strict'
@@ -65,7 +65,7 @@ await scenario('partie', { width: 1280, height: 720 }, async (page) => {
   await page.waitForTimeout(600)
   assert.equal(await date(page), frozen)
 
-  // L'éclaireur est choisi au départ ; un clic droit l'envoie.
+  // La bande est choisie au départ ; un clic droit l'envoie.
   const map = page.locator('[data-testid=map]')
   const box = await map.boundingBox()
   await page.mouse.click(box.x + box.width / 2 + 60, box.y + box.height / 2, { button: 'right' })

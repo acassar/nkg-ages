@@ -9,9 +9,7 @@ import {
   BAND_RULES,
   bandsOf,
   cannotGift,
-  cannotRecruit,
   cannotStart,
-  huntersResting,
   INVENTION_KINDS,
   RELATION_RULES,
   type GameState,
@@ -33,9 +31,7 @@ export function createBot(_seed: string): Bot {
     play(state) {
       invent(state)
       grow(state)
-      scout(state)
       bands(state)
-      recruit(state)
       diplomacy(state)
     },
   }
@@ -60,13 +56,6 @@ function grow(state: GameState): void {
   if (cannotBuildVillage(state) === null) applyCommand(state, { type: 'buildVillage' })
 }
 
-/** L'éclaireur oisif part explorer. */
-function scout(state: GameState): void {
-  const unit = state.units.find((u) => u.kind === 'eclaireur')
-  if (!unit || unit.target || unit.explore) return
-  applyCommand(state, { type: 'explore', unitIds: [unit.id] })
-}
-
 /** Les bandes migrent seules ; une bande qui dépasse sa taille idéale se scinde. */
 function bands(state: GameState): void {
   for (const band of bandsOf(state)) {
@@ -74,12 +63,6 @@ function bands(state: GameState): void {
     if ((band.members ?? 0) > BAND_RULES.comfortSize)
       applyCommand(state, { type: 'splitBand', campId: band.id })
   }
-}
-
-/** Autant de chasseurs que possible, sauf quand la réserve est pleine. */
-function recruit(state: GameState): void {
-  if (huntersResting(state)) return
-  if (cannotRecruit(state) === null) applyCommand(state, { type: 'recruitHunter' })
 }
 
 /** Un présent aux voisins qui deviennent hostiles. */

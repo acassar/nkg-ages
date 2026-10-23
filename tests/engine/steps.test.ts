@@ -5,11 +5,11 @@ import { loadGame, saveGame } from '@/engine/save/save'
 
 const options = { seed: 'semaines', randomStart: false, width: 128, height: 64 }
 
-/** Envoie l'éclaireur au loin, pour que le mouvement compte dans la partie. */
+/** Envoie la bande au loin, pour que le mouvement compte dans la partie. */
 function started() {
   const state = createGame(options)
-  const scout = state.units.find((u) => u.kind === 'eclaireur')!
-  applyCommand(state, { type: 'moveUnits', unitIds: [scout.id], x: scout.x + 20, y: scout.y })
+  const band = state.camps[0]!
+  applyCommand(state, { type: 'moveCamp', campId: band.id, x: band.x + 20, y: band.y })
   return state
 }
 
@@ -35,13 +35,13 @@ describe('pas de la semaine', () => {
     expect(saveGame(byMonths)).toEqual(saveGame(byWeeks))
   })
 
-  it('les unités avancent entre deux mois, l’économie attend la fin du mois', () => {
+  it('les bandes avancent entre deux mois, l’économie attend la fin du mois', () => {
     const state = started()
-    const scout = state.units.find((u) => u.kind === 'eclaireur')!
-    const x = scout.x
+    const band = state.camps[0]!
+    const x = band.x
     const food = state.tribe.food
     advance(state)
-    expect(scout.x).toBeGreaterThan(x)
+    expect(band.x).toBeGreaterThan(x)
     expect(state.tribe.food).toBe(food)
   })
 

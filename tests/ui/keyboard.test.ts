@@ -4,7 +4,8 @@ import { intentOf } from '@/ui/keyboard'
 describe('raccourcis clavier', () => {
   it('F ne fait plus rien : les bandes naissent d’une scission', () =>
     expect(intentOf('KeyF')).toBeNull())
-  it('E fait explorer', () => expect(intentOf('KeyE')).toEqual({ kind: 'explore' }))
+  it('E ne fait plus rien : il n’y a plus d’éclaireur à envoyer', () =>
+    expect(intentOf('KeyE')).toBeNull())
   it('Espace met en pause', () => expect(intentOf('Space')).toEqual({ kind: 'togglePause' }))
   it.each([1, 2, 3, 4, 5])('la touche %i règle la vitesse', (n) => {
     expect(intentOf(`Digit${n}`)).toEqual({ kind: 'speed', speed: n })

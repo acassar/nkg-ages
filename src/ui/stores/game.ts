@@ -42,10 +42,9 @@ export const useGameStore = defineStore('game', () => {
   const view = shallowRef<GameView | null>(null)
   const error = ref<string | null>(null)
   const loading = ref(false)
-  const selected = ref<Set<number>>(new Set())
   /** Lieu que la carte doit montrer (clic sur une alerte) ; `n` change à chaque demande. */
   const focus = shallowRef<{ x: number; y: number; n: number } | null>(null)
-  /** Campement choisi d'un clic (pour le faire grandir ou y former des recrues), ou null. */
+  /** Campement choisi d’un clic (pour le déplacer, le scinder, le faire grandir), ou null. */
   const selectedCamp = ref<number | null>(null)
   const viewListeners = new Set<ViewListener>()
   const slot = slotFactory()
@@ -142,7 +141,8 @@ export const useGameStore = defineStore('game', () => {
       }
       const started = await start(current)
       world.value = markRaw(started.world)
-      selected.value = new Set(started.view.units.map((u) => u.id))
+      // La bande de départ est choisie d'emblée : un clic droit suffit pour la faire marcher.
+      selectedCamp.value = started.view.camps.find((c) => c.mine && c.band)?.id ?? null
       receive(started.view)
       saving = autosave
       if (autosave) autosaveTimer = setInterval(() => void saveNow(), AUTOSAVE_MS)
@@ -181,8 +181,6 @@ export const useGameStore = defineStore('game', () => {
   const setPaused = (paused: boolean) => send({ type: 'setPaused', paused })
   const invent = (invention: string) =>
     send({ type: 'invent', invention: invention as InventionKind })
-  const recruitHunter = (campId?: number) => send({ type: 'recruitHunter', campId })
-  const recruitScout = (campId?: number) => send({ type: 'recruitScout', campId })
   const buildVillage = (campId?: number) => send({ type: 'buildVillage', campId })
   const buildCity = (campId?: number) => send({ type: 'buildCity', campId })
   const gift = (people: number) => send({ type: 'gift', people })
@@ -197,38 +195,15 @@ export const useGameStore = defineStore('game', () => {
     return view.value?.camps.find((c) => c.mine && c.id === selectedCamp.value && c.band) ?? null
   }
 
-  function select(ids: number[]) {
-    selected.value = new Set(ids)
-    selectedCamp.value = null
-  }
-
-  function toggleSelected(id: number) {
-    const next = new Set(selected.value)
-    if (!next.delete(id)) next.add(id)
-    selected.value = next
-    selectedCamp.value = null
-  }
-
-  /** Choisit un campement : les unités choisies sont relâchées. */
+  /** Choisit un campement (null : plus aucun). */
   function selectCamp(id: number | null) {
-    selected.value = new Set()
     selectedCamp.value = id
   }
 
-  /** Les unités choisies partent explorer seules. */
-  function exploreSelected() {
-    const unitIds = [...selected.value]
-    if (unitIds.length === 0) return report('Choisissez une unité à envoyer explorer', true)
-    return send({ type: 'explore', unitIds })
-  }
-
-  /** Envoie les unités choisies, ou la bande choisie, vers ce point. */
+  /** Envoie la bande choisie vers ce point. */
   function moveSelectedTo(x: number, y: number) {
     const band = selectedBand()
     if (band) return send({ type: 'moveCamp', campId: band.id, x, y })
-    const unitIds = [...selected.value]
-    if (unitIds.length === 0) return
-    return send({ type: 'moveUnits', unitIds, x, y })
   }
 
   /** Demande à la carte de se centrer sur ce lieu (affichage seulement). */
@@ -241,7 +216,6 @@ export const useGameStore = defineStore('game', () => {
     disconnect(true)
     world.value = null
     view.value = null
-    selected.value = new Set()
     selectedCamp.value = null
     report(null)
   }
@@ -253,7 +227,6 @@ export const useGameStore = defineStore('game', () => {
     view,
     error,
     loading,
-    selected,
     focus,
     selectedCamp,
     savedGame,
@@ -265,13 +238,8 @@ export const useGameStore = defineStore('game', () => {
     setSpeed,
     togglePause,
     setPaused,
-    select,
-    toggleSelected,
     selectCamp,
-    exploreSelected,
     invent,
-    recruitHunter,
-    recruitScout,
     buildVillage,
     buildCity,
     gift,

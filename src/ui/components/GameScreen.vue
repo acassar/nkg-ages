@@ -48,8 +48,8 @@ const ranks = (['E', 'D', 'C', 'B', 'A', 'S'] as const).map((rank) => ({
       <button class="close" aria-label="Fermer" @click="game.dismissError()">×</button>
     </p>
     <p class="hint parchment">
-      Clic : choisir une unité ou une bande (Maj : ajouter) · clic droit : l’envoyer · E : explorer
-      · glisser ou ZQSD : carte · molette : zoom · Espace : pause · 1 à 5 : vitesse ·
+      Clic : choisir une bande · clic droit : l’y envoyer · glisser ou ZQSD : carte · molette : zoom
+      · Espace : pause · 1 à 5 : vitesse ·
       <span class="legend" data-testid="rarity-legend" title="Rareté des gisements, de E à S"
         >rareté
         <span

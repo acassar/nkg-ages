@@ -1,9 +1,7 @@
 import { BIOMES } from '../content/biomes'
 import { biomeAt, inBounds, moveCostAt, type World } from '../world/world'
 
-export type UnitKind = 'eclaireur' | 'chasseur'
-
-/** Ce qui marche sur la carte le long d'un chemin : une unité, une bande. */
+/** Ce qui marche sur la carte le long d'un chemin : une bande (plus tard, une expédition). */
 export interface Mover {
   x: number
   y: number
@@ -15,42 +13,6 @@ export interface Mover {
   plannedFog: number
   /** Coût de trajet qu'elle accepte encore de dépenser avant de renoncer. */
   patience: number
-}
-
-export interface Unit extends Mover {
-  id: number
-  kind: UnitKind
-  /** Ordre donné par l'unité elle-même (poursuite d'un troupeau), pas par le joueur. */
-  auto: boolean
-  /** Ordre « Explorer » : arrivée quelque part, l'unité repart vers la lisière du connu. */
-  explore?: boolean
-}
-
-export interface UnitRules {
-  name: string
-  /** Cellules parcourues par tick en plaine. */
-  speed: number
-  /** Rayon de vision en cellules. */
-  sight: number
-  /**
-   * Détour accepté quand le terrain découvert coupe le chemin prévu : l'unité renonce si
-   * le trajet total dépasse `detour` fois le trajet prévu au départ, plus `detourSlack`.
-   */
-  detour: number
-  detourSlack: number
-}
-
-export const UNIT_RULES: Readonly<Record<UnitKind, UnitRules>> = {
-  eclaireur: { name: 'Éclaireur', speed: 0.5, sight: 9, detour: 2, detourSlack: 30 },
-  chasseur: { name: 'Chasseur', speed: 0.42, sight: 6, detour: 2, detourSlack: 20 },
-}
-
-/**
- * Avance une unité le long de son chemin, plus lentement en terrain difficile.
- * Rend false si le prochain pas tombe sur une cellule infranchissable : il faut recalculer.
- */
-export function moveUnit(unit: Unit, world: World, pace = 1): boolean {
-  return moveAlong(unit, world, UNIT_RULES[unit.kind].speed * pace)
 }
 
 /**
@@ -84,12 +46,7 @@ export function moveAlong(unit: Mover, world: World, speed: number): boolean {
   return true
 }
 
-/** Arrête l'unité : plus de cible ni de chemin. */
-export function stopUnit(unit: Unit): void {
-  stopMover(unit)
-  unit.auto = false
-}
-
+/** Arrête ce qui marche : plus de cible ni de chemin. */
 export function stopMover(mover: Mover): void {
   mover.target = null
   mover.path = []

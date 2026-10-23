@@ -182,6 +182,18 @@
           "status": "done"
         },
         {
+          "title": "Bandes seules : elles voient, chassent et défendent",
+          "status": "done"
+        },
+        {
+          "title": "Savoir qui vieillit (brouillard qui se voile)",
+          "status": "todo"
+        },
+        {
+          "title": "Expéditions : un seul type d'unité, plusieurs missions",
+          "status": "todo"
+        },
+        {
           "title": "Sédentarisation, passage au Néolithique",
           "status": "todo"
         },
@@ -223,6 +235,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-23",
+      "text": "Jeu : plus d'éclaireurs ni de chasseurs à piloter ; on ne contrôle que les bandes, qui voient deux fois plus loin que leur zone, chassent seules les troupeaux qu'elles voient (pas les mammouths) et défendent le camp avec leurs chasseurs, une personne sur six ; une bande qui migre seule sans meilleur site connu part vers l'inconnu"
+    },
     {
       "date": "2026-10-23",
       "text": "Correction : les naissances se partagent enfin entre tous les campements selon leur taille ; arrondies au plus gros, elles allaient toutes au plus grand village ou à la plus grande bande, et les autres stagnaient"

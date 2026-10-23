@@ -42,18 +42,18 @@ describe('hôte de partie', () => {
     expect(months).toBeLessThanOrEqual(expected)
   })
 
-  it('fait bouger les unités entre deux mois', () => {
+  it('fait bouger les bandes entre deux mois', () => {
     const { scheduler, host, views } = setup()
-    const scout = host.game!.units.find((u) => u.kind === 'eclaireur')!
-    const from = { x: scout.x, y: scout.y }
-    host.send({ type: 'moveUnits', unitIds: [scout.id], x: from.x + 6, y: from.y })
+    const band = host.game!.camps[0]!
+    const from = { x: band.x, y: band.y }
+    host.send({ type: 'moveCamp', campId: band.id, x: from.x + 6, y: from.y })
     host.send({ type: 'setPaused', paused: false })
     const count = views.length
-    // Un peu plus d'une seconde à la vitesse 1 : pas encore un mois, mais l'éclaireur avance.
+    // Un peu plus d'une seconde à la vitesse 1 : pas encore un mois, mais la bande avance.
     scheduler.advance(1100)
     expect(host.game!.clock.tick).toBe(0)
     expect(views.length).toBeGreaterThan(count)
-    const moved = host.game!.units.find((u) => u.id === scout.id)!
+    const moved = host.game!.camps.find((c) => c.id === band.id)!
     expect(Math.hypot(moved.x - from.x, moved.y - from.y)).toBeGreaterThan(0)
   })
 
@@ -71,7 +71,7 @@ describe('hôte de partie', () => {
   it('renvoie le refus d’une commande invalide sans publier', () => {
     const { host, views } = setup()
     const count = views.length
-    expect(host.send({ type: 'moveUnits', unitIds: [], x: 1, y: 1 }).ok).toBe(false)
+    expect(host.send({ type: 'moveCamp', campId: 999, x: 1, y: 1 }).ok).toBe(false)
     expect(views.length).toBe(count)
   })
 

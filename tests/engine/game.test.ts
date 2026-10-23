@@ -1,26 +1,25 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyCommand,
-  cannotRecruit,
   clearDirty,
   createGame,
   currentScore,
   depositHeld,
   foodCapacity,
-  herdVisible,
-  maxHunters,
-  sightOf,
+  huntersOf,
   step,
+  type Camp,
   type GameState,
 } from '@/engine/game'
 import { HUNT_RULES } from '@/engine/content/fauna'
+import { BAND_RULES } from '@/engine/content/bands'
+import { bandSight } from '@/engine/bands/sight'
 import { FIRST_ERA, SCORE_RULES } from '@/engine/content/eras'
 import { INVENTION_KINDS } from '@/engine/content/inventions'
 import { BIOMES, isWater, type BiomeId } from '@/engine/content/biomes'
 import { RIVER_RULES } from '@/engine/content/rivers'
 import { Visibility } from '@/engine/fog/fog'
 import { TRIBE_RULES } from '@/engine/content/tribe'
-import { UNIT_RULES } from '@/engine/units/units'
 import { PLAYER } from '@/engine/territory/territory'
 import fc from 'fast-check'
 import { createRng } from '@/engine/core/random'
@@ -38,7 +37,7 @@ function fingerprint(g: GameState): string {
   }
   return JSON.stringify({
     tick: g.clock.tick,
-    units: g.units,
+    camps: g.camps,
     fog,
     land,
     rng: g.rng.state,
@@ -100,11 +99,10 @@ describe('création de partie', () => {
     expect(g.territory.weights![i]).toBeCloseTo(food + RIVER_RULES.food)
   })
 
-  it('pose un campement et un éclaireur sur un départ viable', () => {
+  it('pose une bande sur un départ viable, sans éclaireur ni chasseur à piloter', () => {
     const g = createGame(options)
     expect(g.camps).toHaveLength(1)
-    // Un éclaireur et deux chasseurs, au camp.
-    expect(g.units.map((u) => u.kind)).toEqual(['eclaireur', 'chasseur', 'chasseur'])
+    expect('units' in g).toBe(false)
     const camp = g.camps[0]!
     expect(isWater(g.world.biome[Math.floor(camp.y) * g.world.width + Math.floor(camp.x)]!)).toBe(
       false,
@@ -113,13 +111,21 @@ describe('création de partie', () => {
     expect(g.territory.ownedCount).toBeGreaterThan(20)
     expect(g.territory.playerWeight).toBeGreaterThan(0)
     expect(g.tribe.population).toBe(TRIBE_RULES.startPopulation)
+    expect(camp.members).toBe(TRIBE_RULES.startPopulation)
     expect(g.clock.paused).toBe(true)
   })
 
-  it('voit autour du campement dès le départ', () => {
+  it('voit autour de la bande, à toute sa vue, dès le départ', () => {
     const g = createGame(options)
     const c = g.camps[0]!
-    expect(g.fog.cells[Math.floor(c.y) * g.world.width + Math.floor(c.x)]).toBe(Visibility.Visible)
+    const { width } = g.world
+    expect(g.fog.cells[Math.floor(c.y) * width + Math.floor(c.x)]).toBe(Visibility.Visible)
+    // Bien plus loin que sa zone : ses gens parcourent le pays.
+    const far = Math.floor(c.y) * width + Math.floor(c.x + BAND_RULES.sight - 1)
+    expect(BAND_RULES.sight).toBeGreaterThan(BAND_RULES.radius)
+    expect(g.fog.cells[far]).toBe(Visibility.Visible)
+    const beyond = Math.floor(c.y) * width + Math.floor(c.x + BAND_RULES.sight + 2)
+    expect(g.fog.cells[beyond]).toBe(Visibility.Unknown)
   })
 
   it('propose 3 départs au choix, et le choisi est utilisé', () => {
@@ -157,65 +163,43 @@ describe('commandes', () => {
     expect(g.clock.speed).toBe(1)
   })
 
-  it('refuse une destination hors du monde, dans l’eau connue ou sans unité', () => {
+  it('refuse une destination hors du monde, dans l’eau connue ou sans bande', () => {
     const g = createGame(options)
-    const id = g.units[0]!.id
-    expect(applyCommand(g, { type: 'moveUnits', unitIds: [id], x: -1, y: 5 }).ok).toBe(false)
-    expect(applyCommand(g, { type: 'moveUnits', unitIds: [id], x: NaN, y: 5 }).ok).toBe(false)
+    const id = g.camps[0]!.id
+    expect(applyCommand(g, { type: 'moveCamp', campId: id, x: -1, y: 5 }).ok).toBe(false)
+    expect(applyCommand(g, { type: 'moveCamp', campId: id, x: NaN, y: 5 }).ok).toBe(false)
     const water = knownWater(g)
-    expect(applyCommand(g, { type: 'moveUnits', unitIds: [id], ...water })).toEqual({
+    expect(applyCommand(g, { type: 'moveCamp', campId: id, ...water })).toEqual({
       ok: false,
       reason: 'Destination infranchissable',
     })
     const c = g.camps[0]!
-    expect(applyCommand(g, { type: 'moveUnits', unitIds: [999], x: c.x, y: c.y }).ok).toBe(false)
+    expect(applyCommand(g, { type: 'moveCamp', campId: 999, x: c.x, y: c.y }).ok).toBe(false)
   })
 
   it('accepte un clic sur de l’eau encore inconnue : le brouillard ne trahit rien', () => {
     const g = createGame(options)
-    const u = g.units[0]!
+    const band = g.camps[0]!
     expect(g.fog.cells[0]).toBe(Visibility.Unknown)
     expect(isWater(g.world.biome[0]!)).toBe(true)
-    expect(applyCommand(g, { type: 'moveUnits', unitIds: [u.id], x: 0.5, y: 0.5 })).toEqual({
+    expect(applyCommand(g, { type: 'moveCamp', campId: band.id, x: 0.5, y: 0.5 })).toEqual({
       ok: true,
     })
-    expect(u.target).toEqual({ x: 0.5, y: 0.5 })
+    expect(band.target).toEqual({ x: 0.5, y: 0.5 })
   })
 
   it('refuse une destination qu’aucun chemin connu n’atteint', () => {
     const g = createGame(options)
-    const u = g.units[0]!
+    const band = g.camps[0]!
     // On fait comme si le joueur connaissait toute la carte : la case d'eau du coin est
     // refusée, et une terre d'une autre île aussi.
     g.fog.cells.fill(Visibility.Seen)
     const island = otherIsland(g)
     if (!island) return
-    expect(applyCommand(g, { type: 'moveUnits', unitIds: [u.id], ...island })).toEqual({
+    expect(applyCommand(g, { type: 'moveCamp', campId: band.id, ...island })).toEqual({
       ok: false,
       reason: 'Aucun chemin connu vers cette destination',
     })
-  })
-
-  it('dans un ordre de groupe, l’unité sans chemin abandonne son ancien ordre', () => {
-    const g = createGame(options)
-    const scout = g.units[0]!
-    const camp = g.camps[0]!
-    // Une seconde unité, sur une île que le joueur sait séparée du campement.
-    g.fog.cells.fill(Visibility.Seen)
-    const island = otherIsland(g)
-    if (!island) return
-    const castaway = {
-      ...scout,
-      id: 99,
-      ...island,
-      target: { x: island.x + 0.1, y: island.y },
-      path: [],
-    }
-    g.units.push(castaway)
-    const r = applyCommand(g, { type: 'moveUnits', unitIds: [scout.id, 99], x: camp.x, y: camp.y })
-    expect(r.ok).toBe(true)
-    expect(castaway.target).toBeNull()
-    expect(castaway.path).toEqual([])
   })
 
   it('lance une invention par commande, puis l’annonce achevée avec son rang', () => {
@@ -249,11 +233,11 @@ describe('commandes', () => {
     const hunt = (withSpear: boolean) => {
       const h = createGame(options)
       if (withSpear) h.inventions.ranks.lance = 'S'
-      const hunter = h.units.find((u) => u.kind === 'chasseur')!
-      h.units = [hunter]
+      const band = h.camps[0]!
       let prises = 0
       for (let i = 0; i < 200; i++) {
-        h.herds = [{ id: 1, kind: 'cerf', x: hunter.x + 0.5, y: hunter.y, size: 8, goal: hunter }]
+        h.herds = [{ id: 1, kind: 'cerf', x: band.x + 3, y: band.y, size: 8, goal: band }]
+        h.tribe.food = 0
         step(h)
         prises += 8 - (h.herds[0]?.size ?? 0)
       }
@@ -264,24 +248,21 @@ describe('commandes', () => {
 
   it('chaque technique agit sur la partie', () => {
     const g = createGame(options)
-    const scout = g.units.find((u) => u.kind === 'eclaireur')!
-    const hunter = g.units.find((u) => u.kind === 'chasseur')!
-    const sight = sightOf(g, hunter)
+    const sight = bandSight(g.inventions)
+    expect(sight).toBe(BAND_RULES.sight)
     g.inventions.ranks.pistage = 'S'
-    expect(sightOf(g, hunter)).toBe(sight + 5)
-    expect(sightOf(g, scout)).toBe(UNIT_RULES.eclaireur.sight)
+    expect(bandSight(g.inventions)).toBe(sight + 5)
 
-    // Portage : l'éclaireur couvre plus de chemin dans le même temps.
+    // Portage : la bande couvre plus de chemin dans le même temps.
     const walk = (rank: 'S' | null) => {
       const h = createGame(options)
       if (rank) h.inventions.ranks.portage = rank
-      const u = h.units.find((v) => v.kind === 'eclaireur')!
-      h.units = [u]
-      const start = { x: u.x, y: u.y }
+      const band = h.camps[0]!
+      const start = { x: band.x, y: band.y }
       const far = landAt(h, (x, y) => Math.hypot(x - start.x, y - start.y) > 25)
-      applyCommand(h, { type: 'moveUnits', unitIds: [u.id], x: far.x + 0.5, y: far.y + 0.5 })
-      for (let i = 0; i < 10; i++) step(h)
-      return Math.hypot(u.x - start.x, u.y - start.y)
+      applyCommand(h, { type: 'moveCamp', campId: band.id, x: far.x + 0.5, y: far.y + 0.5 })
+      for (let i = 0; i < 2; i++) step(h)
+      return Math.hypot(band.x - start.x, band.y - start.y)
     }
     expect(walk('S')).toBeGreaterThan(walk(null))
 
@@ -301,28 +282,29 @@ describe('commandes', () => {
     expect(yieldOf('poisson', 'harpon')).toBeGreaterThan(yieldOf('poisson', null))
   })
 
-  it('le propulseur rend la chasse au mammouth moins meurtrière', () => {
+  it('le propulseur rend la chasse moins meurtrière', () => {
     // Un seul monde pour toutes les manches (le générer coûte cher) : chaque manche
-    // repart d'un chasseur neuf et d'un aléa à elle.
-    const base = createGame(options)
-    const start = { ...base.units.find((u) => u.kind === 'chasseur')! }
+    // repart d'une bande neuve et d'un aléa à elle. Des sangliers, les plus dangereux
+    // qu'une bande chasse seule.
+    const base = createGame({ ...options, rareEvents: false })
+    const start = { ...base.camps[0]! }
     const deaths = (thrower: boolean) => {
       let dead = 0
       for (let run = 0; run < 20; run++) {
         const g = base
         g.rng = createRng(`propulseur-${run}`)
         g.inventions.ranks = { lance: 'E', ...(thrower ? { propulseur: 'S' as const } : {}) }
-        const hunter = { ...start, path: [], target: null }
-        g.units = [hunter]
-        for (let i = 0; i < 40 && g.units.length > 0; i++) {
-          g.herds = [
-            { id: 1, kind: 'mammouth', x: hunter.x + 0.5, y: hunter.y, size: 4, goal: hunter },
-          ]
+        const band: Camp = { ...start, path: [], target: null }
+        g.camps = [band]
+        for (let i = 0; i < 40; i++) {
+          g.herds = [{ id: 1, kind: 'sanglier', x: band.x + 2, y: band.y, size: 5, goal: band }]
           g.tribe.food = 0
-          g.tribe.population = 12
+          g.tribe.population = 24
+          band.members = 24
+          clearDirty(g)
           step(g)
+          dead += g.events.filter((e) => e.type === 'hunterKilled').length
         }
-        if (g.units.length === 0) dead++
       }
       return dead
     }
@@ -376,12 +358,12 @@ describe('commandes', () => {
 })
 
 describe('scénarios', () => {
-  it('un éclaireur envoyé au loin découvre de nouvelles terres', () => {
+  it('une bande envoyée au loin découvre de nouvelles terres', () => {
     const g = createGame(options)
-    const u = g.units[0]!
+    const band = g.camps[0]!
     const known = () => g.fog.cells.filter((c) => c !== Visibility.Unknown).length
     const before = known()
-    // Cherche une destination de terre accessible en ligne droite.
+    // Cherche une destination de terre accessible.
     let target: { x: number; y: number } | null = null
     for (const [dx, dy] of [
       [25, 0],
@@ -393,48 +375,44 @@ describe('scénarios', () => {
       [18, -18],
       [-18, 18],
     ] as const) {
-      const r = applyCommand(g, { type: 'moveUnits', unitIds: [u.id], x: u.x + dx, y: u.y + dy })
-      if (r.ok) {
-        target = { x: u.x + dx, y: u.y + dy }
+      const at = { campId: band.id, x: band.x + dx, y: band.y + dy }
+      if (applyCommand(g, { type: 'moveCamp', ...at }).ok) {
+        target = at
         break
       }
     }
     expect(target).not.toBeNull()
-    for (let i = 0; i < 120; i++) step(g)
+    for (let i = 0; i < 30; i++) step(g)
     expect(known()).toBeGreaterThan(before)
   })
 
-  it('l’éclaireur envoyé dans l’eau inconnue s’arrête au bord, sans jamais nager', () => {
-    const g = createGame(options)
-    const u = g.units[0]!
-    applyCommand(g, { type: 'moveUnits', unitIds: [u.id], x: 0.5, y: 0.5 })
-    let ticks = 0
-    for (; ticks < 3000 && u.target; ticks++) {
+  it('la bande envoyée dans l’eau inconnue s’arrête au bord, sans jamais nager', () => {
+    const g = createGame({ ...options, rareEvents: false })
+    const band = g.camps[0]!
+    applyCommand(g, { type: 'moveCamp', campId: band.id, x: 0.5, y: 0.5 })
+    let months = 0
+    const gaveUp: unknown[] = []
+    for (; months < 600 && band.target; months++) {
       step(g)
-      expect(onWater(g, u)).toBe(false)
+      expect(onWater(g, band)).toBe(false)
+      gaveUp.push(...g.events.filter((e) => e.type === 'bandGaveUp'))
+      clearDirty(g)
     }
     // Le coin est en pleine mer : une fois les côtes découvertes, plus aucun chemin connu
-    // assez court n'y mène, l'éclaireur s'arrête au lieu d'errer.
-    expect(u.target).toBeNull()
-    expect(u.path).toEqual([])
-    expect(ticks).toBeLessThan(1500)
-    // Le joueur en est prévenu, une seule fois, puis l'envoi suivant repart à vide.
-    // (les autres avis, comme l'hiver ou les événements rares, ne comptent pas ici)
-    expect(g.events.filter((e) => e.type === 'unitGaveUp')).toEqual([
-      { type: 'unitGaveUp', unitId: u.id },
-    ])
-    clearDirty(g)
-    expect(g.events).toEqual([])
+    // assez court n'y mène, la bande s'arrête au lieu d'errer, et le joueur en est prévenu.
+    expect(band.target).toBeNull()
+    expect(band.path).toEqual([])
+    expect(months).toBeLessThan(400)
+    expect(gaveUp).toEqual([{ type: 'bandGaveUp', campId: band.id }])
   })
 
-  it('une unité qui arrive à destination ne prévient de rien', () => {
-    const g = createGame(options)
-    const u = g.units[0]!
-    const c = g.camps[0]!
-    applyCommand(g, { type: 'moveUnits', unitIds: [u.id], x: c.x + 1, y: c.y })
-    for (let i = 0; i < 20 && u.target; i++) step(g)
-    expect(u.target).toBeNull()
-    expect(g.events).toEqual([])
+  it('une bande qui arrive à destination ne prévient de rien', () => {
+    const g = createGame({ ...options, rareEvents: false })
+    const band = g.camps[0]!
+    applyCommand(g, { type: 'moveCamp', campId: band.id, x: band.x + 1, y: band.y })
+    step(g)
+    expect(band.target).toBeNull()
+    expect(g.events.filter((e) => e.type === 'bandGaveUp')).toEqual([])
   })
 
   it('n’entre jamais dans l’eau et finit toujours par arriver ou s’arrêter (fast-check)', () => {
@@ -445,15 +423,15 @@ describe('scénarios', () => {
         fc.integer({ min: 0, max: g0.world.height - 1 }),
         (x, y) => {
           const g = createGame(options)
-          const u = g.units[0]!
-          const r = applyCommand(g, { type: 'moveUnits', unitIds: [u.id], x: x + 0.5, y: y + 0.5 })
-          if (!r.ok) return
-          for (let i = 0; i < 2500 && u.target; i++) {
+          const band = g.camps[0]!
+          const to = { campId: band.id, x: x + 0.5, y: y + 0.5 }
+          if (!applyCommand(g, { type: 'moveCamp', ...to }).ok) return
+          for (let i = 0; i < 600 && band.target; i++) {
             step(g)
-            expect(onWater(g, u)).toBe(false)
+            expect(onWater(g, band)).toBe(false)
           }
-          // Arrivé, ou arrêté faute de chemin connu assez court : jamais en errance.
-          expect(u.target).toBeNull()
+          // Arrivée, ou arrêtée faute de chemin connu assez court : jamais en errance.
+          expect(band.target).toBeNull()
         },
       ),
       { numRuns: 12 },
@@ -500,16 +478,16 @@ describe('scénarios', () => {
     expect(g.tribe.materials.silex).toBeCloseTo(24 * 0.5)
   })
 
-  it('un chasseur près d’un troupeau abat des bêtes et nourrit la tribu', () => {
+  it('la bande chasse seule un troupeau qu’elle voit et nourrit la tribu', () => {
     const g = createGame(options)
-    const hunter = g.units.find((u) => u.kind === 'chasseur')!
-    g.units = [hunter]
+    const band = g.camps[0]!
+    expect(huntersOf(g)).toBeGreaterThan(0)
     g.tribe.food = 0
     g.abundance.fill(0)
     g.territory.weights = new Float32Array(g.territory.owner.length)
     g.deposits = []
-    const herd = { id: 1, kind: 'cerf' as const, x: hunter.x + 0.5, y: hunter.y, size: 8 }
-    g.herds = [{ ...herd, goal: { x: herd.x, y: herd.y } }]
+    const spot = { x: band.x + BAND_RULES.sight - 3, y: band.y }
+    g.herds = [{ id: 1, kind: 'cerf', ...spot, size: 8, goal: { ...spot } }]
     let meat = 0
     let smallest = 8
     for (let i = 0; i < 60 && g.herds.length > 0; i++) {
@@ -517,85 +495,82 @@ describe('scénarios', () => {
       step(g)
       if (g.tribe.food > before) meat++
       smallest = Math.min(smallest, g.herds[0]?.size ?? 0)
-      // Le troupeau fuit : on le ramène à portée pour ce test.
-      for (const h of g.herds) Object.assign(h, { x: hunter.x + 0.5, y: hunter.y, goal: h })
+      // Le troupeau fuit : on le ramène en vue pour ce test.
+      for (const h of g.herds) Object.assign(h, { ...spot, goal: { ...spot } })
     }
     expect(meat).toBeGreaterThan(0)
     // Le troupeau peut se reconstituer ensuite : on regarde sa plus petite taille.
     expect(smallest).toBeLessThan(8)
   })
 
-  it('la chasse au mammouth peut coûter la vie d’un chasseur', () => {
-    const g = createGame(options)
-    const hunters = g.units.filter((u) => u.kind === 'chasseur')
-    const at = hunters[0]!
-    const herd = { id: 1, kind: 'mammouth' as const, x: at.x + 0.5, y: at.y, size: 4 }
+  it('la chasse peut coûter la vie d’un chasseur, et la tribu perd une personne', () => {
+    const g = createGame({ ...options, rareEvents: false })
+    const band = g.camps[0]!
+    const spot = { x: band.x + 2, y: band.y }
     let killed = 0
-    for (let i = 0; i < 400 && killed === 0; i++) {
-      g.herds = [{ ...herd, size: 4, goal: { x: herd.x, y: herd.y } }]
+    let population = 0
+    for (let i = 0; i < 2000 && killed === 0; i++) {
+      g.herds = [{ id: 1, kind: 'sanglier', ...spot, size: 5, goal: { ...spot } }]
       g.tribe.food = 0
+      g.tribe.population = 24
+      g.tribe.growth = 0
+      band.members = 24
+      clearDirty(g)
       step(g)
       killed = g.events.filter((e) => e.type === 'hunterKilled').length
-      clearDirty(g)
+      population = g.tribe.population
     }
     expect(killed).toBe(1)
-    expect(g.units.filter((u) => u.kind === 'chasseur')).toHaveLength(1)
+    expect(population).toBeLessThan(24)
   })
 
-  it('un chasseur oisif poursuit seul un troupeau en vue, sans avertir s’il renonce', () => {
+  it('un troupeau hors de vue n’est pas chassé', () => {
     const g = createGame(options)
-    const hunter = g.units.find((u) => u.kind === 'chasseur')!
-    g.units = [hunter]
-    const spot = { x: hunter.x + 4, y: hunter.y }
-    // Un troupeau en vue, sur une terre accessible : on prend la case connue la plus proche.
-    g.herds = [{ id: 1, kind: 'cerf', ...spot, size: 8, goal: { ...spot } }]
-    let chased = false
-    for (let i = 0; i < HUNT_RULES.chaseEvery + 1; i++) {
-      g.herds[0]!.x = spot.x
-      g.herds[0]!.y = spot.y
+    const band = g.camps[0]!
+    const spot = { x: band.x + BAND_RULES.sight + 6, y: band.y }
+    for (let i = 0; i < 24; i++) {
+      g.herds = [{ id: 1, kind: 'cerf', ...spot, size: 8, goal: { ...spot } }]
+      g.tribe.food = 0
       step(g)
-      chased ||= hunter.auto && hunter.target !== null
+      expect(g.herds[0]!.size).toBe(8)
     }
-    expect(herdVisible(g, g.herds[0]!)).toBe(true)
-    expect(chased).toBe(true)
-    expect(g.events.filter((e) => e.type === 'unitGaveUp')).toEqual([])
   })
 
-  it('un chasseur oisif ne poursuit pas seul un troupeau de mammouths', () => {
+  it('une bande ne chasse pas seule les mammouths', () => {
     const g = createGame(options)
-    const hunter = g.units.find((u) => u.kind === 'chasseur')!
-    g.units = [hunter]
-    const spot = { x: hunter.x + 4, y: hunter.y }
-    g.herds = [{ id: 1, kind: 'mammouth', ...spot, size: 4, goal: { ...spot } }]
-    for (let i = 0; i < HUNT_RULES.chaseEvery * 3; i++) {
-      Object.assign(g.herds[0]!, spot)
+    const band = g.camps[0]!
+    const spot = { x: band.x + 2, y: band.y }
+    for (let i = 0; i < 24; i++) {
+      g.herds = [{ id: 1, kind: 'mammouth', ...spot, size: 4, goal: { ...spot } }]
+      g.tribe.food = 0
+      clearDirty(g)
       step(g)
-      expect(hunter.target).toBeNull()
+      expect(g.herds[0]!.size).toBe(4)
+      expect(g.events.filter((e) => e.type === 'hunterKilled')).toEqual([])
     }
   })
 
   it('réserve pleine, les chasseurs ne risquent pas leur vie', () => {
     const g = createGame(options)
-    const hunter = g.units.find((u) => u.kind === 'chasseur')!
-    g.units = [hunter]
-    const herd = { id: 1, kind: 'mammouth' as const, x: hunter.x + 0.5, y: hunter.y, size: 4 }
+    const band = g.camps[0]!
+    const spot = { x: band.x + 2, y: band.y }
     for (let i = 0; i < 200; i++) {
-      g.herds = [{ ...herd, goal: { x: herd.x, y: herd.y } }]
+      g.herds = [{ id: 1, kind: 'sanglier', ...spot, size: 5, goal: { ...spot } }]
       g.tribe.food = foodCapacity(g)
+      clearDirty(g)
       step(g)
+      expect(g.events.filter((e) => e.type === 'hunterKilled')).toEqual([])
     }
-    expect(g.units).toEqual([hunter])
-    expect(g.herds[0]!.size).toBe(4)
+    expect(g.herds[0]!.size).toBe(5)
   })
 
   it('la viande au-delà de la réserve est signalée comme perdue', () => {
     const g = createGame(options)
-    const hunter = g.units.find((u) => u.kind === 'chasseur')!
-    g.units = [hunter]
-    const herd = { id: 1, kind: 'cerf' as const, x: hunter.x + 0.5, y: hunter.y, size: 8 }
+    const band = g.camps[0]!
+    const spot = { x: band.x + 2, y: band.y }
     const lost: number[] = []
     for (let i = 0; i < 300 && lost.length === 0; i++) {
-      g.herds = [{ ...herd, goal: { x: herd.x, y: herd.y } }]
+      g.herds = [{ id: 1, kind: 'cerf', ...spot, size: 8, goal: { ...spot } }]
       g.tribe.food = foodCapacity(g) - 2
       step(g)
       for (const e of g.events) if (e.type === 'meatLost') lost.push(e.amount)
@@ -609,7 +584,9 @@ describe('scénarios', () => {
   it('l’errance de la faune ne puise pas dans l’aléa de la partie', () => {
     const run = (withHerds: boolean) => {
       const g = createGame(options)
-      g.units = []
+      // Sans chasseurs : seule l'errance des bêtes pourrait toucher à l'aléa de la partie.
+      g.camps[0]!.members = HUNT_RULES.peoplePerHunter - 1
+      g.tribe.population = HUNT_RULES.peoplePerHunter - 1
       if (!withHerds) g.herds = []
       for (let i = 0; i < 50; i++) step(g)
       return g.rng.state
@@ -617,31 +594,14 @@ describe('scénarios', () => {
     expect(run(true)).toEqual(run(false))
   })
 
-  it('on forme un chasseur contre des rations, dans la limite de la population', () => {
+  it('une personne sur quelques-unes chasse, dans chaque campement', () => {
     const g = createGame(options)
-    const hunters = () => g.units.filter((u) => u.kind === 'chasseur').length
-    g.tribe.food = 100
-    const max = maxHunters(g)
-    expect(max).toBe(Math.floor(TRIBE_RULES.startPopulation / HUNT_RULES.peoplePerHunter))
-    // On perd les chasseurs du départ, puis on les remplace.
-    g.units = g.units.filter((u) => u.kind !== 'chasseur')
-    for (let i = 0; i < max; i++)
-      expect(applyCommand(g, { type: 'recruitHunter' })).toEqual({ ok: true })
-    expect(hunters()).toBe(max)
-    expect(g.tribe.food).toBe(100 - max * HUNT_RULES.recruitFood)
-    expect(applyCommand(g, { type: 'recruitHunter' }).ok).toBe(false)
-    expect(cannotRecruit(g)).toMatch(/habitants/)
-    // Plus de place mais plus de vivres.
-    g.tribe.population += HUNT_RULES.peoplePerHunter
-    g.tribe.food = 0
-    expect(cannotRecruit(g)).toMatch(/rations/)
-    // Le nouveau chasseur paraît au camp, sur la terre ferme.
-    g.tribe.food = HUNT_RULES.recruitFood
-    expect(applyCommand(g, { type: 'recruitHunter' }).ok).toBe(true)
-    const camp = g.camps[0]!
-    const fresh = g.units.at(-1)!
-    expect(Math.abs(fresh.x - camp.x)).toBeLessThanOrEqual(1)
-    expect(fresh.y).toBe(camp.y)
+    const band = g.camps[0]!
+    expect(huntersOf(g)).toBe(Math.floor(TRIBE_RULES.startPopulation / HUNT_RULES.peoplePerHunter))
+    // Deux bandes : chacune compte ses chasseurs, les restes ne s'additionnent pas.
+    band.members = HUNT_RULES.peoplePerHunter * 2 - 1
+    g.camps.push({ ...band, id: 99, members: HUNT_RULES.peoplePerHunter * 2 - 1 })
+    expect(huntersOf(g)).toBe(2)
   })
 
   it('la tribu tient un gisement de silex dès le départ, quelle que soit la graine', () => {
@@ -665,8 +625,8 @@ describe('scénarios', () => {
   it('une même graine et les mêmes commandes donnent la même partie', () => {
     const play = () => {
       const g = createGame(options)
-      const u = g.units[0]!
-      applyCommand(g, { type: 'moveUnits', unitIds: [u.id], x: u.x + 6, y: u.y + 3 })
+      const band = g.camps[0]!
+      applyCommand(g, { type: 'moveCamp', campId: band.id, x: band.x + 6, y: band.y + 3 })
       for (let i = 0; i < 300; i++) step(g)
       return fingerprint(g)
     }

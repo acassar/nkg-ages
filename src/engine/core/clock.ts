@@ -1,6 +1,6 @@
 /**
  * Horloge de jeu : un tick vaut un mois de jeu, découpé en pas (des semaines).
- * Les unités et les bêtes bougent à chaque pas, l'économie tourne une fois par mois.
+ * Les bandes et les bêtes bougent à chaque pas, l'économie tourne une fois par mois.
  * Les vitesses 1 à 5 fixent le nombre de mois par seconde réelle.
  */
 export type Speed = 1 | 2 | 3 | 4 | 5

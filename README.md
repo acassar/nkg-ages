@@ -16,13 +16,13 @@ pnpm dev
 
 ## Jouer (J0)
 
-| Action              | Commande                                      |
-| ------------------- | --------------------------------------------- |
-| Pause / vitesse     | `Espace` / `1` à `5`, ou la barre du haut     |
-| Choisir l'éclaireur | clic sur son pion                             |
-| Envoyer l'éclaireur | clic droit sur la carte                       |
-| Déplacer la carte   | glisser, `ZQSD` (`WASD` en QWERTY) ou flèches |
-| Zoomer              | molette                                       |
+| Action            | Commande                                      |
+| ----------------- | --------------------------------------------- |
+| Pause / vitesse   | `Espace` / `1` à `5`, ou la barre du haut     |
+| Choisir une bande | clic sur son camp (celle du départ l'est)     |
+| Envoyer la bande  | clic droit sur la carte                       |
+| Déplacer la carte | glisser, `ZQSD` (`WASD` en QWERTY) ou flèches |
+| Zoomer            | molette                                       |
 
 Un tick vaut un mois de jeu ; les vitesses 1 à 5 jouent 1, 3, 8, 24 et 72 ticks par seconde.
 

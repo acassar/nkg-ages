@@ -3,6 +3,7 @@ import { CITY_RULES } from '@/engine/content/cities'
 import { VILLAGE_RULES } from '@/engine/content/villages'
 import { INVENTION_RULES } from '@/engine/content/inventions'
 import {
+  advance,
   applyCommand,
   cannotBuildCity,
   createGame,
@@ -112,12 +113,12 @@ describe('écriture', () => {
 })
 
 describe('routes', () => {
-  it('on marche plus vite sur ses terres, pas ailleurs', () => {
+  it('une bande marche plus vite sur ses terres, pas ailleurs', () => {
     const walked = (roads: boolean, onHome: boolean) => {
       const g = createGame(options)
       if (roads) g.inventions.ranks.routes = 'S'
-      const scout = g.units.find((u) => u.kind === 'eclaireur')!
-      const from = { x: scout.x, y: scout.y }
+      const band = g.camps[0]!
+      const from = { x: band.x, y: band.y }
       // Une terre tenue à quelques cases du camp : le chemin passe par nos terres.
       const { width } = g.world
       let target = -1
@@ -126,15 +127,16 @@ describe('routes', () => {
         if (target < 0 && o === PLAYER && d > 4 && d < 6) target = i
       })
       const order = applyCommand(g, {
-        type: 'moveUnits',
-        unitIds: [scout.id],
+        type: 'moveCamp',
+        campId: band.id,
         x: (target % width) + 0.5,
         y: Math.floor(target / width) + 0.5,
       })
       expect(order).toEqual({ ok: true })
       if (!onHome) g.territory.owner.fill(0)
-      step(g)
-      return Math.hypot(scout.x - from.x, scout.y - from.y)
+      // Un seul pas : la bande n'a pas encore atteint sa destination.
+      advance(g)
+      return Math.hypot(band.x - from.x, band.y - from.y)
     }
     expect(walked(true, true)).toBeGreaterThan(walked(false, true))
     expect(walked(true, false)).toBeCloseTo(walked(false, false))

@@ -46,46 +46,14 @@ const signed = new Intl.NumberFormat('fr-FR', {
         :title="
           game.view.tribe.huntersResting
             ? 'Réserve pleine : les chasseurs se reposent'
-            : 'Chasseurs en vie / que la tribu peut entretenir (un chasseur ne cueille pas)'
+            : 'Chasseurs des bandes : ils chassent seuls autour du camp et le défendent'
         "
       >
         <span class="label">Chasseurs</span>
         <b data-testid="hunters">{{ game.view.tribe.hunters }}</b>
-        <span class="soft">/ {{ game.view.tribe.maxHunters }}</span>
         <span v-if="game.view.tribe.huntersResting" class="balance" data-testid="hunters-resting"
           >au repos</span
         >
-        <button
-          class="ink-button recruit"
-          data-testid="recruit"
-          :disabled="game.view.tribe.recruitBlocked !== null"
-          :title="
-            game.view.tribe.recruitBlocked ??
-            `Former un chasseur (${game.view.tribe.recruitCost} rations)`
-          "
-          @click="game.recruitHunter(game.selectedCamp ?? undefined)"
-        >
-          +
-        </button>
-      </span>
-      <span
-        title="Éclaireurs en vie / que la tribu peut entretenir (ils explorent et fondent les campements)"
-      >
-        <span class="label">Éclaireurs</span>
-        <b data-testid="scouts">{{ game.view.tribe.scouts }}</b>
-        <span class="soft">/ {{ game.view.tribe.maxScouts }}</span>
-        <button
-          class="ink-button recruit"
-          data-testid="recruit-scout"
-          :disabled="game.view.tribe.scoutBlocked !== null"
-          :title="
-            game.view.tribe.scoutBlocked ??
-            `Former un éclaireur (${game.view.tribe.scoutCost} rations)`
-          "
-          @click="game.recruitScout(game.selectedCamp ?? undefined)"
-        >
-          +
-        </button>
       </span>
       <span
         v-if="game.view.tribe.villages > 0 || game.view.tribe.maxVillages > 0"
