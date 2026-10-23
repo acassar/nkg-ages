@@ -34,11 +34,6 @@ export interface UnitView {
   target: { x: number; y: number } | null
   /** Points de passage restants, le dernier étant la cible. */
   path: { x: number; y: number }[]
-  /**
-   * Fondation d'un campement là où se tient l'unité : null si elle n'en fonde jamais
-   * (seul l'éclaireur le peut), sinon ce qui l'en empêche maintenant (ou null).
-   */
-  foundCamp: { blocked: string | null } | null
   /** Sous l'ordre « Explorer ». */
   exploring: boolean
 }
@@ -56,6 +51,29 @@ export interface CampView {
   people: string | null
   /** Ce qu'il peut devenir (village, puis cité), son coût et ce qui l'en empêche ; null sinon. */
   upgrade: { to: 'village' | 'city'; cost: string; blocked: string | null } | null
+  /** Gens qui y vivent (campements du joueur seulement, sinon null). */
+  members: number | null
+  /** Bande nomade du joueur (pas un village) : sa marche et l'état de ses terres ; null sinon. */
+  band: BandView | null
+}
+
+export interface BandView {
+  /** Efficacité de cueillette, de 0 à 1 (1 : au mieux ; moins si la bande est trop grande). */
+  efficiency: number
+  /** Taille au-delà de laquelle la bande perd en efficacité. */
+  comfortSize: number
+  /** Abondance moyenne des terres autour, de 0 à 1, et son état en mots. */
+  abundance: number
+  land: 'abondantes' | 'en baisse' | 'épuisées'
+  /** En marche vers ce point (chemin restant), ou null à l'arrêt. */
+  target: { x: number; y: number } | null
+  path: { x: number; y: number }[]
+  /** Migre seule quand ses terres s'épuisent. */
+  roaming: boolean
+  /** Ce qui empêche de la scinder maintenant, ou null. */
+  splitBlocked: string | null
+  /** Rayon de la zone qu'elle exploite, en cellules. */
+  radius: number
 }
 
 export interface GameView {
@@ -234,9 +252,11 @@ export interface TribeView {
   scoutBlocked: string | null
   /** Réserve pleine : les chasseurs ne chassent pas. */
   huntersResting: boolean
-  /** Campements tenus, et combien la population permet d'en tenir. */
+  /** Campements tenus (bandes et villages), dont les bandes nomades. */
   camps: number
-  maxCamps: number
+  bands: number
+  /** Efficacité moyenne de cueillette (1 : au mieux). */
+  efficiency: number
   /** Villages tenus, combien la population en permet, leur coût et ce qui bloque (ou null). */
   villages: number
   maxVillages: number

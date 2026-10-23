@@ -105,7 +105,6 @@ function onKey(event: KeyboardEvent, down: boolean) {
   if (!down || event.repeat) return
   if (intent.kind === 'togglePause') void game.togglePause()
   if (intent.kind === 'speed') void game.setSpeed(intent.speed)
-  if (intent.kind === 'foundCamp') void game.foundCamp()
   if (intent.kind === 'explore') void game.exploreSelected()
 }
 
@@ -206,15 +205,22 @@ function campAt(p: { x: number; y: number }) {
 
 /**
  * Curseur selon ce qu'un clic ferait : flèche au repos, main sur ce qu'on peut choisir,
- * viseur quand des unités attendent une destination, interdit sur l'eau connue.
+ * viseur quand des unités ou une bande attendent une destination, interdit sur l'eau connue.
  */
 const cursor = ref<'default' | 'pointer' | 'crosshair' | 'not-allowed' | 'grabbing'>('default')
 
 function updateCursor(p: { x: number; y: number }) {
   if (drag?.moved) cursor.value = 'grabbing'
   else if (unitAt(p) || campAt(p)) cursor.value = 'pointer'
-  else if (game.selected.size > 0) cursor.value = onWater(p) ? 'not-allowed' : 'crosshair'
+  else if (game.selected.size > 0 || selectedBandId() !== null)
+    cursor.value = onWater(p) ? 'not-allowed' : 'crosshair'
   else cursor.value = 'default'
+}
+
+/** La bande choisie (elle attend une destination comme une unité), ou null. */
+function selectedBandId(): number | null {
+  const camp = game.view?.camps.find((c) => c.id === game.selectedCamp)
+  return camp?.band ? camp.id : null
 }
 
 /** Le pointeur est-il sur de l'eau déjà découverte (où l'on ne peut envoyer personne) ? */

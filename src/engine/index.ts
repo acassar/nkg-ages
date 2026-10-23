@@ -23,6 +23,7 @@ export { INVENTION_KINDS, INVENTION_RULES } from './content/inventions'
 export type { InventionKind } from './content/inventions'
 export { cannotStart, inventionStat, nextCost, workPerMonth } from './inventions/inventions'
 export { CAMP_RULES } from './content/camps'
+export { BAND_RULES } from './content/bands'
 export { ANIMAL_KINDS, ANIMAL_RULES, HUNT_RULES } from './content/fauna'
 export type { AnimalKind } from './content/fauna'
 export type { Herd } from './fauna/fauna'
@@ -52,8 +53,11 @@ export {
   cannotRecruit,
   currentScore,
   tallyOf,
-  cannotFoundCamp,
-  maxCamps,
+  bandsOf,
+  bandAbundance,
+  campEfficiency,
+  tribeEfficiency,
+  cannotSplit,
   maxHunters,
   maxScouts,
   cannotRecruitScout,

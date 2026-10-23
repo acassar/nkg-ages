@@ -6,25 +6,19 @@ import {
   applyCommand,
   cannotBuildCity,
   cannotBuildVillage,
-  cannotFoundCamp,
+  BAND_RULES,
+  bandsOf,
   cannotGift,
   cannotRecruit,
   cannotStart,
-  CAMP_RULES,
   huntersResting,
   INVENTION_KINDS,
-  PLAYER,
   RELATION_RULES,
   type GameState,
 } from '../src/engine'
-import { createRng, type Rng } from '../src/engine/core/random'
 
 /** Réglages du joueur automatique. */
 export const BOT_RULES = {
-  /** Distance visée d'un nouveau campement, en multiples de la distance minimale. */
-  campDistance: [1.1, 1.8],
-  /** Essais de destination par mois quand l'éclaireur est oisif. */
-  tries: 12,
   /** Offre un présent à un voisin dont la relation tombe sous ce seuil, si les vivres le permettent. */
   giftBelow: RELATION_RULES.raidBelow + 20,
 } as const
@@ -34,13 +28,13 @@ export interface Bot {
   play(state: GameState): void
 }
 
-export function createBot(seed: string): Bot {
-  const rng = createRng(`bot:${seed}`)
+export function createBot(_seed: string): Bot {
   return {
     play(state) {
       invent(state)
       grow(state)
-      scout(state, rng)
+      scout(state)
+      bands(state)
       recruit(state)
       diplomacy(state)
     },
@@ -66,24 +60,19 @@ function grow(state: GameState): void {
   if (cannotBuildVillage(state) === null) applyCommand(state, { type: 'buildVillage' })
 }
 
-/** L'éclaireur fonde un campement dès qu'il le peut ; oisif, il part vers un nouveau site. */
-function scout(state: GameState, rng: Rng): void {
+/** L'éclaireur oisif part explorer. */
+function scout(state: GameState): void {
   const unit = state.units.find((u) => u.kind === 'eclaireur')
-  if (!unit) return
-  if (cannotFoundCamp(state, unit) === null) {
-    applyCommand(state, { type: 'foundCamp', unitId: unit.id })
-    return
-  }
-  if (unit.target) return
-  const camps = state.camps.filter((c) => c.owner === PLAYER)
-  const home = rng.pick(camps)
-  const [near, far] = BOT_RULES.campDistance
-  for (let i = 0; i < BOT_RULES.tries; i++) {
-    const angle = rng.next() * Math.PI * 2
-    const r = CAMP_RULES.minDistance * (near + rng.next() * (far - near))
-    const x = home.x + Math.cos(angle) * r
-    const y = home.y + Math.sin(angle) * r
-    if (applyCommand(state, { type: 'moveUnits', unitIds: [unit.id], x, y }).ok) return
+  if (!unit || unit.target || unit.explore) return
+  applyCommand(state, { type: 'explore', unitIds: [unit.id] })
+}
+
+/** Les bandes migrent seules ; une bande qui dépasse sa taille idéale se scinde. */
+function bands(state: GameState): void {
+  for (const band of bandsOf(state)) {
+    if (!band.roaming) applyCommand(state, { type: 'setRoaming', campId: band.id, roaming: true })
+    if ((band.members ?? 0) > BAND_RULES.comfortSize)
+      applyCommand(state, { type: 'splitBand', campId: band.id })
   }
 }
 

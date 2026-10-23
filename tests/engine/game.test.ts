@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   applyCommand,
   cannotRecruit,
-  cannotFoundCamp,
   clearDirty,
   createGame,
   currentScore,
@@ -17,7 +16,6 @@ import {
 import { HUNT_RULES } from '@/engine/content/fauna'
 import { FIRST_ERA, SCORE_RULES } from '@/engine/content/eras'
 import { INVENTION_KINDS } from '@/engine/content/inventions'
-import { CAMP_RULES } from '@/engine/content/camps'
 import { BIOMES, isWater, type BiomeId } from '@/engine/content/biomes'
 import { RIVER_RULES } from '@/engine/content/rivers'
 import { Visibility } from '@/engine/fog/fog'
@@ -294,7 +292,8 @@ describe('commandes', () => {
       const c = h.camps[0]!
       h.deposits = [{ id: 1, kind, x: Math.floor(c.x), y: Math.floor(c.y), rank: 'E' }]
       h.tribe.food = 0
-      h.territory.playerWeight = 0
+      // Terres épuisées : seuls les gisements nourrissent.
+      h.abundance.fill(0)
       step(h)
       return kind === 'silex' ? h.tribe.materials.silex! : h.tribe.lastProduction
     }
@@ -352,7 +351,7 @@ describe('commandes', () => {
     g.tribe.population = goal.population
     g.tribe.food = 10_000
     for (let i = 1; i < goal.camps; i++)
-      g.camps.push({ id: 100 + i, owner: PLAYER, x: 1.5 + i, y: 1.5 })
+      g.camps.push({ id: 100 + i, owner: PLAYER, x: 1.5 + i, y: 1.5, members: 1 })
     const kinds = INVENTION_KINDS.slice(0, goal.inventions)
     for (const k of kinds) g.inventions.ranks[k] = 'E'
     step(g)
@@ -471,7 +470,7 @@ describe('scénarios', () => {
   it('sans rien à récolter, la famine prévient une fois puis décime la tribu', () => {
     // Sans événements rares : une abondance ou des nouveaux venus brouilleraient le compte.
     const g = createGame({ ...options, rareEvents: false })
-    g.territory.playerWeight = 0
+    g.abundance.fill(0)
     g.territory.weights = new Float32Array(g.territory.owner.length)
     g.deposits = []
     const famines: number[] = []
@@ -486,7 +485,7 @@ describe('scénarios', () => {
 
   it('les gisements tenus nourrissent la tribu et remplissent ses réserves de matériaux', () => {
     const g = createGame(options)
-    g.territory.playerWeight = 0
+    g.abundance.fill(0)
     g.territory.weights = new Float32Array(g.territory.owner.length)
     const cell = (x: number, y: number) => ({ x, y })
     // Deux gisements riches posés sur le camp : sans eux, ce serait la famine.
@@ -506,7 +505,7 @@ describe('scénarios', () => {
     const hunter = g.units.find((u) => u.kind === 'chasseur')!
     g.units = [hunter]
     g.tribe.food = 0
-    g.territory.playerWeight = 0
+    g.abundance.fill(0)
     g.territory.weights = new Float32Array(g.territory.owner.length)
     g.deposits = []
     const herd = { id: 1, kind: 'cerf' as const, x: hunter.x + 0.5, y: hunter.y, size: 8 }
@@ -655,69 +654,6 @@ describe('scénarios', () => {
       { numRuns: 12, examples: [[" '"]] },
     )
   }, 30_000)
-
-  it('l’éclaireur fonde un campement au loin, qui prend des terres et voit autour de lui', () => {
-    const g = createGame(options)
-    const scout = g.units.find((u) => u.kind === 'eclaireur')!
-    const home = g.camps[0]!
-    // Au départ : trop près du camp, et pas assez d'habitants pour un second campement.
-    expect(cannotFoundCamp(g, scout)).toMatch(/habitants/)
-    g.tribe.population = CAMP_RULES.peoplePerCamp
-    g.tribe.food = 100
-    expect(cannotFoundCamp(g, scout)).toMatch(/Trop près/)
-    expect(
-      cannotFoundCamp(
-        g,
-        g.units.find((u) => u.kind === 'chasseur')!,
-      ),
-    ).toMatch(/éclaireur/)
-    // On pose l'éclaireur sur une terre assez lointaine.
-    const spot = landAt(g, (x, y) => {
-      const d = Math.hypot(x + 0.5 - home.x, y + 0.5 - home.y)
-      return d >= CAMP_RULES.minDistance + 2 && d < CAMP_RULES.minDistance + 12
-    })
-    Object.assign(scout, { x: spot.x + 0.5, y: spot.y + 0.5 })
-    expect(cannotFoundCamp(g, scout)).toBeNull()
-    const owned = g.territory.ownedCount
-    expect(applyCommand(g, { type: 'foundCamp', unitId: scout.id })).toEqual({ ok: true })
-    expect(g.camps).toHaveLength(2)
-    expect(g.tribe.food).toBe(100 - CAMP_RULES.foodCost)
-    expect(g.territory.ownedCount).toBeGreaterThan(owned)
-    const i = spot.y * g.world.width + spot.x
-    expect(g.territory.owner[i]).toBe(PLAYER)
-    expect(g.fog.cells[i]).toBe(Visibility.Visible)
-    // Un troisième campement attend d'autres habitants.
-    expect(applyCommand(g, { type: 'foundCamp', unitId: scout.id }).ok).toBe(false)
-    // Le territoire grandit aussi autour du nouveau campement.
-    const near = () => {
-      let n = 0
-      for (let y = spot.y - 8; y <= spot.y + 8; y++)
-        for (let x = spot.x - 8; x <= spot.x + 8; x++)
-          if (g.territory.owner[y * g.world.width + x] === PLAYER) n++
-      return n
-    }
-    const before = near()
-    for (let k = 0; k < 120; k++) step(g)
-    expect(near()).toBeGreaterThan(before)
-  })
-
-  it('refuse de fonder un campement sans unité, ou sans vivres', () => {
-    const g = createGame(options)
-    expect(applyCommand(g, { type: 'foundCamp', unitId: 999 }).ok).toBe(false)
-    const scout = g.units.find((u) => u.kind === 'eclaireur')!
-    const home = g.camps[0]!
-    const spot = landAt(
-      g,
-      (x, y) => Math.hypot(x - home.x, y - home.y) > CAMP_RULES.minDistance + 2,
-    )
-    Object.assign(scout, { x: spot.x + 0.5, y: spot.y + 0.5 })
-    g.tribe.population = CAMP_RULES.peoplePerCamp
-    g.tribe.food = CAMP_RULES.foodCost - 1
-    expect(applyCommand(g, { type: 'foundCamp', unitId: scout.id })).toEqual({
-      ok: false,
-      reason: `Il faut ${CAMP_RULES.foodCost} rations`,
-    })
-  })
 
   it('le territoire grandit avec le temps', () => {
     const g = createGame(options)

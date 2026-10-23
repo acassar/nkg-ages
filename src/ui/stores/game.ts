@@ -188,11 +188,13 @@ export const useGameStore = defineStore('game', () => {
   const gift = (people: number) => send({ type: 'gift', people })
   const trade = (people: number) => send({ type: 'trade', people })
 
-  /** Le premier éclaireur choisi fonde un campement là où il se tient. */
-  function foundCamp() {
-    const scout = view.value?.units.find((u) => selected.value.has(u.id) && u.foundCamp)
-    if (!scout) return report('Choisissez un éclaireur pour fonder un campement', true)
-    return send({ type: 'foundCamp', unitId: scout.id })
+  const splitBand = (campId: number) => send({ type: 'splitBand', campId })
+  const setRoaming = (campId: number, roaming: boolean) =>
+    send({ type: 'setRoaming', campId, roaming })
+
+  /** La bande choisie, s'il y en a une (un village ne marche pas). */
+  function selectedBand() {
+    return view.value?.camps.find((c) => c.mine && c.id === selectedCamp.value && c.band) ?? null
   }
 
   function select(ids: number[]) {
@@ -220,7 +222,10 @@ export const useGameStore = defineStore('game', () => {
     return send({ type: 'explore', unitIds })
   }
 
+  /** Envoie les unités choisies, ou la bande choisie, vers ce point. */
   function moveSelectedTo(x: number, y: number) {
+    const band = selectedBand()
+    if (band) return send({ type: 'moveCamp', campId: band.id, x, y })
     const unitIds = [...selected.value]
     if (unitIds.length === 0) return
     return send({ type: 'moveUnits', unitIds, x, y })
@@ -271,7 +276,8 @@ export const useGameStore = defineStore('game', () => {
     buildCity,
     gift,
     trade,
-    foundCamp,
+    splitBand,
+    setRoaming,
     moveSelectedTo,
     focusOn,
     quit,

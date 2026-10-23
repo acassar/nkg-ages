@@ -72,29 +72,26 @@ export class OverlayPainter {
       ctx.lineWidth = 1.6
       ctx.strokeStyle = camp.mine ? red : rival
       ctx.stroke()
+      if (camp.members !== null) {
+        // Les gens de la bande ou du village, sous la tente.
+        ctx.font = 'bold 10px Georgia, serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'top'
+        ctx.lineWidth = 3
+        ctx.strokeStyle = paper
+        const y = p.y + (camp.village ? (camp.city ? 13 : 10) : 8)
+        ctx.strokeText(String(camp.members), p.x, y)
+        ctx.fillStyle = red
+        ctx.fillText(String(camp.members), p.x, y)
+      }
+      if (camp.band?.target && camp.id === state.selectedCamp)
+        this.paintRoute(camera, p, camp.band.target, camp.band.path)
     }
 
     for (const unit of state.units) {
       const p = worldToScreen(camera, unit.x, unit.y)
       const selected = state.selected.has(unit.id)
-      if (unit.target && selected) {
-        const t = worldToScreen(camera, unit.target.x, unit.target.y)
-        ctx.setLineDash([4, 4])
-        ctx.strokeStyle = cssColor(INK, 0.7)
-        ctx.lineWidth = 1.2
-        ctx.beginPath()
-        ctx.moveTo(p.x, p.y)
-        for (const point of unit.path) {
-          const q = worldToScreen(camera, point.x, point.y)
-          ctx.lineTo(q.x, q.y)
-        }
-        ctx.lineTo(t.x, t.y)
-        ctx.stroke()
-        ctx.setLineDash([])
-        ctx.beginPath()
-        ctx.arc(t.x, t.y, 3, 0, Math.PI * 2)
-        ctx.stroke()
-      }
+      if (unit.target && selected) this.paintRoute(camera, p, unit.target, unit.path)
       ctx.beginPath()
       ctx.arc(p.x, p.y, 6, 0, Math.PI * 2)
       ctx.fillStyle = paper
@@ -122,6 +119,32 @@ export class OverlayPainter {
       ctx.lineWidth = 1.2
       ctx.stroke()
     }
+  }
+
+  /** Trajet restant d'un pion ou d'une bande choisis : pointillés jusqu'à un petit rond. */
+  private paintRoute(
+    camera: Camera,
+    from: { x: number; y: number },
+    target: { x: number; y: number },
+    path: readonly { x: number; y: number }[],
+  ): void {
+    const { ctx } = this
+    const t = worldToScreen(camera, target.x, target.y)
+    ctx.setLineDash([4, 4])
+    ctx.strokeStyle = cssColor(INK, 0.7)
+    ctx.lineWidth = 1.2
+    ctx.beginPath()
+    ctx.moveTo(from.x, from.y)
+    for (const point of path) {
+      const q = worldToScreen(camera, point.x, point.y)
+      ctx.lineTo(q.x, q.y)
+    }
+    ctx.lineTo(t.x, t.y)
+    ctx.stroke()
+    ctx.setLineDash([])
+    ctx.beginPath()
+    ctx.arc(t.x, t.y, 3, 0, Math.PI * 2)
+    ctx.stroke()
   }
 
   /** Troupeaux : quelques traces de bêtes à l'encre brune, et leur nombre. */

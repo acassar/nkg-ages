@@ -16,7 +16,7 @@ import PeoplesPanel from '@/ui/components/PeoplesPanel.vue'
 import SelectionBar from '@/ui/components/SelectionBar.vue'
 import TopBar from '@/ui/components/TopBar.vue'
 import { AUTOSAVE_MS, useClientFactory, useGameStore, useSaveSlotFactory } from '@/ui/stores/game'
-import type { GameView } from '@/views/types'
+import { BIOME_IDS, type GameView } from '@/views/types'
 
 let scheduler: ManualScheduler
 let slot: SaveSlot
@@ -148,30 +148,36 @@ describe('écran de jeu', () => {
     expect(wrapper.find('[data-testid=notice]').exists()).toBe(false)
   })
 
-  it('propose de fonder un campement quand un éclaireur est choisi, avec ce qui l’empêche', async () => {
-    vi.useFakeTimers()
+  it('une bande choisie se déplace au clic droit, se scinde et migre seule', async () => {
     const game = useGameStore()
-    await game.newGame({ seed: 'camp', randomStart: false, width: 128, height: 64 })
+    await game.newGame({ seed: 'bande', randomStart: false, width: 128, height: 64 })
     const wrapper = mount(SelectionBar)
-    const scout = game.view!.units.find((u) => u.kind === 'eclaireur')!
-    const hunter = game.view!.units.find((u) => u.kind === 'chasseur')!
-    game.select([hunter.id])
+    const camp = game.view!.camps.find((c) => c.mine)!
+    game.selectCamp(camp.id)
     await flushPromises()
-    // Un chasseur seul peut explorer, mais pas fonder de campement.
-    expect(wrapper.find('[data-testid=selection]').text()).toContain('Chasseur')
-    expect(wrapper.find('[data-testid=found-camp]').exists()).toBe(false)
-    // Sans éclaireur choisi, F prévient sans rien envoyer.
-    await game.foundCamp()
-    expect(game.error).toMatch(/éclaireur/)
-    game.select([scout.id, hunter.id])
+    expect(wrapper.find('[data-testid=camp-selection]').text()).toContain(
+      `Bande de ${camp.members}`,
+    )
+    expect(wrapper.find('[data-testid=band-state]').text()).toContain('terres abondantes')
+    // Trop petite pour se scinder : le bouton le dit.
+    const split = wrapper.find('[data-testid=band-split]')
+    expect(split.attributes('disabled')).toBeDefined()
+    expect(split.attributes('title')).toMatch(/personnes/)
+    // Migrer seule : un interrupteur.
+    await wrapper.find('[data-testid=band-roaming]').trigger('click')
     await flushPromises()
-    const button = wrapper.find('[data-testid=found-camp]')
-    expect(button.attributes('disabled')).toBeDefined()
-    expect(wrapper.text()).toMatch(/habitants/)
-    // Le refus du moteur remonte jusqu'à l'avis.
-    await game.foundCamp()
+    expect(game.view!.camps.find((c) => c.id === camp.id)!.band!.roaming).toBe(true)
+    // Le clic droit envoie la bande, pas les unités (aucune n'est choisie), sur une terre en vue.
+    const world = game.world!
+    const water = [BIOME_IDS.Ocean, BIOME_IDS.DeepOcean] as number[]
+    const dx = [3, -3, 2, -2, 4, -4].find(
+      (d) =>
+        !water.includes(world.biome[Math.floor(camp.y) * world.width + Math.floor(camp.x) + d]!),
+    )!
+    await game.moveSelectedTo(camp.x + dx, camp.y)
     await flushPromises()
-    expect(game.error).toMatch(/habitants/)
+    expect(game.error).toBeNull()
+    expect(game.view!.camps.find((c) => c.id === camp.id)!.band!.target).not.toBeNull()
   })
 
   it('un clic sur un campement le choisit : il grandit et forme des recrues là', async () => {
@@ -183,7 +189,7 @@ describe('écran de jeu', () => {
     await flushPromises()
     expect(game.selected.size).toBe(0)
     const panel = wrapper.find('[data-testid=camp-selection]')
-    expect(panel.text()).toContain('Campement')
+    expect(panel.text()).toContain('Bande')
     // Sans agriculture, le village est refusé, et la raison est dite.
     expect(wrapper.find('[data-testid=camp-upgrade]').attributes('disabled')).toBeDefined()
     expect(wrapper.find('[data-testid=camp-why]').text()).toMatch(/Agriculture/)

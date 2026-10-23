@@ -179,7 +179,7 @@
         },
         {
           "title": "Bandes nomades et scission",
-          "status": "todo"
+          "status": "done"
         },
         {
           "title": "Sédentarisation, passage au Néolithique",
@@ -223,6 +223,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-23",
+      "text": "Jeu : le campement de départ devient une bande nomade qui épuise ses terres et doit migrer (ou « Migrer seule ») ; au-delà de 25 personnes elle cueille moins bien et se scinde ; fonder un campement disparaît au profit de la scission"
+    },
     {
       "date": "2026-10-23",
       "text": "Performance : la recherche de chemin n'alloue plus rien en boucle (tas réutilisé, coûts en ligne) ; pire semaine du banc ramenée de 35-60 ms à 10-12 ms, pire ordre de 20-25 ms à 8 ms"

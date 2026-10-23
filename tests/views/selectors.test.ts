@@ -97,14 +97,24 @@ describe('vues de partie', () => {
     expect(view.notices).toEqual(['Chasse : un chasseur est mort face aux mammouths.'])
   })
 
-  it('dit qui peut fonder un campement, et combien la tribu en tient', () => {
+  it('montre la bande : ses gens, son efficacité, ses terres et ce qui empêche de la scinder', () => {
     const g = game()
     const view = buildGameView(g)
-    const scout = view.units.find((u) => u.kind === 'eclaireur')!
-    const hunter = view.units.find((u) => u.kind === 'chasseur')!
-    expect(hunter.foundCamp).toBeNull()
-    expect(scout.foundCamp?.blocked).toMatch(/habitants/)
-    expect(view.tribe).toMatchObject({ camps: 1, maxCamps: 1 })
+    const camp = view.camps.find((c) => c.mine)!
+    expect(camp.members).toBe(g.tribe.population)
+    expect(camp.band).toMatchObject({ efficiency: 1, land: 'abondantes', target: null })
+    expect(camp.band!.splitBlocked).toMatch(/personnes/)
+    expect(view.tribe).toMatchObject({ camps: 1, bands: 1, efficiency: 1 })
+    // Trop grande, elle cueille moins bien ; sur des terres épuisées, l'état le dit.
+    g.camps[0]!.members = 40
+    g.abundance.fill(0.2)
+    const later = buildGameView(g).camps.find((c) => c.mine)!
+    expect(later.band!.efficiency).toBeLessThan(1)
+    expect(later.band!.land).toBe('épuisées')
+    expect(later.band!.splitBlocked).toBeNull()
+    // Un village n'est plus une bande.
+    g.camps[0]!.village = true
+    expect(buildGameView(g).camps.find((c) => c.mine)!.band).toBeNull()
   })
 
   it('rédige les événements rares avec leur rang', () => {

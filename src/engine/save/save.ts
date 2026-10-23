@@ -3,8 +3,12 @@ import type { Rect } from '../core/geometry'
 import { createRng } from '../core/random'
 import type { Herd } from '../fauna/fauna'
 import { countKnown } from '../fog/fog'
+import { depletedCells } from '../bands/bands'
+import { BAND_RULES } from '../content/bands'
+import { PLAYER } from '../territory/territory'
 import {
   createGame,
+  syncMembers,
   type Camp,
   type GameState,
   type NewGameOptions,
@@ -43,6 +47,10 @@ export interface SaveData {
   tribe: TribeState
   deposits: Deposit[]
   herds: Herd[]
+  /** Abondance des terres en plages (absente d'avant les bandes : tout est intact). */
+  abundance?: number[]
+  /** Cellules tenues par les zones des bandes (absentes d'avant les bandes). */
+  bandCells?: number[]
   inventions: InventionsState
   outcome: Outcome | null
   nextId: number
@@ -66,7 +74,7 @@ function copy<T>(value: T): T {
 }
 
 /** Grille en plages : [valeur, longueur, valeur, longueur…]. Brouillard et territoire s'y prêtent. */
-export function encodeRuns(cells: Uint8Array): number[] {
+export function encodeRuns(cells: ArrayLike<number>): number[] {
   const runs: number[] = []
   let i = 0
   while (i < cells.length) {
@@ -79,8 +87,17 @@ export function encodeRuns(cells: Uint8Array): number[] {
   return runs
 }
 
-export function decodeRuns(runs: readonly number[], length: number): Uint8Array {
-  const cells = new Uint8Array(length)
+export function decodeRuns(runs: readonly number[], length: number): Uint8Array
+export function decodeRuns(
+  runs: readonly number[],
+  length: number,
+  cells: Float32Array,
+): Float32Array
+export function decodeRuns(
+  runs: readonly number[],
+  length: number,
+  cells: Uint8Array | Float32Array = new Uint8Array(length),
+): Uint8Array | Float32Array {
   let at = 0
   for (let k = 0; k + 1 < runs.length; k += 2) {
     const count = runs[k + 1]!
@@ -121,6 +138,8 @@ export function saveGame(state: GameState): SaveData {
     tribe: copy(state.tribe),
     deposits: copy(state.deposits),
     herds: copy(state.herds),
+    abundance: encodeRuns(state.abundance),
+    bandCells: [...state.bandCells],
     inventions: copy(state.inventions),
     outcome: copy(state.outcome),
     nextId: state.nextId,
@@ -169,6 +188,9 @@ export function loadGame(data: SaveData): GameState {
   state.deposits = copy(data.deposits)
   state.herds = copy(data.herds)
   state.inventions = copy(data.inventions)
+  // Avant la métallurgie, le bronze s'inventait sans elle : on la donne à qui a le bronze.
+  const ranks = state.inventions.ranks
+  if (ranks.bronze && !ranks.metallurgie) ranks.metallurgie = 'E'
   state.outcome = copy(data.outcome)
   state.nextId = data.nextId
 
@@ -199,6 +221,30 @@ export function loadGame(data: SaveData): GameState {
     territory.ownerWeight = [0, data.territory.playerWeight]
   }
   territory.dirty = { x: 0, y: 0, w: state.world.width, h: state.world.height }
+
+  if (data.abundance) decodeRuns(data.abundance, size, state.abundance)
+  else state.abundance.fill(1)
+  state.depleted = depletedCells(state.abundance)
+  if (data.bandCells) state.bandCells = [...data.bandCells]
+  else {
+    // Sauvegarde d'avant les bandes : le grand territoire fixe d'alors n'est plus qu'une zone
+    // de bande, que la bande rendra en partant. Les terres des villages leur restent.
+    const villages = state.camps.filter((c) => c.owner === PLAYER && c.village)
+    const { width } = state.world
+    state.bandCells = []
+    territory.owner.forEach((o, i) => {
+      if (o !== PLAYER) return
+      const x = (i % width) + 0.5
+      const y = Math.floor(i / width) + 0.5
+      const near = villages.some((v) => Math.hypot(v.x - x, v.y - y) <= BAND_RULES.radius + 1)
+      if (!near) state.bandCells.push(i)
+    })
+    // Les gens se répartissent entre les campements, et les bandes sont prêtes à marcher.
+    for (const c of state.camps)
+      if (c.owner === PLAYER)
+        Object.assign(c, { target: null, path: [], plannedFog: 0, patience: 0, ...c })
+  }
+  syncMembers(state)
 
   state.events = []
   return state

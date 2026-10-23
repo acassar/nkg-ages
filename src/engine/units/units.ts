@@ -3,9 +3,8 @@ import { biomeAt, inBounds, moveCostAt, type World } from '../world/world'
 
 export type UnitKind = 'eclaireur' | 'chasseur'
 
-export interface Unit {
-  id: number
-  kind: UnitKind
+/** Ce qui marche sur la carte le long d'un chemin : une unité, une bande. */
+export interface Mover {
   x: number
   y: number
   /** Destination demandée par le joueur. */
@@ -16,6 +15,11 @@ export interface Unit {
   plannedFog: number
   /** Coût de trajet qu'elle accepte encore de dépenser avant de renoncer. */
   patience: number
+}
+
+export interface Unit extends Mover {
+  id: number
+  kind: UnitKind
   /** Ordre donné par l'unité elle-même (poursuite d'un troupeau), pas par le joueur. */
   auto: boolean
   /** Ordre « Explorer » : arrivée quelque part, l'unité repart vers la lisière du connu. */
@@ -46,12 +50,20 @@ export const UNIT_RULES: Readonly<Record<UnitKind, UnitRules>> = {
  * Rend false si le prochain pas tombe sur une cellule infranchissable : il faut recalculer.
  */
 export function moveUnit(unit: Unit, world: World, pace = 1): boolean {
+  return moveAlong(unit, world, UNIT_RULES[unit.kind].speed * pace)
+}
+
+/**
+ * Avance sur son chemin de `speed` cellules au plus (en plaine), moins en terrain difficile.
+ * Rend false si le prochain pas tombe sur une cellule infranchissable.
+ */
+export function moveAlong(unit: Mover, world: World, speed: number): boolean {
   if (!unit.target) return true
   if (unit.path.length === 0) unit.path = [{ ...unit.target }]
   const cx = Math.floor(unit.x)
   const cy = Math.floor(unit.y)
   const cost = inBounds(world, cx, cy) ? moveCostAt(world, cy * world.width + cx) : 1
-  let budget = (UNIT_RULES[unit.kind].speed * pace) / (Number.isFinite(cost) ? cost : 1)
+  let budget = speed / (Number.isFinite(cost) ? cost : 1)
   while (budget > 0 && unit.path.length > 0) {
     const next = unit.path[0]!
     const dx = next.x - unit.x
@@ -74,9 +86,13 @@ export function moveUnit(unit: Unit, world: World, pace = 1): boolean {
 
 /** Arrête l'unité : plus de cible ni de chemin. */
 export function stopUnit(unit: Unit): void {
-  unit.target = null
-  unit.path = []
+  stopMover(unit)
   unit.auto = false
+}
+
+export function stopMover(mover: Mover): void {
+  mover.target = null
+  mover.path = []
 }
 
 export function isPassable(world: World, x: number, y: number): boolean {

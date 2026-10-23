@@ -73,6 +73,8 @@ export interface TribeBonus {
   growth?: number
   /** Pertes de famine en moins (0,3 = -30 %). */
   famineShield?: number
+  /** Efficacité des cueilleurs (1 : au mieux ; une bande trop grande cueille moins). */
+  efficiency?: number
 }
 
 export const NO_BONUS: TribeBonus = { gather: 0, storageMonths: 0 }
@@ -91,7 +93,8 @@ export function tickTribe(
 ): TribeOutcome {
   if (tribe.population <= 0) return 'stable'
   const gatherers = Math.max(0, tribe.population - away)
-  const produced = production(gatherers, available, rules) * (1 + bonus.gather)
+  const hands = gatherers * (bonus.efficiency ?? 1)
+  const produced = production(hands, available, rules) * (1 + bonus.gather)
   const eaten = tribe.population * rules.rationPerPerson
   tribe.lastProduction = produced
   tribe.lastConsumption = eaten
