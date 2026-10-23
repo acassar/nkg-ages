@@ -82,6 +82,10 @@ export interface GameView {
   score: number
   /** Objectif de l'ère, élément par élément. */
   goal: GoalView[]
+  /** Succès de la partie, gagnés ou non. */
+  achievements: AchievementView[]
+  /** Conseil du moment pour débuter, ou null. */
+  hint: string | null
   /** Peuples voisins rencontrés et encore en vie. */
   peoples: PeopleView[]
   /** Fin de partie, ou null tant qu'elle dure. */
@@ -111,6 +115,13 @@ export interface PeopleView {
   tradeBlocked: string | null
   /** Ce qui aigrit la relation en ce moment, ou null (« Campements trop proches des leurs »). */
   tension: string | null
+}
+
+export interface AchievementView {
+  id: string
+  name: string
+  description: string
+  done: boolean
 }
 
 export interface GoalView {

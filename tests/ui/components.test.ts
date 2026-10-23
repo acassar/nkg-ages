@@ -8,6 +8,7 @@ import { ManualScheduler } from '@/host/scheduler'
 import StartScreen from '@/ui/components/StartScreen.vue'
 import GameScreen from '@/ui/components/GameScreen.vue'
 import GoalsPanel from '@/ui/components/GoalsPanel.vue'
+import HintBox from '@/ui/components/HintBox.vue'
 import InventionsPanel from '@/ui/components/InventionsPanel.vue'
 import OutcomeDialog from '@/ui/components/OutcomeDialog.vue'
 import PeoplesPanel from '@/ui/components/PeoplesPanel.vue'
@@ -53,6 +54,19 @@ describe('écran de départ', () => {
     await game.saveNow()
     expect(slot.read()?.options).toMatchObject({ peoples: 0, rareEvents: false })
   }, 30_000)
+})
+
+describe('conseils et succès', () => {
+  it('affiche le conseil du moment, qu’on peut taire, et le compte des succès', async () => {
+    const game = useGameStore()
+    await game.newGame({ seed: 'conseil', randomStart: false, width: 128, height: 64 })
+    const hint = mount(HintBox)
+    expect(hint.find('[data-testid=hint]').text()).toMatch(/éclaireur/)
+    await hint.find('[data-testid=hint-close]').trigger('click')
+    expect(hint.find('[data-testid=hint]').exists()).toBe(false)
+    const goals = mount(GoalsPanel)
+    expect(goals.find('[data-testid=achievements]').text()).toBe('0')
+  })
 })
 
 describe('barre du haut', () => {

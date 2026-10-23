@@ -1,7 +1,14 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useGameStore } from '../stores/game'
 
 const game = useGameStore()
+const achievements = computed(() => game.view?.achievements ?? [])
+const won = computed(() => achievements.value.filter((a) => a.done).length)
+/** Liste des succès pour l'infobulle : gagnés cochés, les autres avec leur condition. */
+const list = computed(() =>
+  achievements.value.map((a) => `${a.done ? '✓' : '·'} ${a.name} : ${a.description}`).join('\n'),
+)
 </script>
 
 <template>
@@ -18,6 +25,9 @@ const game = useGameStore()
         <span class="count">{{ Math.min(g.have, g.need) }} / {{ g.need }}</span>
       </li>
     </ul>
+    <div class="achievements" :title="list">
+      Succès <b data-testid="achievements">{{ won }}</b> / {{ achievements.length }}
+    </div>
   </aside>
 </template>
 
@@ -58,6 +68,15 @@ li {
   display: flex;
   justify-content: space-between;
   font-variant-numeric: tabular-nums;
+}
+.achievements {
+  margin-top: 4px;
+  color: var(--ink-soft);
+  cursor: help;
+}
+.achievements b {
+  font-weight: normal;
+  color: var(--ink);
 }
 li.done {
   color: var(--ink-soft);

@@ -58,6 +58,7 @@ export {
   cityCount,
   inventionBoost,
   wonderHeld,
+  achievementFacts,
   cropsOf,
   START_CHOICES,
 } from './game'
@@ -80,3 +81,4 @@ export { PEOPLE_RULES, PEOPLE_NAMES } from './content/peoples'
 export { RELATION_RULES, MOODS } from './content/relations'
 export { WORLD_SIZES, GAME_SETUP } from './content/setup'
 export type { WorldSize } from './content/setup'
+export { ACHIEVEMENTS } from './content/achievements'
