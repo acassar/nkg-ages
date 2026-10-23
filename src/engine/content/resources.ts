@@ -55,6 +55,7 @@ export const RESOURCE_RULES: Readonly<Record<ResourceKind, ResourceRules>> = {
     nearStart: 4,
   },
   // Métaux rares, sans garantie au départ : il faut explorer et s'étendre pour les tenir.
+  // On ne les reconnaît qu'avec la métallurgie (voir `reveals` dans les inventions).
   cuivre: {
     name: 'Cuivre',
     category: 'material',

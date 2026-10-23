@@ -39,6 +39,7 @@ import {
   huntersResting,
   HUNT_RULES,
   depositHeld,
+  resourceKnown,
   foodCapacity,
   INVENTION_KINDS,
   INVENTION_RULES,
@@ -379,7 +380,7 @@ function depositViews(state: GameState): DepositView[] {
   const { cells } = state.fog
   const { width } = state.world
   return state.deposits
-    .filter((d) => cells[d.y * width + d.x] !== Visibility.Unknown)
+    .filter((d) => cells[d.y * width + d.x] !== Visibility.Unknown && resourceKnown(state, d.kind))
     .map((d) => ({
       id: d.id,
       kind: d.kind,

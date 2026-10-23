@@ -175,7 +175,7 @@
         },
         {
           "title": "Ressources de leur époque",
-          "status": "todo"
+          "status": "done"
         },
         {
           "title": "Bandes nomades et scission",
@@ -223,6 +223,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-23",
+      "text": "Contenu : cuivre et étain invisibles et inexploités avant la nouvelle invention « Métallurgie du cuivre » (après l'agriculture, avant le bronze)"
+    },
     {
       "date": "2026-10-23",
       "text": "Outils : sonde d'équilibrage (pnpm sonde), un robot joue 40 parties et date chaque étape ; l'arbre des inventions est fini en 33 ans, la population explose après 30 ans"

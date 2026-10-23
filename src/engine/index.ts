@@ -46,6 +46,7 @@ export {
   clearDirty,
   startYear,
   depositHeld,
+  resourceKnown,
   foodCapacity,
   herdVisible,
   cannotRecruit,

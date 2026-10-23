@@ -35,6 +35,7 @@ import {
   INVENTION_KINDS,
   INVENTION_RULES,
   INVENTION_WORK,
+  revealerOf,
   type InventionKind,
 } from './content/inventions'
 import type { Rank } from './content/rarity'
@@ -742,7 +743,7 @@ function harvest(state: GameState): void {
   const { tribe } = state
   let depositFood = 0
   for (const d of state.deposits) {
-    if (!heldBy(owner, width, height, d, PLAYER)) continue
+    if (!heldBy(owner, width, height, d, PLAYER) || !resourceKnown(state, d.kind)) continue
     const amount = depositYield(d) * (1 + depositBonus(state, d.kind))
     if (RESOURCE_RULES[d.kind].category === 'food') depositFood += amount
     else if (tribe.population > 0) tribe.materials[d.kind] = (tribe.materials[d.kind] ?? 0) + amount
@@ -1046,7 +1047,18 @@ function heldSpot(state: GameState): { x: number; y: number } | null {
 function depositBonus(state: GameState, kind: ResourceKind): number {
   if (kind === 'silex') return inventionMean(state.inventions, 'taille') / 100
   if (kind === 'poisson') return inventionMean(state.inventions, 'harpon') / 100
+  const revealer = revealerOf(kind)
+  if (revealer) return inventionMean(state.inventions, revealer) / 100
   return 0
+}
+
+/**
+ * La tribu sait-elle reconnaître cette ressource ? Sinon ses gisements restent invisibles
+ * et inexploités (le cuivre avant la métallurgie).
+ */
+export function resourceKnown(state: GameState, kind: ResourceKind): boolean {
+  const by = revealerOf(kind)
+  return by === undefined || state.inventions.ranks[by] !== undefined
 }
 
 /** Mois de réserve en plus : conservation (fumage), greniers des villages et des cités. */
