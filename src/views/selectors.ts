@@ -1,6 +1,10 @@
 import {
   Biome,
+  climateOf,
   dateOfTick,
+  seasonOf,
+  seasonalYield,
+  SEASON_RULES,
   FIRST_ERA,
   PLAYER,
   ANIMAL_RULES,
@@ -39,6 +43,7 @@ import {
   BIOME_IDS,
   type DepositView,
   type InventionView,
+  type SeasonView,
   type GameView,
   type GridPatch,
   type TribeView,
@@ -103,6 +108,7 @@ export function buildGameView(state: GameState, full = false): GameView {
     paused: state.clock.paused,
     dateLabel: formatDate(year, month),
     eraName: FIRST_ERA.name,
+    season: seasonView(state, month),
     units: state.units.map((u) => ({
       id: u.id,
       kind: u.kind,
@@ -151,6 +157,16 @@ export function buildGameView(state: GameState, full = false): GameView {
   }
 }
 
+/** Saison en cours et son effet sur la cueillette, selon le climat des campements. */
+function seasonView(state: GameState, month: number): SeasonView {
+  const kind = seasonOf(month)
+  return {
+    kind,
+    name: SEASON_RULES[kind].name,
+    gather: Math.round(seasonalYield(month, climateOf(state)) * 100),
+  }
+}
+
 const GOAL_LABELS = { population: 'Habitants', camps: 'Campements', inventions: 'Inventions' }
 
 function dateLabelOf(tick: number): string {
@@ -181,6 +197,8 @@ function noticeOf(state: GameState, event: GameEvent): string {
     }
     case 'rare':
       return rareNotice(event)
+    case 'winter':
+      return `L'hiver arrive : la cueillette tombe à ${Math.round(event.yieldFactor * 100)} % jusqu'au printemps.`
     case 'meatLost':
       return `Chasse : la réserve est pleine, ${event.amount} rations de viande sont perdues.`
     case 'hunterKilled':
@@ -220,7 +238,9 @@ function tribeView(state: GameState): TribeView {
     population: tribe.population,
     food: Math.floor(tribe.food),
     foodCapacity: Math.floor(foodCapacity(state)),
-    foodBalance: Math.round((tribe.lastProduction - tribe.lastConsumption) * 10) / 10,
+    foodBalance:
+      Math.round((tribe.lastProduction - tribe.lastConsumption - tribe.lastSpoiled) * 10) / 10,
+    spoiled: Math.round(tribe.lastSpoiled * 10) / 10,
     starving: tribe.starvingMonths > 0,
     materials: RESOURCE_KINDS.filter((k) => tribe.materials[k] !== undefined).map((k) => ({
       kind: k,

@@ -137,7 +137,8 @@ export function loadGame(data: SaveData): GameState {
   if (data.eventRng !== undefined) state.eventRng = createRng(data.eventRng)
   state.units = copy(data.units)
   state.camps = copy(data.camps)
-  state.tribe = copy(data.tribe)
+  // Un champ ajouté depuis la sauvegarde garde sa valeur de départ au lieu de manquer.
+  state.tribe = { ...state.tribe, ...copy(data.tribe) }
   state.deposits = copy(data.deposits)
   state.herds = copy(data.herds)
   state.inventions = copy(data.inventions)

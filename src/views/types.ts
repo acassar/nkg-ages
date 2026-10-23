@@ -54,6 +54,7 @@ export interface GameView {
   paused: boolean
   dateLabel: string
   eraName: string
+  season: SeasonView
   units: UnitView[]
   camps: CampView[]
   /** Brouillard : 0 inconnu, 1 déjà vu, 2 visible. Seulement la zone modifiée. */
@@ -73,6 +74,13 @@ export interface GameView {
   goal: GoalView[]
   /** Fin de partie, ou null tant qu'elle dure. */
   outcome: OutcomeView | null
+}
+
+export interface SeasonView {
+  kind: 'hiver' | 'printemps' | 'ete' | 'automne'
+  name: string
+  /** Cueillette du mois, en % de la moyenne de l'année (climat des campements compris). */
+  gather: number
 }
 
 export interface GoalView {
@@ -138,8 +146,10 @@ export interface TribeView {
   /** Réserve de nourriture, en rations (une ration nourrit une personne un mois). */
   food: number
   foodCapacity: number
-  /** Récolte moins consommation au dernier mois. */
+  /** Récolte moins consommation et pertes au dernier mois. */
   foodBalance: number
+  /** Rations gâtées dans la réserve au dernier mois. */
+  spoiled: number
   starving: boolean
   /** Matériaux en réserve, arrondis. */
   materials: { kind: string; name: string; amount: number }[]
