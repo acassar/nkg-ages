@@ -56,10 +56,12 @@ describe('bronze', () => {
     )
   }, 60_000)
 
-  it('il faut l’agriculture, puis du cuivre et de l’étain', () => {
+  it('il faut la métallurgie du cuivre, puis du cuivre et de l’étain', () => {
     const g = createGame(options)
-    expect(cannotStart(g.inventions, 'bronze', g.tribe.materials)).toMatch(/Agriculture/)
+    expect(cannotStart(g.inventions, 'bronze', g.tribe.materials)).toMatch(/Métallurgie/)
+    expect(cannotStart(g.inventions, 'metallurgie', g.tribe.materials)).toMatch(/Agriculture/)
     g.inventions.ranks.agriculture = 'E'
+    g.inventions.ranks.metallurgie = 'E'
     expect(cannotStart(g.inventions, 'bronze', g.tribe.materials)).toMatch(/cuivre/)
     g.tribe.materials.cuivre = 12
     expect(cannotStart(g.inventions, 'bronze', g.tribe.materials)).toMatch(/étain/)

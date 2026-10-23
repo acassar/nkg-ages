@@ -18,6 +18,8 @@ import {
   type TerritoryState,
 } from './territory/territory'
 import { findPath, knownPassable, pathBlocked } from './units/path'
+import { frontierTarget } from './units/explore'
+import { SCOUT_RULES } from './content/units'
 import { CAMP_RULES } from './content/camps'
 import { PEOPLE_NAMES, PEOPLE_RULES } from './content/peoples'
 import { MOODS, RELATION_RULES } from './content/relations'
@@ -33,6 +35,7 @@ import {
   INVENTION_KINDS,
   INVENTION_RULES,
   INVENTION_WORK,
+  revealerOf,
   type InventionKind,
 } from './content/inventions'
 import type { Rank } from './content/rarity'
@@ -138,6 +141,8 @@ export type GameEvent =
   | { type: 'meatLost'; amount: number }
   /** Un succès est gagné (voir content/achievements). */
   | { type: 'achievement'; id: string; name: string }
+  /** Une unité en exploration ne trouve plus d'inconnu à sa portée : elle s'arrête. */
+  | { type: 'explored'; unitId: number }
 
 export interface Outcome {
   type: 'victory' | 'defeat'
@@ -224,7 +229,8 @@ export function createGame(options: NewGameOptions): GameState {
   ensureNearStart(state.deposits, world, owner, PLAYER, site, createRng(`depart:${world.seed}`))
   ensureWithinReach(state.deposits, world, site, createRng(`metaux:${world.seed}`))
   state.units.push(newUnit(state, 'eclaireur', cx, cy))
-  for (let i = 0; i < START_HUNTERS; i++) state.units.push(newHunter(state, i))
+  for (let i = 0; i < START_HUNTERS; i++)
+    state.units.push(newRecruit(state, 'chasseur', state.camps[0]!, i))
   placePeoples(state, site, options.peoples ?? PEOPLE_RULES.count)
   updateFog(state.fog, viewersOf(state))
   return state
@@ -269,12 +275,34 @@ function newUnit(state: GameState, kind: Unit['kind'], x: number, y: number): Un
   }
 }
 
-/** Un chasseur se tient à côté du camp, sur la terre ferme, pour rester distinct des autres. */
-function newHunter(state: GameState, index: number): Unit {
-  const camp = state.camps.find((c) => c.owner === PLAYER)!
+/**
+ * Une recrue se tient à côté de son campement, sur la terre ferme, pour rester distincte des
+ * autres. Le campement est celui choisi par le joueur, ou le premier de la tribu.
+ */
+function newRecruit(state: GameState, kind: Unit['kind'], camp: Camp, index: number): Unit {
   const side = index % 2 === 0 ? 1 : -1
   const dx = isPassable(state.world, camp.x + side, camp.y) ? side : 0
-  return newUnit(state, 'chasseur', camp.x + dx, camp.y)
+  return newUnit(state, kind, camp.x + dx, camp.y)
+}
+
+/** Le campement du joueur où paraît une recrue : celui demandé, ou le premier. */
+function recruitCamp(state: GameState, campId?: number): Camp | undefined {
+  return state.camps.find((c) => c.owner === PLAYER && (campId === undefined || c.id === campId))
+}
+
+/** Éclaireurs que la tribu peut entretenir : un, plus un pour `peoplePerScout` habitants. */
+export function maxScouts(state: GameState): number {
+  return 1 + Math.floor(state.tribe.population / SCOUT_RULES.peoplePerScout)
+}
+
+/** Pourquoi on ne peut pas former d'éclaireur maintenant, ou null si on le peut. */
+export function cannotRecruitScout(state: GameState): string | null {
+  const scouts = state.units.filter((u) => u.kind === 'eclaireur').length
+  if (scouts >= maxScouts(state))
+    return `Un éclaireur de plus pour ${SCOUT_RULES.peoplePerScout} habitants`
+  if (state.tribe.food < SCOUT_RULES.recruitFood)
+    return `Il faut ${SCOUT_RULES.recruitFood} rations`
+  return null
 }
 
 /** Chasseurs que la tribu peut entretenir : un pour `peoplePerHunter` habitants. */
@@ -437,8 +465,11 @@ export function applyCommand(state: GameState, command: Command): CommandResult 
       if (units.length === 0) return { ok: false, reason: 'Aucune unité choisie' }
       let routed = 0
       // Dans un ordre de groupe, celle qui ne peut pas y aller s'arrête plutôt que de
-      // poursuivre son ancien ordre.
-      for (const u of units) if (orderUnit(state, u, x, y, false)) routed++
+      // poursuivre son ancien ordre. Un ordre précis met fin à l'exploration.
+      for (const u of units) {
+        u.explore = false
+        if (orderUnit(state, u, x, y, false)) routed++
+      }
       if (routed === 0) return { ok: false, reason: 'Aucun chemin connu vers cette destination' }
       return { ok: true }
     }
@@ -506,9 +537,33 @@ export function applyCommand(state: GameState, command: Command): CommandResult 
     case 'recruitHunter': {
       const reason = cannotRecruit(state)
       if (reason) return { ok: false, reason }
+      const camp = recruitCamp(state, command.campId)
+      if (!camp) return { ok: false, reason: 'Aucun campement choisi' }
       state.tribe.food -= HUNT_RULES.recruitFood
       const hunters = state.units.filter((u) => u.kind === 'chasseur').length
-      state.units.push(newHunter(state, hunters))
+      state.units.push(newRecruit(state, 'chasseur', camp, hunters))
+      return { ok: true }
+    }
+    case 'recruitScout': {
+      const reason = cannotRecruitScout(state)
+      if (reason) return { ok: false, reason }
+      const camp = recruitCamp(state, command.campId)
+      if (!camp) return { ok: false, reason: 'Aucun campement choisi' }
+      state.tribe.food -= SCOUT_RULES.recruitFood
+      const scouts = state.units.filter((u) => u.kind === 'eclaireur').length
+      state.units.push(newRecruit(state, 'eclaireur', camp, scouts + 1))
+      return { ok: true }
+    }
+    case 'explore': {
+      const units = state.units.filter((u) => command.unitIds.includes(u.id))
+      if (units.length === 0) return { ok: false, reason: 'Aucune unité choisie' }
+      let going = 0
+      for (const u of units) {
+        stopUnit(u)
+        u.explore = true
+        if (exploreFrom(state, u)) going++
+      }
+      if (going === 0) return { ok: false, reason: 'Plus rien d’inconnu à portée' }
       return { ok: true }
     }
     default: {
@@ -548,6 +603,7 @@ export function advance(state: GameState): void {
     const home = state.territory.owner[cellOf(state, unit.x, unit.y)] === PLAYER
     if (!moveUnit(unit, state.world, home ? pace * roads : pace)) replan(state, unit)
   }
+  for (const unit of state.units) if (unit.explore && !unit.target) exploreFrom(state, unit)
   for (const herd of state.herds) wander(herd, state.world, state.faunaRng)
   state.clock.step++
   if (state.clock.step >= STEPS_PER_MONTH) {
@@ -599,6 +655,21 @@ function see(state: GameState): void {
     unit.plannedFog = state.fog.version
     if (pathBlocked(state.world, state.fog, unit, unit.path)) replan(state, unit)
   }
+}
+
+/**
+ * Envoie une unité en exploration vers la lisière du connu la plus proche. Quand il n'en
+ * reste aucune à sa portée, l'unité s'arrête et le joueur est prévenu. Rend true si elle part.
+ */
+function exploreFrom(state: GameState, unit: Unit): boolean {
+  const target = frontierTarget(state.world, state.fog, unit)
+  if (target && orderUnit(state, unit, target.x, target.y, false)) {
+    unit.explore = true
+    return true
+  }
+  unit.explore = false
+  state.events.push({ type: 'explored', unitId: unit.id })
+  return false
 }
 
 /**
@@ -672,7 +743,7 @@ function harvest(state: GameState): void {
   const { tribe } = state
   let depositFood = 0
   for (const d of state.deposits) {
-    if (!heldBy(owner, width, height, d, PLAYER)) continue
+    if (!heldBy(owner, width, height, d, PLAYER) || !resourceKnown(state, d.kind)) continue
     const amount = depositYield(d) * (1 + depositBonus(state, d.kind))
     if (RESOURCE_RULES[d.kind].category === 'food') depositFood += amount
     else if (tribe.population > 0) tribe.materials[d.kind] = (tribe.materials[d.kind] ?? 0) + amount
@@ -976,7 +1047,18 @@ function heldSpot(state: GameState): { x: number; y: number } | null {
 function depositBonus(state: GameState, kind: ResourceKind): number {
   if (kind === 'silex') return inventionMean(state.inventions, 'taille') / 100
   if (kind === 'poisson') return inventionMean(state.inventions, 'harpon') / 100
+  const revealer = revealerOf(kind)
+  if (revealer) return inventionMean(state.inventions, revealer) / 100
   return 0
+}
+
+/**
+ * La tribu sait-elle reconnaître cette ressource ? Sinon ses gisements restent invisibles
+ * et inexploités (le cuivre avant la métallurgie).
+ */
+export function resourceKnown(state: GameState, kind: ResourceKind): boolean {
+  const by = revealerOf(kind)
+  return by === undefined || state.inventions.ranks[by] !== undefined
 }
 
 /** Mois de réserve en plus : conservation (fumage), greniers des villages et des cités. */

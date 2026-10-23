@@ -167,15 +167,15 @@
         },
         {
           "title": "Éclaireurs, ordre Explorer, choix du campement",
-          "status": "todo"
+          "status": "done"
         },
         {
           "title": "Sonde d'équilibrage",
-          "status": "todo"
+          "status": "done"
         },
         {
           "title": "Ressources de leur époque",
-          "status": "todo"
+          "status": "done"
         },
         {
           "title": "Bandes nomades et scission",
@@ -226,6 +226,18 @@
     {
       "date": "2026-10-23",
       "text": "Performance : la recherche de chemin réutilise son tas (plus de ramasse-miettes en plein pas) ; pire semaine du banc ramenée de 35-60 ms à moins de 20 ms"
+    },
+    {
+      "date": "2026-10-23",
+      "text": "Contenu : cuivre et étain invisibles et inexploités avant la nouvelle invention « Métallurgie du cuivre » (après l'agriculture, avant le bronze)"
+    },
+    {
+      "date": "2026-10-23",
+      "text": "Outils : sonde d'équilibrage (pnpm sonde), un robot joue 40 parties et date chaque étape ; l'arbre des inventions est fini en 33 ans, la population explose après 30 ans"
+    },
+    {
+      "date": "2026-10-23",
+      "text": "Jouabilité : éclaireurs à former, ordre « Explorer » (touche E), clic sur un campement pour le faire grandir ou y former des recrues, curseur selon l'action"
     },
     {
       "date": "2026-10-23",

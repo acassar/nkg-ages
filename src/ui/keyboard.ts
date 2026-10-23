@@ -6,6 +6,7 @@ export type KeyIntent =
   | { kind: 'speed'; speed: Speed }
   | { kind: 'pan'; dx: number; dy: number }
   | { kind: 'foundCamp' }
+  | { kind: 'explore' }
 
 const PAN: Record<string, [number, number]> = {
   ArrowUp: [0, -1],
@@ -22,6 +23,7 @@ const PAN: Record<string, [number, number]> = {
 export function intentOf(code: string): KeyIntent | null {
   if (code === 'Space') return { kind: 'togglePause' }
   if (code === 'KeyF') return { kind: 'foundCamp' }
+  if (code === 'KeyE') return { kind: 'explore' }
   const digit = /^(?:Digit|Numpad)([1-5])$/.exec(code)
   if (digit) return { kind: 'speed', speed: Number(digit[1]) as Speed }
   const pan = PAN[code]

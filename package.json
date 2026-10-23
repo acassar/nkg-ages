@@ -21,6 +21,7 @@
     "e2e": "node e2e/smoke.mjs",
     "bench": "tsx scripts/bench-engine.ts",
     "bench:map": "node e2e/bench-map.mjs",
+    "sonde": "tsx scripts/sonde.ts",
     "roadmap": "tsx scripts/roadmap.ts"
   },
   "dependencies": {

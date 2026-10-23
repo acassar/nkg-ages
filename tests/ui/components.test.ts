@@ -157,7 +157,9 @@ describe('écran de jeu', () => {
     const hunter = game.view!.units.find((u) => u.kind === 'chasseur')!
     game.select([hunter.id])
     await flushPromises()
-    expect(wrapper.find('[data-testid=selection]').exists()).toBe(false)
+    // Un chasseur seul peut explorer, mais pas fonder de campement.
+    expect(wrapper.find('[data-testid=selection]').text()).toContain('Chasseur')
+    expect(wrapper.find('[data-testid=found-camp]').exists()).toBe(false)
     // Sans éclaireur choisi, F prévient sans rien envoyer.
     await game.foundCamp()
     expect(game.error).toMatch(/éclaireur/)
@@ -170,6 +172,52 @@ describe('écran de jeu', () => {
     await game.foundCamp()
     await flushPromises()
     expect(game.error).toMatch(/habitants/)
+  })
+
+  it('un clic sur un campement le choisit : il grandit et forme des recrues là', async () => {
+    const game = useGameStore()
+    await game.newGame({ seed: 'camp-choisi', randomStart: false, width: 128, height: 64 })
+    const wrapper = mount(SelectionBar)
+    const camp = game.view!.camps.find((c) => c.mine)!
+    game.selectCamp(camp.id)
+    await flushPromises()
+    expect(game.selected.size).toBe(0)
+    const panel = wrapper.find('[data-testid=camp-selection]')
+    expect(panel.text()).toContain('Campement')
+    // Sans agriculture, le village est refusé, et la raison est dite.
+    expect(wrapper.find('[data-testid=camp-upgrade]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('[data-testid=camp-why]').text()).toMatch(/Agriculture/)
+    // Un éclaireur se forme à ce campement.
+    const before = game.view!.tribe.scouts
+    game.view = {
+      ...game.view!,
+      tribe: { ...game.view!.tribe, scoutBlocked: null },
+    }
+    await flushPromises()
+    await wrapper.find('[data-testid=camp-scout]').trigger('click')
+    await flushPromises()
+    // Le moteur décide : la tribu de départ n'a qu'un éclaireur et pas d'habitants en plus.
+    expect(game.view!.tribe.scouts).toBe(before)
+    expect(game.error).toMatch(/éclaireur de plus/)
+    // Choisir une unité relâche le campement.
+    game.select([game.view!.units[0]!.id])
+    expect(game.selectedCamp).toBeNull()
+  })
+
+  it('le bouton Explorer envoie les unités choisies explorer seules', async () => {
+    const game = useGameStore()
+    await game.newGame({ seed: 'exploration', randomStart: false, width: 128, height: 64 })
+    const wrapper = mount(SelectionBar)
+    const scout = game.view!.units.find((u) => u.kind === 'eclaireur')!
+    game.select([scout.id])
+    await flushPromises()
+    await wrapper.find('[data-testid=explore]').trigger('click')
+    await flushPromises()
+    expect(game.error).toBeNull()
+    const moving = game.view!.units.find((u) => u.id === scout.id)!
+    expect(moving.exploring).toBe(true)
+    expect(moving.target).not.toBeNull()
+    expect(wrapper.find('[data-testid=explore]').attributes('aria-pressed')).toBe('true')
   })
 
   it('retour au menu : plus d’erreur ni de sélection', async () => {

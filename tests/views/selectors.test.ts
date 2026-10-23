@@ -262,3 +262,27 @@ describe('vues de partie', () => {
     expect([...snap.river]).toEqual([...g.world.river])
   })
 })
+
+describe('campements choisis', () => {
+  it('dit ce que devient chaque campement du joueur, et ce qui l’en empêche', () => {
+    const g = game()
+    const camp = buildGameView(g).camps.find((c) => c.mine)!
+    expect(camp.upgrade).toMatchObject({
+      to: 'village',
+      blocked: expect.stringMatching(/Agriculture/),
+    })
+    g.camps[0]!.village = true
+    expect(buildGameView(g).camps[0]!.upgrade).toMatchObject({
+      to: 'city',
+      cost: expect.stringMatching(/cuivre/),
+    })
+    g.camps[0]!.city = true
+    expect(buildGameView(g).camps[0]!.upgrade).toBeNull()
+  })
+
+  it('compte les éclaireurs et dit pourquoi on ne peut pas en former', () => {
+    const tribe = buildGameView(game()).tribe
+    expect(tribe).toMatchObject({ scouts: 1, maxScouts: 1 })
+    expect(tribe.scoutBlocked).toMatch(/habitants/)
+  })
+})

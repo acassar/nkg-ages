@@ -33,9 +33,13 @@ import {
   cannotFoundCamp,
   maxCamps,
   maxHunters,
+  maxScouts,
+  cannotRecruitScout,
+  SCOUT_RULES,
   huntersResting,
   HUNT_RULES,
   depositHeld,
+  resourceKnown,
   foodCapacity,
   INVENTION_KINDS,
   INVENTION_RULES,
@@ -53,6 +57,7 @@ import {
   Visibility,
   UNIT_RULES,
   type GameEvent,
+  type Camp,
   type GameState,
   type Rect,
   unionRect,
@@ -60,6 +65,7 @@ import {
 import { alertsOf } from './alerts'
 import {
   BIOME_IDS,
+  type CampView,
   type DepositView,
   type InventionView,
   type SeasonView,
@@ -137,6 +143,7 @@ export function buildGameView(state: GameState, full = false): GameView {
       target: u.target ? { ...u.target } : null,
       path: u.path.map((p) => ({ x: p.x, y: p.y })),
       foundCamp: u.kind === 'eclaireur' ? { blocked: cannotFoundCamp(state, u) } : null,
+      exploring: u.explore === true,
     })),
     camps: state.camps
       .filter((c) => c.owner === PLAYER || known(state, c.x, c.y))
@@ -148,6 +155,7 @@ export function buildGameView(state: GameState, full = false): GameView {
         village: c.village === true,
         city: c.city === true,
         people: state.peoples.find((p) => p.owner === c.owner)?.name ?? null,
+        upgrade: upgradeOf(state, c),
       })),
     fog: patchOf(state.fog.cells, state.world.width, full ? whole : state.fog.dirty),
     territory: territoryPatch(
@@ -243,6 +251,11 @@ function noticeOf(state: GameState, event: GameEvent): string {
       const name = unit ? UNIT_RULES[unit.kind].name : 'Une unité'
       return `${name} renonce : aucun chemin connu assez court ne mène à sa destination.`
     }
+    case 'explored': {
+      const unit = state.units.find((u) => u.id === event.unitId)
+      const name = unit ? UNIT_RULES[unit.kind].name : 'L’éclaireur'
+      return `${name} a exploré tout ce qui est à sa portée : il attend vos ordres.`
+    }
     case 'victory':
       return `Victoire : la tribu a atteint l'objectif du ${FIRST_ERA.name.toLowerCase()}.`
     case 'defeat':
@@ -327,6 +340,10 @@ function tribeView(state: GameState): TribeView {
     maxHunters: maxHunters(state),
     recruitCost: HUNT_RULES.recruitFood,
     recruitBlocked: cannotRecruit(state),
+    scouts: state.units.filter((u) => u.kind === 'eclaireur').length,
+    maxScouts: maxScouts(state),
+    scoutCost: SCOUT_RULES.recruitFood,
+    scoutBlocked: cannotRecruitScout(state),
     huntersResting: huntersResting(state),
     camps: state.camps.filter((c) => c.owner === PLAYER).length,
     maxCamps: maxCamps(state),
@@ -342,12 +359,28 @@ function tribeView(state: GameState): TribeView {
   }
 }
 
+/** Ce que devient ce campement du joueur s'il grandit : village, puis cité. */
+function upgradeOf(state: GameState, camp: Camp): CampView['upgrade'] {
+  if (camp.owner !== PLAYER || camp.city) return null
+  if (!camp.village)
+    return {
+      to: 'village',
+      cost: `${VILLAGE_RULES.foodCost} rations`,
+      blocked: cannotBuildVillage(state, camp.id),
+    }
+  return {
+    to: 'city',
+    cost: `${CITY_RULES.foodCost} rations et ${CITY_RULES.copperCost} cuivre`,
+    blocked: cannotBuildCity(state, camp.id),
+  }
+}
+
 /** Gisements que le joueur a déjà vus. */
 function depositViews(state: GameState): DepositView[] {
   const { cells } = state.fog
   const { width } = state.world
   return state.deposits
-    .filter((d) => cells[d.y * width + d.x] !== Visibility.Unknown)
+    .filter((d) => cells[d.y * width + d.x] !== Visibility.Unknown && resourceKnown(state, d.kind))
     .map((d) => ({
       id: d.id,
       kind: d.kind,

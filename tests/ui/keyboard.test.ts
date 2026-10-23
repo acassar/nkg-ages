@@ -3,6 +3,7 @@ import { intentOf } from '@/ui/keyboard'
 
 describe('raccourcis clavier', () => {
   it('F fait fonder un campement', () => expect(intentOf('KeyF')).toEqual({ kind: 'foundCamp' }))
+  it('E fait explorer', () => expect(intentOf('KeyE')).toEqual({ kind: 'explore' }))
   it('Espace met en pause', () => expect(intentOf('Space')).toEqual({ kind: 'togglePause' }))
   it.each([1, 2, 3, 4, 5])('la touche %i règle la vitesse', (n) => {
     expect(intentOf(`Digit${n}`)).toEqual({ kind: 'speed', speed: n })

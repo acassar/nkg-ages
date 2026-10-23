@@ -18,6 +18,8 @@ export interface Unit {
   patience: number
   /** Ordre donné par l'unité elle-même (poursuite d'un troupeau), pas par le joueur. */
   auto: boolean
+  /** Ordre « Explorer » : arrivée quelque part, l'unité repart vers la lisière du connu. */
+  explore?: boolean
 }
 
 export interface UnitRules {
