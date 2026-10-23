@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { createGame, step } from '@/engine/game'
+import fc from 'fast-check'
+import { applyCommand, clearDirty, createGame, step, type GameState } from '@/engine/game'
+import { loadGame, saveGame } from '@/engine/save/save'
 import {
   buildGameView,
   buildWorldSnapshot,
@@ -55,6 +57,57 @@ describe('vues de partie', () => {
     expect(view.fog).not.toBeNull()
     expect(view.fog!.w * view.fog!.h).toBeLessThan(128 * 64)
   })
+
+  it('envoie l’abondance des terres : entière au départ, puis la zone usée chaque mois', () => {
+    const g = game()
+    const first = buildGameView(g, true).abundance!
+    expect(first).toMatchObject({ x: 0, y: 0, w: 128, h: 64 })
+    expect(first.data.every((v) => v === 255)).toBe(true)
+    clearDirty(g)
+    expect(buildGameView(g).abundance).toBeNull()
+    step(g)
+    const worn = buildGameView(g).abundance!
+    expect(worn.w * worn.h).toBeLessThan(128 * 64)
+    expect(worn.data.some((v) => v < 255)).toBe(true)
+  })
+
+  it('invariant : une texture tenue à jour par les seuls envois suit l’abondance (fast-check)', () => {
+    // Ce que fait le rendu : il part de la grille entière puis n'applique que les morceaux.
+    const encode = (g: GameState) => Uint8Array.from(g.abundance, (a) => Math.round(a * 255))
+    const apply = (mirror: Uint8Array, g: GameState) => {
+      const p = buildGameView(g).abundance
+      clearDirty(g)
+      if (!p) return
+      for (let y = 0; y < p.h; y++)
+        mirror.set(p.data.subarray(y * p.w, (y + 1) * p.w), (p.y + y) * 128 + p.x)
+    }
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 24 }),
+        fc.boolean(),
+        fc.integer({ min: 0, max: 11 }),
+        fc.constantFrom([12, 0], [-12, 0], [0, 10], [0, -10]),
+        (months, reload, moveAt, [dx, dy]) => {
+          let g = game()
+          const mirror = buildGameView(g, true).abundance!.data.slice()
+          clearDirty(g)
+          for (let m = 0; m < months; m++) {
+            // La bande part plus loin : les terres quittées repoussent hors de sa zone.
+            if (m === moveAt) {
+              const c = g.camps[0]!
+              applyCommand(g, { type: 'moveCamp', campId: c.id, x: c.x + dx!, y: c.y + dy! })
+            }
+            step(g)
+            // Une partie reprise renvoie tout.
+            if (reload && m === Math.floor(months / 2)) g = loadGame(saveGame(g))
+            apply(mirror, g)
+            expect(mirror).toEqual(encode(g))
+          }
+        },
+      ),
+      { numRuns: 4 },
+    )
+  }, 30_000)
 
   it('montre la tribu, arrondie, et prévient de la famine', () => {
     const g = game()

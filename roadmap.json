@@ -182,6 +182,10 @@
           "status": "done"
         },
         {
+          "title": "Terres épuisées visibles sur la carte",
+          "status": "done"
+        },
+        {
           "title": "Sédentarisation, passage au Néolithique",
           "status": "todo"
         },
@@ -223,6 +227,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-23",
+      "text": "Carte : les terres usées par les bandes se voient enfin ; elles pâlissent vers l'ocre et se couvrent de hachures d'encre à mesure qu'elles s'épuisent, puis s'effacent quand elles repoussent"
+    },
     {
       "date": "2026-10-23",
       "text": "Correction : les naissances se partagent enfin entre tous les campements selon leur taille ; arrondies au plus gros, elles allaient toutes au plus grand village ou à la plus grande bande, et les autres stagnaient"

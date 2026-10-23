@@ -20,6 +20,7 @@ uniform sampler2D uRiver;
 uniform sampler2D uFog;
 uniform sampler2D uTerritory;
 uniform sampler2D uRivals;
+uniform sampler2D uAbundance;
 uniform vec3 uPalette[10];
 uniform vec3 uPaper;
 uniform vec3 uInk;
@@ -109,6 +110,19 @@ void main() {
     float d = min(fract(level), 1.0 - fract(level));
     float contour = 1.0 - smoothstep(0.0, max(fwidth(level), 1e-4) * 1.2, d);
     color = mix(color, color * 0.75, contour * 0.55 * step(0.12, e));
+    // Terres usées par les bandes : la couleur pâlit vers l'ocre et des hachures d'encre la
+    // couvrent, d'autant plus nombreuses que la terre est épuisée ; elles s'effacent quand
+    // elle repousse. De loin, les traits seraient du bruit : le lavis ocre suffit.
+    float worn = 1.0 - smoothstep(0.3, 0.95, texture(uAbundance, wp / uWorld).r);
+    vec3 dry = mix(vec3(dot(color, vec3(0.3, 0.59, 0.11))), vec3(0.8, 0.7, 0.5), 0.55);
+    color = mix(color, dry, worn * 0.6);
+    // Hachures obliques espacées d'environ une cellule, d'un trait fin de largeur constante à l'écran.
+    float stripe = (w.x - w.y) * 0.8;
+    float px = (0.5 - abs(fract(stripe) - 0.5)) / max(fwidth(stripe), 1e-4);
+    float stroke = 1.0 - smoothstep(0.4, 1.2, px);
+    float gap = valueNoise(w * vec2(2.2, 0.9) + 11.0);
+    float shown = smoothstep(gap - 0.08, gap + 0.08, worn * 1.1) * smoothstep(0.0, 0.1, worn);
+    color = mix(color, uInk, stroke * shown * 0.35 * smoothstep(2.5, 5.0, uZoom));
     // Fleuves : un trait d'eau dont la largeur suit le débit, cerné d'encre.
     float r = texture(uRiver, wp / uWorld).r;
     float aa = max(fwidth(r), 1e-4);

@@ -9,7 +9,18 @@ import { FRAGMENT_SHADER, VERTEX_SHADER } from './shaders'
 /** Le joueur dans la grille de propriétaires (voir le moteur). */
 const PLAYER_OWNER = 1
 
-type TextureName = 'uElevation' | 'uBiome' | 'uRiver' | 'uFog' | 'uTerritory' | 'uRivals'
+type TextureName =
+  'uElevation' | 'uBiome' | 'uRiver' | 'uFog' | 'uTerritory' | 'uRivals' | 'uAbundance'
+
+const TEXTURES: readonly TextureName[] = [
+  'uElevation',
+  'uBiome',
+  'uRiver',
+  'uFog',
+  'uTerritory',
+  'uRivals',
+  'uAbundance',
+]
 
 /**
  * Rendu WebGL2 sans bibliothèque : un seul triangle plein écran, le shader fait tout.
@@ -53,6 +64,8 @@ export class WebGlMapRenderer implements MapRenderer {
     this.upload('uFog', world.width, world.height, empty, true)
     this.upload('uTerritory', world.width, world.height, empty, true)
     this.upload('uRivals', world.width, world.height, empty, true)
+    // Terres intactes au départ : la vue n'envoie ensuite que ce que les bandes ont usé.
+    this.upload('uAbundance', world.width, world.height, empty.fill(255), true)
   }
 
   applyView(view: GameView): void {
@@ -61,6 +74,7 @@ export class WebGlMapRenderer implements MapRenderer {
       this.patch('uTerritory', view.territory, ownerMask(view.territory, PLAYER_OWNER))
       this.patch('uRivals', view.territory, rivalMask(view.territory, PLAYER_OWNER))
     }
+    if (view.abundance) this.patch('uAbundance', view.abundance, view.abundance.data)
   }
 
   resize(cssWidth: number, cssHeight: number, pixelRatio: number): void {
@@ -85,8 +99,7 @@ export class WebGlMapRenderer implements MapRenderer {
     gl.uniform3fv(this.uniform('uPlayerInk'), PLAYER_INK)
     gl.uniform3fv(this.uniform('uRivalInk'), RIVAL_INK)
     gl.uniform1f(this.uniform('uRevealAll'), this.options.revealAll ? 1 : 0)
-    const names: TextureName[] = ['uElevation', 'uBiome', 'uRiver', 'uFog', 'uTerritory', 'uRivals']
-    names.forEach((name, unit) => {
+    TEXTURES.forEach((name, unit) => {
       gl.activeTexture(gl.TEXTURE0 + unit)
       gl.bindTexture(gl.TEXTURE_2D, this.textures.get(name) ?? null)
       gl.uniform1i(this.uniform(name), unit)
