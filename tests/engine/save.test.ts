@@ -71,6 +71,15 @@ describe('sauvegarde', () => {
     expect(result.ok).toBe(true)
   })
 
+  it('une sauvegarde d’avant les saisons (sans pertes notées) se reprend sans trou', () => {
+    const data = saveGame(busyGame())
+    const old = { ...data, tribe: { ...data.tribe } } as typeof data
+    delete (old.tribe as Partial<typeof old.tribe>).lastSpoiled
+    const g = loadGame(old)
+    expect(g.tribe.lastSpoiled).toBe(0)
+    expect(g.tribe.population).toBe(data.tribe.population)
+  })
+
   it('refuse une sauvegarde d’une autre version', () => {
     const data = { ...saveGame(createGame(options)), version: SAVE_VERSION + 1 }
     expect(() => loadGame(data)).toThrow(/autre version/)

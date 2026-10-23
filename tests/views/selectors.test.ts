@@ -107,6 +107,24 @@ describe('vues de partie', () => {
     expect(view.tribe).toMatchObject({ camps: 1, maxCamps: 1 })
   })
 
+  it('montre la saison, annonce l’hiver et compte la nourriture gâtée dans le bilan', () => {
+    const g = game()
+    expect(buildGameView(g).season).toMatchObject({ kind: 'hiver', name: 'Hiver' })
+    g.clock.tick = 6
+    const summer = buildGameView(g).season
+    expect(summer.kind).toBe('ete')
+    expect(summer.gather).toBeGreaterThan(100)
+    g.events.push({ type: 'winter', yieldFactor: 0.48 })
+    g.tribe.lastProduction = 20
+    g.tribe.lastConsumption = 12
+    g.tribe.lastSpoiled = 1.5
+    const view = buildGameView(g)
+    expect(view.notices).toEqual([
+      "L'hiver arrive : la cueillette tombe à 48 % jusqu'au printemps.",
+    ])
+    expect(view.tribe).toMatchObject({ foodBalance: 6.5, spoiled: 1.5 })
+  })
+
   it('montre les chasseurs et ce qui empêche d’en former, et prévient de la viande perdue', () => {
     const g = game()
     g.events.push({ type: 'meatLost', amount: 7 })

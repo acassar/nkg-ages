@@ -25,6 +25,7 @@ import { TRIBE_RULES } from '@/engine/content/tribe'
 import { UNIT_RULES } from '@/engine/units/units'
 import { PLAYER } from '@/engine/territory/territory'
 import fc from 'fast-check'
+import { createRng } from '@/engine/core/random'
 
 const options = { seed: 'scénario', randomStart: false, width: 256, height: 128 }
 
@@ -301,19 +302,24 @@ describe('commandes', () => {
   })
 
   it('le propulseur rend la chasse au mammouth moins meurtrière', () => {
+    // Un seul monde pour toutes les manches (le générer coûte cher) : chaque manche
+    // repart d'un chasseur neuf et d'un aléa à elle.
+    const base = createGame(options)
+    const start = { ...base.units.find((u) => u.kind === 'chasseur')! }
     const deaths = (thrower: boolean) => {
       let dead = 0
       for (let run = 0; run < 20; run++) {
-        const g = createGame({ ...options, seed: `propulseur-${run}` })
-        g.inventions.ranks.lance = 'E'
-        if (thrower) g.inventions.ranks.propulseur = 'S'
-        const hunter = g.units.find((u) => u.kind === 'chasseur')!
+        const g = base
+        g.rng = createRng(`propulseur-${run}`)
+        g.inventions.ranks = { lance: 'E', ...(thrower ? { propulseur: 'S' as const } : {}) }
+        const hunter = { ...start, path: [], target: null }
         g.units = [hunter]
         for (let i = 0; i < 40 && g.units.length > 0; i++) {
           g.herds = [
             { id: 1, kind: 'mammouth', x: hunter.x + 0.5, y: hunter.y, size: 4, goal: hunter },
           ]
           g.tribe.food = 0
+          g.tribe.population = 12
           step(g)
         }
         if (g.units.length === 0) dead++
@@ -321,7 +327,7 @@ describe('commandes', () => {
       return dead
     }
     expect(deaths(true)).toBeLessThan(deaths(false))
-  }, 30_000)
+  })
 
   it('défaite : la tribu disparue, tout s’arrête', () => {
     const g = createGame(options)
@@ -413,7 +419,10 @@ describe('scénarios', () => {
     expect(u.path).toEqual([])
     expect(ticks).toBeLessThan(1500)
     // Le joueur en est prévenu, une seule fois, puis l'envoi suivant repart à vide.
-    expect(g.events).toEqual([{ type: 'unitGaveUp', unitId: u.id }])
+    // (les autres avis, comme l'arrivée de l'hiver, ne comptent pas ici)
+    expect(g.events.filter((e) => e.type === 'unitGaveUp')).toEqual([
+      { type: 'unitGaveUp', unitId: u.id },
+    ])
     clearDirty(g)
     expect(g.events).toEqual([])
   })
