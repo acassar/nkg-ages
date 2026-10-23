@@ -75,6 +75,48 @@ export function ensureNearStart(
   }
 }
 
+/**
+ * Garantit les gisements promis à portée d'exploration (`withinReach`) : s'il n'y en a aucun
+ * dans l'anneau autour du départ, on en pose un sur une terre libre de cet anneau, dans un
+ * biome qui lui convient si possible (sinon sur n'importe quelle terre).
+ */
+export function ensureWithinReach(
+  deposits: Deposit[],
+  world: World,
+  start: { x: number; y: number },
+  rng: Rng,
+): void {
+  const { width, height } = world
+  const taken = new Set(deposits.map((d) => d.y * width + d.x))
+  let id = deposits.reduce((m, d) => Math.max(m, d.id), 0) + 1
+  for (const kind of RESOURCE_KINDS) {
+    const ring = RESOURCE_RULES[kind].withinReach
+    if (ring === undefined) continue
+    const [near, far] = ring
+    const inRing = (x: number, y: number) => {
+      const d = Math.hypot(x - start.x, y - start.y)
+      return d >= near && d <= far
+    }
+    if (deposits.some((d) => d.kind === kind && inRing(d.x, d.y))) continue
+    const fitting: { x: number; y: number }[] = []
+    const land: { x: number; y: number }[] = []
+    for (let y = Math.max(0, start.y - far); y <= Math.min(height - 1, start.y + far); y++) {
+      for (let x = Math.max(0, start.x - far); x <= Math.min(width - 1, start.x + far); x++) {
+        const i = y * width + x
+        const biome = world.biome[i] as BiomeId
+        if (taken.has(i) || isWater(biome) || !inRing(x, y)) continue
+        land.push({ x, y })
+        if (RESOURCE_RULES[kind].biomes.includes(biome)) fitting.push({ x, y })
+      }
+    }
+    const spots = fitting.length > 0 ? fitting : land
+    if (spots.length === 0) continue
+    const spot = rng.pick(spots)
+    taken.add(spot.y * width + spot.x)
+    deposits.push({ id: id++, kind, x: spot.x, y: spot.y, rank: rollRank(rng) })
+  }
+}
+
 function touchesLand(world: World, x: number, y: number): boolean {
   for (const [dx, dy] of [
     [1, 0],
