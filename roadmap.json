@@ -194,6 +194,10 @@
           "status": "done"
         },
         {
+          "title": "Chasse d'abord près des troupeaux : la terre se repose",
+          "status": "todo"
+        },
+        {
           "title": "Savoir qui vieillit (brouillard qui se voile)",
           "status": "todo"
         },
@@ -259,6 +263,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-24",
+      "text": "Backlog : une bande qui voit un troupeau chasse d'abord et ne cueille que le reste ; sa terre s'use moins et elle migre moins souvent (aujourd'hui la viande ne fait que 4 à 5 % des vivres des bandes)"
+    },
     {
       "date": "2026-10-24",
       "text": "Backlog : nouveaux villages possibles une fois toutes les bandes sédentarisées, pictogrammes de ressources plus grands avec leur propre couleur, rareté affichée en étoiles au-dessus (bronze, argent, or, violette brillante) et filtres de carte"
