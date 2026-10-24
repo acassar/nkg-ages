@@ -206,6 +206,22 @@
           "status": "todo"
         },
         {
+          "title": "Nouveaux villages après la sédentarisation",
+          "status": "todo"
+        },
+        {
+          "title": "Pictogrammes plus grands, une couleur par ressource",
+          "status": "todo"
+        },
+        {
+          "title": "Rareté en étoiles (bronze, argent, or, violette)",
+          "status": "todo"
+        },
+        {
+          "title": "Filtres de carte : ressources et autres informations",
+          "status": "todo"
+        },
+        {
           "title": "Arbre des inventions",
           "status": "todo"
         },
@@ -243,6 +259,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-24",
+      "text": "Backlog : nouveaux villages possibles une fois toutes les bandes sédentarisées, pictogrammes de ressources plus grands avec leur propre couleur, rareté affichée en étoiles au-dessus (bronze, argent, or, violette brillante) et filtres de carte"
+    },
     {
       "date": "2026-10-24",
       "text": "Jeu : plus de curseur de chasse ; chaque bande cueille et chasse à la fois, envoie chasser les bras libres quand ses terres manquent, s'arrête de récolter réserve pleine (ses terres s'usent moins), et fait d'autant plus d'enfants que sa réserve est garnie, sauf quand elle fond ; les vivres ne s'affichent plus que sur la bande choisie"

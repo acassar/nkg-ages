@@ -14,6 +14,8 @@ export default defineConfig({
     include: ['tests/**/*.test.ts'],
     setupFiles: ['tests/setup.ts'],
     environment: 'node',
+    // Les tests du moteur créent des mondes entiers : sous la couverture v8 en CI, ils dépassent les 5 s par défaut.
+    testTimeout: 30_000,
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,vue}'],
