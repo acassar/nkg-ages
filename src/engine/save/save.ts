@@ -253,6 +253,8 @@ export function loadGame(data: SaveData): GameState {
   const camps = state.camps.filter((c) => c.owner === PLAYER)
   const people = camps.reduce((sum, c) => sum + (c.members ?? 0), 0)
   for (const c of camps) {
+    // Sauvegarde d'avant la récolte automatique : la part de chasseurs réglée n'existe plus.
+    delete (c as { hunting?: number }).hunting
     if (c.larder) {
       // Un champ ajouté depuis la sauvegarde garde sa valeur de départ au lieu de manquer.
       c.larder = { ...createLarder(0), ...c.larder }

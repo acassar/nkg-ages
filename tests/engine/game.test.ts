@@ -7,6 +7,7 @@ import {
   depositHeld,
   foodCapacity,
   huntersOf,
+  plannedHunters,
   step,
   type Camp,
   type GameState,
@@ -451,9 +452,14 @@ describe('scénarios', () => {
 
   it('la tribu se nourrit de son territoire et grandit', () => {
     const g = createGame(options)
-    for (let i = 0; i < 240; i++) step(g)
+    // Une bande qui reste sur place use ses terres : quelques fins d'hiver maigres, pas plus.
+    let starving = 0
+    for (let i = 0; i < 240; i++) {
+      step(g)
+      if (home(g).starvingMonths > 0) starving++
+    }
     expect(g.tribe.population).toBeGreaterThan(TRIBE_RULES.startPopulation)
-    expect(home(g).starvingMonths).toBe(0)
+    expect(starving).toBeLessThanOrEqual(6)
   })
 
   it('sans rien à récolter, la famine prévient une fois puis décime la tribu', () => {
@@ -492,7 +498,6 @@ describe('scénarios', () => {
   it('la bande chasse seule un troupeau qu’elle voit et nourrit la tribu', () => {
     const g = createGame(options)
     const band = g.camps[0]!
-    expect(huntersOf(g)).toBeGreaterThan(0)
     home(g).food = 0
     g.abundance.fill(0)
     g.territory.weights = new Float32Array(g.territory.owner.length)
@@ -510,6 +515,8 @@ describe('scénarios', () => {
       for (const h of g.herds) Object.assign(h, { ...spot, goal: { ...spot } })
     }
     expect(meat).toBeGreaterThan(0)
+    // Sans rien à cueillir, tous les bras libres sont partis chasser.
+    expect(huntersOf(g)).toBe(Math.floor(TRIBE_RULES.startPopulation * HUNT_RULES.maxShare))
     // Le troupeau peut se reconstituer ensuite : on regarde sa plus petite taille.
     expect(smallest).toBeLessThan(8)
   })
@@ -605,14 +612,34 @@ describe('scénarios', () => {
     expect(run(true)).toEqual(run(false))
   })
 
-  it('une personne sur quelques-unes chasse, dans chaque campement', () => {
-    const g = createGame(options)
-    const band = g.camps[0]!
-    expect(huntersOf(g)).toBe(Math.floor(TRIBE_RULES.startPopulation / (1 / HUNT_RULES.share)))
-    // Deux bandes : chacune compte ses chasseurs, les restes ne s'additionnent pas.
-    band.members = (1 / HUNT_RULES.share) * 2 - 1
-    g.camps.push({ ...band, id: 99, members: (1 / HUNT_RULES.share) * 2 - 1 })
-    expect(huntersOf(g)).toBe(2)
+  it('la bande répartit seule ses gens : une part chasse, plus quand ses terres manquent', () => {
+    const rate = TRIBE_RULES.gatherPerPerson
+    const base = Math.floor(12 * HUNT_RULES.share)
+    const able = Math.floor(12 * HUNT_RULES.maxShare)
+    // Rien ne manque : personne ne sort.
+    expect(plannedHunters(12, 0, 100, rate)).toBe(0)
+    expect(plannedHunters(0, 50, 0, rate)).toBe(0)
+    // Les terres suffisent : la part habituelle chasse, les autres cueillent.
+    expect(plannedHunters(12, 20, 100, rate)).toBe(base)
+    // Les terres ne suffisent pas : la cueillette n'occupe que trois personnes (4,8 rations),
+    // les autres chassent, jusqu'à la moitié de la bande.
+    expect(plannedHunters(12, 20, 3 * rate, rate)).toBe(able)
+    expect(plannedHunters(12, 20, 9 * rate, rate)).toBe(Math.max(base, 3))
+    // Plus de terres, jamais plus de chasseurs.
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: 60 }),
+        fc.double({ min: 0, max: 200, noNaN: true }),
+        fc.double({ min: 0, max: 200, noNaN: true }),
+        fc.double({ min: 0, max: 200, noNaN: true }),
+        (members, room, land, more) => {
+          const h = plannedHunters(members, room, land, rate)
+          expect(h).toBeGreaterThanOrEqual(0)
+          expect(h).toBeLessThanOrEqual(Math.floor(members * HUNT_RULES.maxShare + 1e-9))
+          expect(plannedHunters(members, room, land + more, rate)).toBeLessThanOrEqual(h)
+        },
+      ),
+    )
   })
 
   it('la tribu tient un gisement de silex dès le départ, quelle que soit la graine', () => {

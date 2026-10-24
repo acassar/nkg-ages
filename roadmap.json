@@ -190,7 +190,7 @@
           "status": "done"
         },
         {
-          "title": "Vivres par bande, cueillette ou chasse au choix",
+          "title": "Vivres par bande, cueillette et chasse réparties seules",
           "status": "done"
         },
         {
@@ -243,6 +243,10 @@
     }
   ],
   "log": [
+    {
+      "date": "2026-10-24",
+      "text": "Jeu : plus de curseur de chasse ; chaque bande cueille et chasse à la fois, envoie chasser les bras libres quand ses terres manquent, s'arrête de récolter réserve pleine (ses terres s'usent moins), et fait d'autant plus d'enfants que sa réserve est garnie, sauf quand elle fond ; les vivres ne s'affichent plus que sur la bande choisie"
+    },
     {
       "date": "2026-10-23",
       "text": "Jeu : plus de réserve commune ; chaque bande ou village vit de ses propres vivres, mis en commun seulement avec les campements proches, et règle d'un curseur la part de ses gens qui chassent plutôt que de cueillir (la viande va dans la même réserve) ; une bande ne compte plus les terres d'un autre peuple comme les siennes"

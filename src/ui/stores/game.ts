@@ -189,7 +189,6 @@ export const useGameStore = defineStore('game', () => {
   const splitBand = (campId: number) => send({ type: 'splitBand', campId })
   const setRoaming = (campId: number, roaming: boolean) =>
     send({ type: 'setRoaming', campId, roaming })
-  const setHunting = (campId: number, share: number) => send({ type: 'setHunting', campId, share })
 
   /** La bande choisie, s'il y en a une (un village ne marche pas). */
   function selectedBand() {
@@ -247,7 +246,6 @@ export const useGameStore = defineStore('game', () => {
     trade,
     splitBand,
     setRoaming,
-    setHunting,
     moveSelectedTo,
     focusOn,
     quit,

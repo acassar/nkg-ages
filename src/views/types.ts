@@ -56,11 +56,12 @@ export interface LarderView {
   gathered: number
   meat: number
   starving: boolean
-  /** Part des gens qui chassent (de 0 à `maxHunting`), et combien cela fait de chasseurs. */
-  hunting: number
-  maxHunting: number
+  /** Rations gâtées au dernier mois. */
+  spoiled: number
+  /** Gens partis chasser au dernier mois (la bande les répartit seule), et ceux restés cueillir. */
   hunters: number
-  /** Réserve pleine : ses chasseurs ne chassent pas. */
+  gatherers: number
+  /** Réserve pleine : ses chasseurs se reposent, la cueillette ne remplace que les repas. */
   resting: boolean
 }
 
@@ -240,20 +241,10 @@ export interface DepositView {
 
 export interface TribeView {
   population: number
-  /** Vivres de tous les campements, en rations (une ration nourrit une personne un mois). */
-  food: number
-  foodCapacity: number
-  /** Récolte moins consommation et pertes au dernier mois. */
-  foodBalance: number
-  /** Rations gâtées dans la réserve au dernier mois. */
-  spoiled: number
+  /** Une des bandes a faim. */
   starving: boolean
   /** Matériaux en réserve, arrondis. */
   materials: { kind: string; name: string; amount: number }[]
-  /** Chasseurs de tous les campements (chacun règle sa part) : ils chassent et défendent leur camp. */
-  hunters: number
-  /** Réserve pleine : les chasseurs ne chassent pas. */
-  huntersResting: boolean
   /** Campements tenus (bandes et villages), dont les bandes nomades. */
   camps: number
   bands: number

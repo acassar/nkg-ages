@@ -79,6 +79,7 @@ import {
   tickTribe,
   type Group,
   type Larder,
+  type TribeBonus,
   type TribeState,
 } from './tribe/tribe'
 import { isPassable, moveAlong, stopMover, type Mover } from './units/units'
@@ -142,8 +143,8 @@ export interface Camp extends Partial<Mover> {
    * remplissent. Deux campements proches la mettent en commun (BAND_RULES.shareDistance).
    */
   larder?: Larder
-  /** Part de ses gens qui chassent au lieu de cueillir (HUNT_RULES.share par défaut). */
-  hunting?: number
+  /** Chasseurs qu'il a envoyés le dernier mois (la bande les répartit seule). */
+  hunters?: number
 }
 
 /** La tribu du joueur : ses gens (répartis entre ses campements) et ses matériaux. */
@@ -303,14 +304,32 @@ function placePeoples(state: GameState, player: StartSite, count: number): void 
   }
 }
 
-/** Part des gens d'un campement qui chassent. */
-export function huntingOf(camp: Camp): number {
-  return camp.hunting ?? HUNT_RULES.share
+/** Chasseurs qu'un campement a envoyés le dernier mois. */
+export function huntersIn(camp: Camp): number {
+  return camp.hunters ?? 0
 }
 
-/** Chasseurs d'un campement : la part de ses gens qu'il envoie chasser. */
-export function huntersIn(camp: Camp): number {
-  return Math.floor((camp.members ?? 0) * huntingOf(camp) + 1e-9)
+/** Gens d'un campement en âge de chasser : ce sont eux qui le défendent d'un pillage. */
+export function defendersIn(camp: Camp): number {
+  return Math.floor((camp.members ?? 0) * HUNT_RULES.share + 1e-9)
+}
+
+/**
+ * Chasseurs qu'une bande envoie ce mois-ci, si elle voit du gibier sans danger. Elle cueille
+ * et chasse à la fois : une part de ses gens (`HUNT_RULES.share`) chasse toujours, et quand
+ * ses terres ne suffisent pas à remplir la réserve, tous les bras que la cueillette n'occupe
+ * pas partent chasser aussi, jusqu'à `maxShare`. S'il ne manque rien, personne ne sort.
+ * `room` : rations qui manquent pour finir le mois réserve pleine ; `land` : ce que ses
+ * terres offrent ce mois-ci ; `rate` : ce que cueille une personne.
+ */
+export function plannedHunters(members: number, room: number, land: number, rate: number): number {
+  if (members <= 0 || room <= 0) return 0
+  const base = Math.floor(members * HUNT_RULES.share + 1e-9)
+  const able = Math.floor(members * HUNT_RULES.maxShare + 1e-9)
+  if (land >= room || rate <= 0) return Math.min(base, able)
+  // Les terres ne suffisent pas : la cueillette prend tout ce qu'elles offrent, le reste chasse.
+  const busy = Math.ceil(land / rate - 1e-9)
+  return Math.min(able, Math.max(base, members - busy))
 }
 
 /** Réserve d'un campement du joueur (vide s'il n'en avait pas encore). */
@@ -318,7 +337,7 @@ export function larderOf(camp: Camp): Larder {
   return (camp.larder ??= createLarder(0))
 }
 
-/** Chasseurs de toute la tribu : ils mangent sans cueillir, et défendent les camps. */
+/** Chasseurs de toute la tribu au dernier mois. */
 export function huntersOf(state: GameState): number {
   let hunters = 0
   for (const c of state.camps) if (c.owner === PLAYER) hunters += huntersIn(c)
@@ -668,7 +687,6 @@ export function applyCommand(state: GameState, command: Command): CommandResult 
       const side = isPassable(state.world, band.x + 1, band.y) ? 1 : 0
       const young = newBand(state, band.x + side, band.y, leaving, food)
       young.roaming = band.roaming
-      if (band.hunting !== undefined) young.hunting = band.hunting
       state.camps.push(young)
       // La nouvelle bande part d'elle-même vers d'autres terres, si elle en connaît : même
       // moins riches, elles valent mieux que celles qu'elle partage avec sa mère.
@@ -681,14 +699,6 @@ export function applyCommand(state: GameState, command: Command): CommandResult 
       const band = bandOf(state, command.campId)
       if (!band) return { ok: false, reason: 'Aucune bande choisie' }
       band.roaming = command.roaming
-      return { ok: true }
-    }
-    case 'setHunting': {
-      const camp = state.camps.find((c) => c.owner === PLAYER && c.id === command.campId)
-      if (!camp) return { ok: false, reason: 'Aucun campement choisi' }
-      if (!Number.isFinite(command.share))
-        return { ok: false, reason: 'Part de chasseurs invalide' }
-      camp.hunting = Math.min(HUNT_RULES.maxShare, Math.max(0, command.share))
       return { ok: true }
     }
     case 'gift': {
@@ -824,7 +834,6 @@ function month(state: GameState): void {
   state.clock.tick++
   // Chaque campement vit de ses gens : ils doivent compter toute la population.
   syncMembers(state)
-  hunt(state)
   // Le joueur et les peuples poussent chacun avec leur aléa : tant qu'ils ne se touchent pas,
   // la présence des voisins ne change rien au territoire du joueur. Seuls les villages du
   // joueur étendent ses terres : une bande n'a que sa zone, qui la suit.
@@ -834,6 +843,7 @@ function month(state: GameState): void {
   growTerritory(state.territory, state.world, mine, state.rng, CAMP_RULES.growthPerTick)
   growTerritory(state.territory, state.world, theirs, state.peopleRng, CAMP_RULES.growthPerTick)
   harvest(state)
+  tendHerds(state)
   for (const people of state.peoples) livePeople(state, people)
   fortune(state)
   syncMembers(state)
@@ -903,8 +913,10 @@ function foodWeights(world: World): Float32Array {
 }
 
 /**
- * Un mois de récolte, campement par campement : chacun cueille sur les terres du joueur
- * les plus proches de lui, avec ceux qui ne chassent pas, et vit de sa propre réserve.
+ * Un mois de récolte, campement par campement : chacun chasse et cueille sur les terres du
+ * joueur les plus proches de lui, répartit seul ses gens entre les deux, et vit de sa propre
+ * réserve. Il ne rapporte que ce qu'il faut pour la remplir : réserve pleine, ses chasseurs
+ * se reposent et la cueillette ne remplace que les repas.
  */
 function harvest(state: GameState): void {
   const { owner, width, height } = state.territory
@@ -947,7 +959,6 @@ function harvest(state: GameState): void {
     if (rect) state.abundanceDirty = unionRect(state.abundanceDirty, rect)
   camps.forEach((camp, k) => {
     const larder = larderOf(camp)
-    const group: Group = { ...larder, population: camp.members ?? 0 }
     const forage =
       forageOf(cellsOf[k]!, state.territory.weights, state.abundance) * BAND_RULES.yieldPerCell
     const available = (forage + depositFood[k]!) * seasonalYield(month, campClimate(state, camp))
@@ -959,10 +970,13 @@ function harvest(state: GameState): void {
       efficiency: campEfficiency(camp),
     }
     // Les moissons rentrent avant le repas du mois ; la réserve les borne comme le reste.
-    const crops = group.population > 0 ? (fields.get(camp) ?? 0) : 0
-    group.food += crops
-    group.lastCrops = crops
-    if (tickTribe(group, available, bonus, huntersIn(camp)) === 'famineStarts')
+    const crops = (camp.members ?? 0) > 0 ? (fields.get(camp) ?? 0) : 0
+    larder.food += crops
+    larder.lastCrops = crops
+    // La chasse d'abord : la viande remplit la réserve, la cueillette fait le reste.
+    const hunters = hunt(state, camp, available, bonus)
+    const group: Group = { ...larder, population: camp.members ?? 0 }
+    if (tickTribe(group, available, bonus, hunters, larder.lastMeat + crops) === 'famineStarts')
       state.events.push({ type: 'famine', campId: camp.id })
     // Part de ce qu'offraient ses terres qui a été cueillie : c'est elle qui les épuise.
     const gathered = group.lastProduction / (1 + bonus.gather)
@@ -1082,8 +1096,10 @@ export function raid(state: GameState, people: People): void {
   const camp = raidTarget(state, people)
   if (!camp) return
   const larder = larderOf(camp)
-  const hunters = huntersIn(camp)
-  const defense = Math.min(RELATION_RULES.maxDefense, hunters * RELATION_RULES.defensePerHunter)
+  const defense = Math.min(
+    RELATION_RULES.maxDefense,
+    defendersIn(camp) * RELATION_RULES.defensePerHunter,
+  )
   const wanted = Math.min(
     people.tribe.population * RELATION_RULES.raidFoodPerPerson,
     larder.food * RELATION_RULES.raidMaxShare,
@@ -1507,46 +1523,65 @@ export function depositHeld(state: GameState, deposit: Deposit): boolean {
 }
 
 /**
- * Chaque campement chasse seul : ses chasseurs tentent chacun leur chance sur le plus proche
- * des troupeaux qu'il voit (pas les plus dangereux), et la viande va à sa réserve.
- * Réserve pleine, ils ne risquent pas leur vie.
+ * Un campement envoie ses chasseurs (voir plannedHunters) : chacun tente sa chance sur le
+ * plus proche des troupeaux qu'il voit (pas les plus dangereux), et la viande va à sa
+ * réserve. Ils rentrent dès qu'elle suffit à finir le mois réserve pleine ; réserve déjà
+ * pleine, ils ne risquent pas leur vie et la cueillette remplace seule les repas. Rend le
+ * nombre de chasseurs partis (ils ne cueillent pas ce mois-ci).
  */
-function hunt(state: GameState): void {
+function hunt(state: GameState, camp: Camp, available: number, bonus: TribeBonus): number {
   const { world, rng, faunaRng } = state
-  for (const camp of state.camps) {
-    if (camp.owner !== PLAYER) continue
-    const larder = larderOf(camp)
-    larder.lastMeat = 0
-    for (let i = huntersIn(camp); i > 0 && (camp.members ?? 0) > 0; i--) {
-      const capacity = campCapacity(state, camp)
-      if (larder.food >= capacity) break
-      const prey = herdsSeenBy(state, camp).find(safePrey)
-      if (!prey) break
-      const rules = ANIMAL_RULES[prey.kind]
-      // Le propulseur éloigne le chasseur de la bête : le danger baisse.
-      const thrower = inventionStat(state.inventions, 'propulseur')
-      const safety = thrower ? Math.min(1, Math.max(0, -rollStat(thrower, rng) / 100)) : 0
-      if (rng.next() < rules.danger * (1 - safety)) {
-        loseMember(state, camp)
-        state.events.push({ type: 'hunterKilled', animal: prey.kind })
-        continue
-      }
-      // Dégâts de l'arme du moment, rapportés à ceux des mains nues.
-      const weapon = inventionStat(state.inventions, 'lance') ?? INVENTION_WORK.bareDamage
-      const power = Math.max(0, rollStat(weapon, rng)) / INVENTION_WORK.bareDamage.mean
-      if (rng.next() < rules.catchChance * power) {
-        prey.size--
-        const lost = Math.floor(larder.food + rules.meat - capacity)
-        const kept = Math.min(rules.meat, capacity - larder.food)
-        larder.food += kept
-        larder.lastMeat += kept
-        if (lost >= 1) state.events.push({ type: 'meatLost', amount: lost })
-        flee(prey, world, faunaRng, camp, HUNT_RULES.fleeDistance)
-      }
+  const larder = larderOf(camp)
+  larder.lastMeat = 0
+  camp.hunters = 0
+  const members = camp.members ?? 0
+  if (larder.food >= campCapacity(state, camp)) return 0
+  if (!herdsSeenBy(state, camp).some(safePrey)) return 0
+  // Ce qu'il faut rapporter pour finir le mois réserve pleine, repas compris.
+  const full = () => campCapacity(state, camp) + (camp.members ?? 0) * TRIBE_RULES.rationPerPerson
+  const rate = TRIBE_RULES.gatherPerPerson * (bonus.efficiency ?? 1) * (1 + bonus.gather)
+  const planned = plannedHunters(
+    members,
+    full() - larder.food,
+    available * (1 + bonus.gather),
+    rate,
+  )
+  camp.hunters = planned
+  for (let i = planned; i > 0 && (camp.members ?? 0) > 0; i--) {
+    const target = full()
+    if (larder.food >= target) break
+    const prey = herdsSeenBy(state, camp).find(safePrey)
+    if (!prey) break
+    const rules = ANIMAL_RULES[prey.kind]
+    // Le propulseur éloigne le chasseur de la bête : le danger baisse.
+    const thrower = inventionStat(state.inventions, 'propulseur')
+    const safety = thrower ? Math.min(1, Math.max(0, -rollStat(thrower, rng) / 100)) : 0
+    if (rng.next() < rules.danger * (1 - safety)) {
+      loseMember(state, camp)
+      camp.hunters--
+      state.events.push({ type: 'hunterKilled', animal: prey.kind })
+      continue
+    }
+    // Dégâts de l'arme du moment, rapportés à ceux des mains nues.
+    const weapon = inventionStat(state.inventions, 'lance') ?? INVENTION_WORK.bareDamage
+    const power = Math.max(0, rollStat(weapon, rng)) / INVENTION_WORK.bareDamage.mean
+    if (rng.next() < rules.catchChance * power) {
+      prey.size--
+      const lost = Math.floor(larder.food + rules.meat - target)
+      const kept = Math.min(rules.meat, target - larder.food)
+      larder.food += kept
+      larder.lastMeat += kept
+      if (lost >= 1) state.events.push({ type: 'meatLost', amount: lost })
+      flee(prey, world, faunaRng, camp, HUNT_RULES.fleeDistance)
     }
   }
+  return camp.hunters
+}
+
+/** Les troupeaux décimés disparaissent, les autres se reforment. */
+function tendHerds(state: GameState): void {
   state.herds = state.herds.filter((h) => h.size > 0)
-  for (const herd of state.herds) regrow(herd, faunaRng)
+  for (const herd of state.herds) regrow(herd, state.faunaRng)
 }
 
 /** Le joueur voit-il ce troupeau en ce moment ? */

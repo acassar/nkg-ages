@@ -103,12 +103,10 @@ describe('barre du haut', () => {
     expect(wrapper.find('[data-testid=date]').text()).toContain('12 000 av. J.-C.')
     expect(wrapper.find('[data-testid=season]').text()).toMatch(/^Hiver · \d+ %$/)
     expect(wrapper.find('[data-testid=population]').text()).toBe('12')
-    expect(wrapper.find('[data-testid=food]').text()).toBe('36')
-    expect(wrapper.find('[data-testid=hunters]').text()).toBe('2')
-    // Deux chasseurs pour douze habitants : une personne sur six chasse.
-    // Les chasseurs chassent seuls : rien à former.
+    // Les vivres et les chasseurs sont propres à chaque bande : pas de total en haut.
+    expect(wrapper.find('[data-testid=food]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid=hunters]').exists()).toBe(false)
     expect(wrapper.find('[data-testid=recruit]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid=hunters-resting]').exists()).toBe(false)
     await wrapper.find('[data-testid=speed-4]').trigger('click')
     await flushPromises()
     expect(game.view?.speed).toBe(4)
@@ -165,13 +163,10 @@ describe('écran de jeu', () => {
     const split = wrapper.find('[data-testid=band-split]')
     expect(split.attributes('disabled')).toBeDefined()
     expect(split.attributes('title')).toMatch(/personnes/)
-    // Sa propre réserve, et le curseur entre cueillette et chasse.
-    expect(wrapper.find('[data-testid=camp-larder]').text()).toMatch(/vivres/)
-    const hunting = wrapper.find('[data-testid=camp-hunting]')
-    await hunting.setValue('0.4')
-    await hunting.trigger('change')
-    await flushPromises()
-    expect(game.view!.camps.find((c) => c.id === camp.id)!.larder!.hunting).toBe(0.4)
+    // Sa propre réserve, et qui cueille ou chasse : la bande en décide seule.
+    expect(wrapper.find('[data-testid=camp-larder]').text()).toMatch(/36 \/ \d+ vivres/)
+    expect(wrapper.find('[data-testid=camp-work]').text()).toMatch(/cueillent/)
+    expect(wrapper.find('[data-testid=camp-hunting]').exists()).toBe(false)
     // Migrer seule : un interrupteur.
     await wrapper.find('[data-testid=band-roaming]').trigger('click')
     await flushPromises()

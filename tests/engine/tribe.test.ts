@@ -75,25 +75,54 @@ describe('tribu', () => {
     expect(t.food).toBe(storageCapacity(10))
   })
 
-  it('grandit selon son surplus : ≈ 5 % par an pour un surplus d’un quart, le double au mieux', () => {
-    const grow = (available: number) => {
-      const t = tribe({ population: 100, food: storageCapacity(100) })
-      for (let m = 0; m < 12; m++) tickTribe(t, available)
+  it('grandit selon sa réserve : vite réserve pleine, bien moins à moitié vide', () => {
+    const grow = (months: number) => {
+      const t = tribe({ population: 100, food: 100 * R.rationPerPerson * months })
+      // Juste de quoi manger : la réserve ne bouge pas.
+      for (let m = 0; m < 12; m++) tickTribe(t, t.population * R.rationPerPerson)
       return t.population
     }
-    expect(grow(100 * R.rationPerPerson * (1 + R.surplusForGrowth))).toBeGreaterThanOrEqual(104)
-    expect(grow(100 * R.rationPerPerson * (1 + R.surplusForGrowth))).toBeLessThanOrEqual(106)
-    expect(grow(PLENTY)).toBeGreaterThanOrEqual(109)
-    expect(grow(PLENTY)).toBeLessThanOrEqual(111)
-    // Réserve pleine mais sans surplus : croissance minimale, d'un quart.
-    expect(grow(100 * R.rationPerPerson)).toBe(101)
+    // ≈ 5 % par an, fois maxGrowthFactor.
+    const full = 100 * R.growthPerMonth * 12 * R.maxGrowthFactor
+    expect(grow(R.storageMonths)).toBeGreaterThanOrEqual(100 + Math.floor(full) - 1)
+    expect(grow(R.storageMonths)).toBeLessThanOrEqual(100 + Math.ceil(full) + 1)
+    expect(grow(5)).toBeGreaterThan(101)
+    expect(grow(5)).toBeLessThan(grow(R.storageMonths))
+    expect(grow(1)).toBe(100)
   })
 
-  it('calcule le facteur de croissance selon le surplus', () => {
-    expect(growthFactor(125, 100)).toBeCloseTo(1)
-    expect(growthFactor(1000, 100)).toBe(R.maxGrowthFactor)
-    expect(growthFactor(90, 100)).toBe(0.25)
+  it('calcule le facteur de croissance selon les mois de vivres en réserve', () => {
+    expect(growthFactor(R.comfortMonths * 100, 100)).toBe(R.minGrowthFactor)
+    expect(growthFactor(R.fullMonths * 100, 100)).toBe(R.maxGrowthFactor)
+    expect(growthFactor(1000 * 100, 100)).toBe(R.maxGrowthFactor)
+    expect(growthFactor(5 * 100, 100)).toBeCloseTo((R.minGrowthFactor + R.maxGrowthFactor) / 2)
+    expect(growthFactor(100, 100)).toBe(0)
     expect(growthFactor(5, 0)).toBe(0)
+  })
+
+  it('une réserve qui fond ne fait pas naître, même pleine ; la viande rentrée compte', () => {
+    const t = tribe({ population: 100, food: storageCapacity(100) })
+    for (let m = 0; m < 12; m++) tickTribe(t, 0.5 * t.population * R.rationPerPerson)
+    expect(t.population).toBe(100)
+    // La même réserve, nourrie par la chasse plutôt que la cueillette : elle grandit.
+    const hunted = tribe({ population: 100, food: storageCapacity(100) })
+    for (let m = 0; m < 12; m++) {
+      const meat = 0.5 * hunted.population * R.rationPerPerson
+      hunted.food += meat
+      tickTribe(hunted, 0.5 * hunted.population * R.rationPerPerson, undefined, 0, meat)
+    }
+    expect(hunted.population).toBeGreaterThan(100)
+  })
+
+  it('ne cueille que ce qui manque pour finir le mois réserve pleine', () => {
+    const full = storageCapacity(10)
+    const t = tribe({ population: 10, food: full - 3 })
+    tickTribe(t, PLENTY)
+    expect(t.lastProduction).toBeCloseTo(10 * R.rationPerPerson + 3)
+    expect(t.food).toBeCloseTo(full)
+    // Réserve pleine : la cueillette ne fait que remplacer les repas.
+    tickTribe(t, PLENTY)
+    expect(t.lastProduction).toBeCloseTo(10 * R.rationPerPerson)
   })
 
   it('ne grandit pas sans réserve confortable', () => {

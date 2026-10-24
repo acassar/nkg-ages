@@ -17,11 +17,6 @@ export type Command =
   | { type: 'splitBand'; campId: number }
   /** Une bande migre seule quand ses terres s'épuisent (ou reste où on la met). */
   | { type: 'setRoaming'; campId: number; roaming: boolean }
-  /**
-   * Part des gens d'un campement qui chassent (de 0 à HUNT_RULES.maxShare) ; les autres
-   * cueillent. Les deux remplissent la même réserve.
-   */
-  | { type: 'setHunting'; campId: number; share: number }
   /** Offre des vivres à un peuple voisin rencontré (désigné par son numéro de propriétaire). */
   | { type: 'gift'; people: number }
   /** Échange du silex contre des vivres avec un peuple voisin. */

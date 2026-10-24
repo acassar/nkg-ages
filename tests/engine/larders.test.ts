@@ -66,13 +66,10 @@ describe('réserve par bande', () => {
     a.members = 20
     g.tribe.population = 20
     larderOf(a).food = 100
-    applyCommand(g, { type: 'setHunting', campId: a.id, share: 0.3 })
     applyCommand(g, { type: 'splitBand', campId: a.id })
     const b = mine(g)[1]!
     expect(larderOf(a).food).toBe(50)
     expect(larderOf(b).food).toBe(50)
-    // La jeune bande garde la façon de faire de sa mère.
-    expect(b.hunting).toBe(0.3)
   })
 
   it('deux bandes éloignées vivent chacune de leur réserve : l’une peut avoir faim seule', () => {
@@ -155,61 +152,53 @@ describe('réserve par bande', () => {
   })
 })
 
-describe('cueillette ou chasse', () => {
-  it('chaque campement règle sa part de chasseurs, bornée', () => {
-    const g = createGame(options)
+describe('cueillette et chasse à la fois', () => {
+  /** Une bande seule de trente, un troupeau de cerfs en vue, et ses terres à tant de richesse. */
+  function month(weight: number, food: number, herds = true) {
+    const g = createGame({ ...options, rareEvents: false })
     const band = g.camps[0]!
-    band.members = 20
-    expect(huntersIn(band)).toBe(Math.floor(20 * HUNT_RULES.share))
-    expect(applyCommand(g, { type: 'setHunting', campId: band.id, share: 0.5 }).ok).toBe(true)
-    expect(huntersIn(band)).toBe(10)
-    applyCommand(g, { type: 'setHunting', campId: band.id, share: 2 })
-    expect(band.hunting).toBe(HUNT_RULES.maxShare)
-    applyCommand(g, { type: 'setHunting', campId: band.id, share: -1 })
-    expect(huntersIn(band)).toBe(0)
-    expect(applyCommand(g, { type: 'setHunting', campId: band.id, share: NaN }).ok).toBe(false)
-    expect(applyCommand(g, { type: 'setHunting', campId: 999, share: 0.2 }).ok).toBe(false)
+    band.members = 30
+    g.tribe.population = 30
+    g.deposits = []
+    g.territory.weights!.fill(weight)
+    const spot = { x: band.x + 3, y: band.y }
+    g.herds = herds ? [{ id: 1, kind: 'cerf', ...spot, size: 40, goal: { ...spot } }] : []
+    larderOf(band).food = food
+    step(g)
+    let worn = 0
+    for (const a of g.abundance) worn += 1 - a
+    const larder = larderOf(band)
+    return { band, gathered: larder.lastProduction, meat: larder.lastMeat, worn }
+  }
+
+  it('sur des terres riches, une part chasse et les autres cueillent', () => {
+    const rich = month(10, 0)
+    expect(huntersIn(rich.band)).toBe(Math.floor(30 * HUNT_RULES.share))
+    expect(rich.gathered).toBeGreaterThan(0)
   })
 
-  it('sans chasseurs, pas de viande ; avec, la viande remplit la réserve de la bande', () => {
-    const meat = (share: number) => {
-      const g = createGame({ ...options, rareEvents: false })
-      const band = g.camps[0]!
-      barren(g)
-      applyCommand(g, { type: 'setHunting', campId: band.id, share })
-      const spot = { x: band.x + 3, y: band.y }
-      let total = 0
-      for (let i = 0; i < 12; i++) {
-        g.herds = [{ id: 1, kind: 'cerf', ...spot, size: 20, goal: { ...spot } }]
-        larderOf(band).food = 0
-        step(g)
-        total += larderOf(band).lastMeat
-      }
-      return total
-    }
-    expect(meat(0)).toBe(0)
-    expect(meat(HUNT_RULES.maxShare)).toBeGreaterThan(meat(HUNT_RULES.share))
+  it('quand les terres manquent, plus de gens partent chasser', () => {
+    const poor = month(0, 0)
+    expect(huntersIn(poor.band)).toBe(Math.floor(30 * HUNT_RULES.maxShare))
+    expect(poor.meat).toBeGreaterThan(0)
   })
 
-  it('sur des terres riches, plus de chasseurs fait moins de cueilleurs : la cueillette baisse et use moins la terre', () => {
-    const gather = (share: number) => {
-      const g = createGame({ ...options, rareEvents: false })
-      const band = g.camps[0]!
-      band.members = 30
-      g.tribe.population = 30
-      applyCommand(g, { type: 'setHunting', campId: band.id, share })
-      g.herds = []
-      // Des terres très riches : ce sont les bras qui manquent, pas les baies.
-      g.territory.weights!.fill(10)
-      step(g)
-      let worn = 0
-      for (const a of g.abundance) worn += 1 - a
-      return { gathered: larderOf(band).lastProduction, worn }
-    }
-    const gatherers = gather(0)
-    const hunters = gather(HUNT_RULES.maxShare)
-    expect(hunters.gathered).toBeLessThan(gatherers.gathered)
-    expect(hunters.worn).toBeLessThan(gatherers.worn)
+  it('sans gibier en vue, tout le monde cueille', () => {
+    const none = month(0, 0, false)
+    expect(huntersIn(none.band)).toBe(0)
+    expect(none.meat).toBe(0)
+  })
+
+  it('réserve presque pleine, la bande ne cueille que ce qui manque et use moins ses terres', () => {
+    const g = createGame(options)
+    g.camps[0]!.members = 30
+    const capacity = campCapacity(g, g.camps[0]!)
+    const hungry = month(10, 0, false)
+    const fed = month(10, capacity - 5, false)
+    // Le repas du mois (30) et les 5 rations qui manquaient, pas plus.
+    expect(fed.gathered).toBeCloseTo(35)
+    expect(fed.gathered).toBeLessThan(hungry.gathered)
+    expect(fed.worn).toBeLessThan(hungry.worn)
   })
 })
 
@@ -219,10 +208,7 @@ describe('invariants des réserves (fast-check)', () => {
       fc.property(
         fc.array(
           fc.oneof(
-            fc.record({
-              kind: fc.constant('hunt' as const),
-              share: fc.double({ min: -1, max: 1 }),
-            }),
+            fc.record({ kind: fc.constant('full' as const) }),
             fc.record({ kind: fc.constant('split' as const) }),
             fc.record({ kind: fc.constant('wait' as const) }),
           ),
@@ -232,8 +218,7 @@ describe('invariants des réserves (fast-check)', () => {
           const g = createGame({ ...options, rareEvents: false, seed: 'reserves-invariants' })
           for (const p of plays) {
             const band = mine(g).at(-1)!
-            if (p.kind === 'hunt')
-              applyCommand(g, { type: 'setHunting', campId: band.id, share: p.share })
+            if (p.kind === 'full') larderOf(band).food = campCapacity(g, band)
             else if (p.kind === 'split') {
               applyCommand(g, { type: 'setRoaming', campId: band.id, roaming: true })
               applyCommand(g, { type: 'splitBand', campId: band.id })
@@ -245,7 +230,7 @@ describe('invariants des réserves (fast-check)', () => {
               const larder = larderOf(c)
               expect(larder.food).toBeGreaterThanOrEqual(0)
               expect(larder.food).toBeLessThanOrEqual(campCapacity(g, c) + 1e-9)
-              expect(c.hunting ?? HUNT_RULES.share).toBeLessThanOrEqual(HUNT_RULES.maxShare)
+              expect(huntersIn(c)).toBeLessThanOrEqual(c.members! * HUNT_RULES.maxShare)
             }
           }
         },
