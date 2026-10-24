@@ -35,16 +35,12 @@ import {
   campEfficiency,
   cannotSplit,
   tribeEfficiency,
-  huntersOf,
   depositHeld,
   resourceKnown,
-  foodCapacity,
   campCapacity,
   huntersIn,
-  huntingOf,
   larderOf,
   tribeLarder,
-  HUNT_RULES,
   INVENTION_KINDS,
   INVENTION_RULES,
   inventionStat,
@@ -343,7 +339,7 @@ function balanceOf(larder: Larder): number {
   )
 }
 
-/** La réserve d'un campement du joueur et la part de ses gens qui chassent. */
+/** La réserve d'un campement du joueur et la façon dont ses gens l'ont remplie. */
 function larderView(state: GameState, camp: Camp): LarderView | null {
   if (camp.owner !== PLAYER) return null
   const larder = larderOf(camp)
@@ -355,31 +351,25 @@ function larderView(state: GameState, camp: Camp): LarderView | null {
     gathered: Math.round(larder.lastProduction * 10) / 10,
     meat: Math.round(larder.lastMeat * 10) / 10,
     starving: larder.starvingMonths > 0,
-    hunting: huntingOf(camp),
-    maxHunting: HUNT_RULES.maxShare,
+    spoiled: Math.round(larder.lastSpoiled * 10) / 10,
     hunters: huntersIn(camp),
+    gatherers: Math.max(0, (camp.members ?? 0) - huntersIn(camp)),
     resting: larder.food >= capacity,
   }
 }
 
-/** La tribu, arrondie pour l'affichage : ses vivres sont la somme de ceux des campements. */
+/** La tribu, arrondie pour l'affichage. Ses vivres n'y sont pas : chaque bande a les siens. */
 function tribeView(state: GameState): TribeView {
   const { tribe } = state
   const larder = tribeLarder(state)
   return {
     population: tribe.population,
-    food: Math.floor(larder.food),
-    foodCapacity: Math.floor(foodCapacity(state)),
-    foodBalance: balanceOf(larder),
-    spoiled: Math.round(larder.lastSpoiled * 10) / 10,
     starving: larder.starvingMonths > 0,
     materials: RESOURCE_KINDS.filter((k) => tribe.materials[k] !== undefined).map((k) => ({
       kind: k,
       name: RESOURCE_RULES[k].name,
       amount: Math.floor(tribe.materials[k]!),
     })),
-    hunters: huntersOf(state),
-    huntersResting: larder.food >= foodCapacity(state),
     camps: state.camps.filter((c) => c.owner === PLAYER).length,
     bands: bandsOf(state).length,
     efficiency: tribeEfficiency(state),

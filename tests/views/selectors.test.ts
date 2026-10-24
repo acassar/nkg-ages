@@ -121,8 +121,11 @@ describe('vues de partie', () => {
     home(g).lastConsumption = 12
     g.events.push({ type: 'famine', campId: g.camps[0]!.id })
     const view = buildGameView(g)
-    expect(view.tribe).toMatchObject({ population: 12, food: 12, foodBalance: -2, starving: false })
-    expect(view.tribe.foodCapacity).toBeGreaterThan(0)
+    expect(view.tribe).toMatchObject({ population: 12, starving: false })
+    // Pas de vivres pour toute la tribu : chaque bande montre les siens.
+    expect(view.tribe).not.toHaveProperty('food')
+    expect(view.camps[0]!.larder).toMatchObject({ food: 12, balance: -2 })
+    expect(view.camps[0]!.larder!.capacity).toBeGreaterThan(0)
     expect(view.notices[0]).toMatch(/^Famine/)
   })
 
@@ -206,7 +209,7 @@ describe('vues de partie', () => {
     expect(view.notices).toEqual([
       "L'hiver arrive : la cueillette tombe à 48 % jusqu'au printemps.",
     ])
-    expect(view.tribe).toMatchObject({ foodBalance: 6.5, spoiled: 1.5 })
+    expect(view.camps[0]!.larder).toMatchObject({ balance: 6.5, spoiled: 1.5 })
   })
 
   it('montre les villages, ce qui empêche d’en bâtir et la moisson dans le bilan', () => {
@@ -222,7 +225,8 @@ describe('vues de partie', () => {
     home(g).lastSpoiled = 0
     view = buildGameView(g)
     expect(view.camps[0]!.village).toBe(true)
-    expect(view.tribe).toMatchObject({ villages: 1, crops: 30, foodBalance: 28 })
+    expect(view.tribe).toMatchObject({ villages: 1, crops: 30 })
+    expect(view.camps[0]!.larder!.balance).toBe(28)
   })
 
   it('ne liste que les peuples rencontrés, avec leur humeur et ce qu’on peut leur proposer', () => {
@@ -238,21 +242,18 @@ describe('vues de partie', () => {
     expect(view!.tradeBlocked).toMatch(/silex/)
   })
 
-  it('montre les chasseurs des bandes, et prévient de la viande perdue', () => {
+  it('montre qui chasse et qui cueille dans chaque bande, et prévient de la viande perdue', () => {
     const g = game()
     g.events.push({ type: 'meatLost', amount: 7 })
+    g.camps[0]!.hunters = 4
     let view = buildGameView(g)
-    expect(view.tribe.hunters).toBe(2)
+    expect(view.camps[0]!.larder).toMatchObject({ hunters: 4, gatherers: 8, resting: false })
     expect(view.notices).toEqual([
       'Chasse : la réserve est pleine, 7 rations de viande sont perdues.',
     ])
-    g.camps[0]!.members = 3
-    home(g).food = 0
+    home(g).food = view.camps[0]!.larder!.capacity + 1
     view = buildGameView(g)
-    expect(view.tribe.hunters).toBe(0)
-    expect(view.tribe.huntersResting).toBe(false)
-    home(g).food = view.tribe.foodCapacity + 1
-    expect(buildGameView(g).tribe.huntersResting).toBe(true)
+    expect(view.camps[0]!.larder!.resting).toBe(true)
   })
 
   it('montre les inventions : coût, blocage, avancement et statistique au rang', () => {
