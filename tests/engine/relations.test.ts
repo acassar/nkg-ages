@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import fc from 'fast-check'
+import { HUNT_RULES } from '@/engine/content/fauna'
 import { RELATION_RULES } from '@/engine/content/relations'
 import {
   applyCommand,
   cannotTrade,
   closeCamps,
+  defendersIn,
   raid,
   type GameEvent,
   createGame,
@@ -202,8 +204,6 @@ describe('tensions et raids', () => {
   it('une réserve vide coûte une vie, jamais la dernière', () => {
     const g = close()
     const p = g.peoples[0]!
-    // Une bande sans chasseurs : personne ne défend la réserve.
-    g.camps[0]!.hunting = 0
     let killed = 0
     for (let i = 0; i < 300; i++) {
       home(g).food = 0
@@ -223,12 +223,13 @@ describe('tensions et raids', () => {
     const g = close()
     const p = g.peoples[0]!
     const loss = (seed: number, food: number, hunters: number) => {
-      // Vingt personnes, dont tant de chasseurs.
-      g.camps[0]!.members = 20
-      g.camps[0]!.hunting = hunters / 20
+      // Une bande qui compte tant de gens en âge de chasser (et de la défendre).
+      const members = Math.max(2, Math.round(hunters / HUNT_RULES.share))
+      g.camps[0]!.members = members
+      expect(defendersIn(g.camps[0]!)).toBe(hunters)
       g.peopleRng = createRng(`raid-${seed}`)
       home(g).food = food
-      g.tribe.population = 20
+      g.tribe.population = members
       p.tribe.population = 50
       g.events = []
       // Un raid à coup sûr : on rejoue jusqu'au tirage qui le déclenche, à graine égale.

@@ -68,8 +68,9 @@ export const HUNT_RULES = {
   /** Les campements laissent les troupeaux plus dangereux que ceci (les mammouths). */
   maxDanger: 0.02,
   /**
-   * Part des gens d'un campement qui chassent au lieu de cueillir, au départ ; chaque
-   * campement la règle, jusqu'à `maxShare`. Les chasseurs défendent aussi le camp.
+   * Part des gens d'une bande qui chasse dès qu'elle voit du gibier ; quand ses terres ne
+   * suffisent pas, elle envoie chasser les bras que la cueillette n'occupe pas, jusqu'à
+   * `maxShare`. Les gens en âge de chasser (`share`) défendent aussi le camp.
    */
   share: 1 / 6,
   maxShare: 0.5,

@@ -97,7 +97,7 @@
 <circle cx="46" cy="690" r="5" fill="#3a2c1e"/>
 <text x="60" y="694" font-size="14" fill="#3a2c1e">Bandes seules : elles voient, chassent et défendent</text>
 <circle cx="46" cy="711" r="5" fill="#3a2c1e"/>
-<text x="60" y="715" font-size="14" fill="#3a2c1e">Vivres par bande, cueillette ou chasse au choix</text>
+<text x="60" y="715" font-size="14" fill="#3a2c1e">Vivres par bande, cueillette et chasse réparties seules</text>
 <circle cx="46" cy="732" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
 <text x="60" y="736" font-size="14" fill="#6b5843">Savoir qui vieillit (brouillard qui se voile)</text>
 <circle cx="46" cy="753" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
@@ -107,9 +107,9 @@
 <circle cx="46" cy="795" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
 <text x="60" y="799" font-size="14" fill="#6b5843">Nouveaux villages après la sédentarisation</text>
 <circle cx="46" cy="816" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="60" y="820" font-size="14" fill="#6b5843">Pictogrammes plus grands, une forme et une couleur par ressource</text>
+<text x="60" y="820" font-size="14" fill="#6b5843">Pictogrammes plus grands, une couleur par ressource</text>
 <circle cx="46" cy="837" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
-<text x="60" y="841" font-size="14" fill="#6b5843">Rareté en étoiles : bronze E à C, argent B, or A, violette qui brille S</text>
+<text x="60" y="841" font-size="14" fill="#6b5843">Rareté en étoiles (bronze, argent, or, violette)</text>
 <circle cx="46" cy="858" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
 <text x="60" y="862" font-size="14" fill="#6b5843">Filtres de carte : ressources et autres informations</text>
 <circle cx="46" cy="879" r="5" fill="none" stroke="#6b5843" stroke-width="1.3"/>
@@ -132,10 +132,10 @@
 </g>
 <text x="24" y="965" font-size="13" letter-spacing="1.5" fill="#6b5843">JOURNAL</text>
 <text x="24" y="989" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-24</tspan>  Backlog : nouveaux villages possibles une fois toutes les bandes sédentarisées, pictogrammes de ressources plus grands avec leur propre couleur, rareté affichée en étoiles au-dessus (bronze, argent, or, violette brillante) et filtres de carte</text>
-<text x="24" y="1010" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Jeu : plus de réserve commune ; chaque bande ou village vit de ses propres vivres, mis en commun seulement avec les campements proches, et règle d'un curseur la part de ses gens qui chassent plutôt que de cueillir (la viande va dans la même réserve) ; une bande ne compte plus les terres d'un autre peuple comme les siennes</text>
-<text x="24" y="1031" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Jeu : plus d'éclaireurs ni de chasseurs à piloter ; on ne contrôle que les bandes, qui voient deux fois plus loin que leur zone, chassent seules les troupeaux qu'elles voient (pas les mammouths) et défendent le camp avec leurs chasseurs, une personne sur six ; une bande qui migre seule sans meilleur site connu part vers l'inconnu</text>
-<text x="24" y="1052" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Carte : les terres usées par les bandes se voient enfin ; elles pâlissent vers l'ocre et se couvrent de hachures d'encre à mesure qu'elles s'épuisent, puis s'effacent quand elles repoussent</text>
-<text x="24" y="1073" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Correction : les naissances se partagent enfin entre tous les campements selon leur taille ; arrondies au plus gros, elles allaient toutes au plus grand village ou à la plus grande bande, et les autres stagnaient</text>
+<text x="24" y="1010" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-24</tspan>  Jeu : plus de curseur de chasse ; chaque bande cueille et chasse à la fois, envoie chasser les bras libres quand ses terres manquent, s'arrête de récolter réserve pleine (ses terres s'usent moins), et fait d'autant plus d'enfants que sa réserve est garnie, sauf quand elle fond ; les vivres ne s'affichent plus que sur la bande choisie</text>
+<text x="24" y="1031" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Jeu : plus de réserve commune ; chaque bande ou village vit de ses propres vivres, mis en commun seulement avec les campements proches, et règle d'un curseur la part de ses gens qui chassent plutôt que de cueillir (la viande va dans la même réserve) ; une bande ne compte plus les terres d'un autre peuple comme les siennes</text>
+<text x="24" y="1052" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Jeu : plus d'éclaireurs ni de chasseurs à piloter ; on ne contrôle que les bandes, qui voient deux fois plus loin que leur zone, chassent seules les troupeaux qu'elles voient (pas les mammouths) et défendent le camp avec leurs chasseurs, une personne sur six ; une bande qui migre seule sans meilleur site connu part vers l'inconnu</text>
+<text x="24" y="1073" font-size="14" fill="#3a2c1e"><tspan fill="#6b5843">2026-10-23</tspan>  Carte : les terres usées par les bandes se voient enfin ; elles pâlissent vers l'ocre et se couvrent de hachures d'encre à mesure qu'elles s'épuisent, puis s'effacent quand elles repoussent</text>
 <circle cx="700" cy="1082" r="5" fill="#3a2c1e"/>
 <text x="710" y="1086" font-size="12" fill="#6b5843">fait</text>
 <circle cx="760" cy="1082" r="5" fill="none" stroke="#8c2f1c" stroke-width="1.5"/><path d="M760 1077a5 5 0 0 1 0 10z" fill="#8c2f1c"/>

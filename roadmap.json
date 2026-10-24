@@ -190,7 +190,7 @@
           "status": "done"
         },
         {
-          "title": "Vivres par bande, cueillette ou chasse au choix",
+          "title": "Vivres par bande, cueillette et chasse réparties seules",
           "status": "done"
         },
         {
@@ -210,11 +210,11 @@
           "status": "todo"
         },
         {
-          "title": "Pictogrammes plus grands, une forme et une couleur par ressource",
+          "title": "Pictogrammes plus grands, une couleur par ressource",
           "status": "todo"
         },
         {
-          "title": "Rareté en étoiles : bronze E à C, argent B, or A, violette qui brille S",
+          "title": "Rareté en étoiles (bronze, argent, or, violette)",
           "status": "todo"
         },
         {
@@ -262,6 +262,10 @@
     {
       "date": "2026-10-24",
       "text": "Backlog : nouveaux villages possibles une fois toutes les bandes sédentarisées, pictogrammes de ressources plus grands avec leur propre couleur, rareté affichée en étoiles au-dessus (bronze, argent, or, violette brillante) et filtres de carte"
+    },
+    {
+      "date": "2026-10-24",
+      "text": "Jeu : plus de curseur de chasse ; chaque bande cueille et chasse à la fois, envoie chasser les bras libres quand ses terres manquent, s'arrête de récolter réserve pleine (ses terres s'usent moins), et fait d'autant plus d'enfants que sa réserve est garnie, sauf quand elle fond ; les vivres ne s'affichent plus que sur la bande choisie"
     },
     {
       "date": "2026-10-23",

@@ -3,11 +3,6 @@ import { SPEED_VALUES } from '@/client'
 import { useGameStore } from '../stores/game'
 
 const game = useGameStore()
-
-const signed = new Intl.NumberFormat('fr-FR', {
-  maximumFractionDigits: 1,
-  signDisplay: 'exceptZero',
-})
 </script>
 
 <template>
@@ -27,33 +22,6 @@ const signed = new Intl.NumberFormat('fr-FR', {
       <span title="Population de la tribu">
         <span class="label">Tribu</span>
         <b data-testid="population">{{ game.view.tribe.population }}</b>
-      </span>
-      <span
-        :title="
-          game.view.tribe.spoiled > 0
-            ? `Vivres de toutes vos bandes (chacune vit de sa réserve) : ${game.view.tribe.spoiled} rations gâtées le mois dernier`
-            : 'Vivres de toutes vos bandes : chacune vit de sa réserve (une ration nourrit une personne un mois)'
-        "
-      >
-        <span class="label">Vivres</span>
-        <b data-testid="food">{{ game.view.tribe.food }}</b>
-        <span class="soft">/ {{ game.view.tribe.foodCapacity }}</span>
-        <span class="balance" data-testid="food-balance"
-          >{{ signed.format(game.view.tribe.foodBalance) }}/mois</span
-        >
-      </span>
-      <span
-        :title="
-          game.view.tribe.huntersResting
-            ? 'Réserves pleines : les chasseurs se reposent'
-            : 'Chasseurs des bandes (chaque bande règle sa part) : ils chassent autour du camp et le défendent'
-        "
-      >
-        <span class="label">Chasseurs</span>
-        <b data-testid="hunters">{{ game.view.tribe.hunters }}</b>
-        <span v-if="game.view.tribe.huntersResting" class="balance" data-testid="hunters-resting"
-          >au repos</span
-        >
       </span>
       <span
         v-if="game.view.tribe.villages > 0 || game.view.tribe.maxVillages > 0"
@@ -189,14 +157,12 @@ const signed = new Intl.NumberFormat('fr-FR', {
   font-size: 18px;
   font-weight: normal;
 }
-.tribe .soft,
-.tribe .balance {
+.tribe .soft {
   color: var(--ink-soft);
   font-size: 13px;
   margin-left: 3px;
 }
-.tribe.starving b,
-.tribe.starving .balance {
+.tribe.starving b {
   color: var(--ink-red);
 }
 .recruit {

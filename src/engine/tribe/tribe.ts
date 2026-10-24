@@ -108,6 +108,9 @@ export const NO_BONUS: TribeBonus = { gather: 0, storageMonths: 0 }
 /**
  * Un mois de vie de la tribu : récolte, repas, puis naissances ou famine.
  * `available` : rations qu'offre le territoire ce mois-ci (voir territoryFood).
+ * Le groupe ne cueille que ce qui lui manque pour finir le mois réserve pleine : au-delà,
+ * il userait ses terres pour rien. Les naissances suivent les vivres en réserve, tant
+ * qu'elle ne fond pas.
  */
 export function tickTribe(
   tribe: Group,
@@ -115,19 +118,21 @@ export function tickTribe(
   bonus: TribeBonus = NO_BONUS,
   /** Habitants occupés ailleurs (les chasseurs) : ils mangent mais ne cueillent pas. */
   away = 0,
+  /** Rations déjà rentrées ce mois-ci dans `tribe.food` (viande, moisson). */
+  brought = 0,
   rules: TribeRules = TRIBE_RULES,
 ): TribeOutcome {
   if (tribe.population <= 0) return 'stable'
+  const before = tribe.food - brought
   const gatherers = Math.max(0, tribe.population - away)
   const hands = gatherers * (bonus.efficiency ?? 1)
-  const produced = production(hands, available, rules) * (1 + bonus.gather)
+  const could = production(hands, available, rules) * (1 + bonus.gather)
   const eaten = tribe.population * rules.rationPerPerson
+  const capacity = storageCapacity(tribe.population, bonus.storageMonths, rules)
+  const produced = Math.max(0, Math.min(could, capacity + eaten - tribe.food))
   tribe.lastProduction = produced
   tribe.lastConsumption = eaten
-  tribe.food = Math.min(
-    tribe.food + produced - eaten,
-    storageCapacity(tribe.population, bonus.storageMonths, rules),
-  )
+  tribe.food = Math.min(tribe.food + produced - eaten, capacity)
 
   if (tribe.food < 0) {
     tribe.food = 0
@@ -139,12 +144,13 @@ export function tickTribe(
     return tribe.starvingMonths === 1 ? 'famineStarts' : 'famine'
   }
   tribe.starvingMonths = 0
-  if (tribe.food >= eaten * rules.comfortMonths) {
+  // Une réserve qui fond ce mois-ci (l'hiver, des terres usées) ne fait pas naître.
+  if (tribe.food >= before && tribe.food >= eaten * rules.comfortMonths) {
     tribe.growth +=
       tribe.population *
       rules.growthPerMonth *
       (1 + (bonus.growth ?? 0)) *
-      growthFactor(produced, eaten, rules)
+      growthFactor(tribe.food, eaten, rules)
     if (tribe.growth >= 1) {
       const born = Math.floor(tribe.growth)
       tribe.growth -= born
@@ -156,11 +162,16 @@ export function tickTribe(
 }
 
 /**
- * Multiplicateur de croissance selon le surplus du mois. Une réserve pleine sans surplus
- * garde une croissance minimale (un quart), pour qu'une tribu à l'équilibre vive encore.
+ * Multiplicateur de croissance selon les mois de vivres en réserve : `minGrowthFactor` au seuil
+ * de confort, `maxGrowthFactor` à `fullMonths` mois, en ligne droite entre les deux. En mois,
+ * et non en part de la réserve, évite que la conservation (une réserve plus grande) ne
+ * freine la natalité d'une bande qui a autant à manger.
  */
-export function growthFactor(produced: number, eaten: number, rules: TribeRules = TRIBE_RULES) {
+export function growthFactor(food: number, eaten: number, rules: TribeRules = TRIBE_RULES) {
   if (eaten <= 0) return 0
-  const surplus = (produced - eaten) / eaten / rules.surplusForGrowth
-  return Math.min(rules.maxGrowthFactor, Math.max(0.25, surplus))
+  const months = food / eaten
+  if (months < rules.comfortMonths) return 0
+  const t = (months - rules.comfortMonths) / (rules.fullMonths - rules.comfortMonths)
+  const { minGrowthFactor: low, maxGrowthFactor: high } = rules
+  return Math.min(high, low + t * (high - low))
 }

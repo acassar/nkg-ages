@@ -34,14 +34,17 @@ const larderState = computed(() => {
 const larderTitle = computed(() => {
   const l = camp.value?.larder
   if (!l) return ''
-  return `Sa propre réserve (proche d'un autre campement, elle est mise en commun). Le mois dernier : ${l.gathered} rations cueillies, ${l.meat} de viande.`
+  const spoiled = l.spoiled > 0 ? `, ${l.spoiled} gâtées` : ''
+  return `Sa propre réserve (proche d'un autre campement, elle est mise en commun). Le mois dernier : ${l.gathered} rations cueillies, ${l.meat} de viande${spoiled}.`
 })
-
-function onHunting(event: Event) {
-  const c = camp.value
-  if (!c?.larder) return
-  void game.setHunting(c.id, Number((event.target as HTMLInputElement).value))
-}
+/** « 9 cueillent · 3 chassent » : la bande répartit seule ses gens. */
+const workState = computed(() => {
+  const l = camp.value?.larder
+  if (!l) return null
+  const work =
+    l.hunters > 0 ? `${l.gatherers} cueillent · ${l.hunters} chassent` : `${l.gatherers} cueillent`
+  return l.resting ? `${work} · réserve pleine` : work
+})
 
 const upgradeLabel = computed(() =>
   camp.value?.upgrade?.to === 'city' ? 'Faire une cité' : 'Faire un village',
@@ -74,24 +77,13 @@ function upgrade() {
       :title="larderTitle"
       >{{ larderState }}</span
     >
-    <label
-      v-if="camp.larder"
-      class="hunting"
-      :title="`${camp.larder.hunters} chasseurs : ils rapportent de la viande s'ils voient du gibier, et défendent le camp. Les autres cueillent (et usent la terre).${camp.larder.resting ? ' Réserve pleine : ils se reposent.' : ''}`"
+    <span
+      v-if="workState"
+      class="why"
+      data-testid="camp-work"
+      title="La bande cueille et chasse à la fois : quand ses terres ne suffisent pas, plus de gens partent chasser le gibier qu'elle voit. Réserve pleine, les chasseurs se reposent et la cueillette ne fait que remplacer les repas : la bande use moins ses terres."
+      >{{ workState }}</span
     >
-      <span>Cueillette</span>
-      <input
-        type="range"
-        data-testid="camp-hunting"
-        min="0"
-        :max="camp.larder.maxHunting"
-        step="0.05"
-        :value="camp.larder.hunting"
-        aria-label="Part des gens qui chassent"
-        @change="onHunting"
-      />
-      <span>Chasse ({{ camp.larder.hunters }})</span>
-    </label>
     <template v-if="camp.band">
       <button
         class="ink-button"
@@ -151,16 +143,6 @@ function upgrade() {
 }
 .why.alarm {
   color: var(--ink-red);
-}
-.hunting {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--ink-soft);
-}
-.hunting input {
-  width: 80px;
-  accent-color: var(--ink);
 }
 .ink-button {
   font-size: 13px;
